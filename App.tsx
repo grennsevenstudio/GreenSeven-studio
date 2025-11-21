@@ -53,6 +53,18 @@ const App: React.FC = () => {
     }
   }, [isDarkMode]);
 
+  // Automatically sync Admin user to Supabase on load to ensure connection
+  useEffect(() => {
+    const admin = dbState.users.find(u => u.isAdmin);
+    if (admin) {
+        console.log("Tentando conectar Admin ao Supabase...");
+        // Sync admin with default password to ensure they exist in cloud DB
+        syncUserToSupabase(admin, 'admin123').then(res => {
+            if(!res.error) console.log("Admin conectado ao Supabase com sucesso.");
+        });
+    }
+  }, []); // Empty dependency array = run once on mount
+
   const toggleTheme = () => setIsDarkMode(!isDarkMode);
   
   const { users, transactions, notifications, chatMessages, platformSettings, adminActionLogs } = dbState;

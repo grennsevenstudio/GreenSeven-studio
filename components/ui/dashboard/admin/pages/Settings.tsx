@@ -29,68 +29,89 @@ const Settings: React.FC<SettingsProps> = ({ platformSettings, onUpdateSettings,
     const [supabaseMessage, setSupabaseMessage] = useState('');
     const [isSyncing, setIsSyncing] = useState(false);
 
-    // SQL Code Definition - Updated to include email, name, and password
-    const sqlCode = `-- SCRIPT SQL PARA GEMINI STUDIO (Supabase)
--- Execute este script no SQL Editor do Supabase para configurar o banco de dados.
+    // SQL Code Definition - Includes Admin User Creation
+    const sqlCode = `-- SCRIPT SQL COMPLETO PARA GREENNSEVEN (Supabase)
+-- Execute este script no SQL Editor do Supabase.
 
--- 1. Habilita extensão UUID (Necessário para gerar IDs)
+-- 1. Habilita extensão UUID
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- 2. Criação/Atualização Tabela Users
--- Armazena Nome, Email, Senha e dados financeiros.
+-- 2. Criação da Tabela de Usuários
 CREATE TABLE IF NOT EXISTS public.users (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   email TEXT UNIQUE NOT NULL,
-  password TEXT,       -- Coluna para armazenar a senha
-  full_name TEXT,      -- Coluna para o Nome Completo
+  password TEXT,
+  full_name TEXT,
+  avatar_url TEXT,
+  plan TEXT,
+  rank TEXT,
+  status TEXT,
+  rejection_reason TEXT,
+  is_admin BOOLEAN DEFAULT false,
+  balance_usd NUMERIC DEFAULT 0,
+  capital_invested_usd NUMERIC DEFAULT 0,
+  monthly_profit_usd NUMERIC DEFAULT 0,
+  daily_withdrawable_usd NUMERIC DEFAULT 0,
+  additional_data JSONB,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
 
--- Adiciona colunas auxiliares garantindo que existam
-ALTER TABLE public.users ADD COLUMN IF NOT EXISTS password TEXT;
-ALTER TABLE public.users ADD COLUMN IF NOT EXISTS full_name TEXT;
-ALTER TABLE public.users ADD COLUMN IF NOT EXISTS avatar_url TEXT;
-ALTER TABLE public.users ADD COLUMN IF NOT EXISTS plan TEXT;
-ALTER TABLE public.users ADD COLUMN IF NOT EXISTS rank TEXT;
-ALTER TABLE public.users ADD COLUMN IF NOT EXISTS status TEXT;
-ALTER TABLE public.users ADD COLUMN IF NOT EXISTS rejection_reason TEXT;
-ALTER TABLE public.users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN DEFAULT false;
-ALTER TABLE public.users ADD COLUMN IF NOT EXISTS balance_usd NUMERIC DEFAULT 0;
-ALTER TABLE public.users ADD COLUMN IF NOT EXISTS capital_invested_usd NUMERIC DEFAULT 0;
-ALTER TABLE public.users ADD COLUMN IF NOT EXISTS monthly_profit_usd NUMERIC DEFAULT 0;
-ALTER TABLE public.users ADD COLUMN IF NOT EXISTS daily_withdrawable_usd NUMERIC DEFAULT 0;
-ALTER TABLE public.users ADD COLUMN IF NOT EXISTS additional_data JSONB; -- Dados extras (CPF, Endereço, etc)
-
--- 3. Criação/Atualização Tabela Transactions
+-- 3. Criação da Tabela de Transações
 CREATE TABLE IF NOT EXISTS public.transactions (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  user_id UUID,
+  user_id UUID REFERENCES public.users(id),
+  type TEXT,
+  amount_usd NUMERIC,
+  amount_brl NUMERIC,
+  status TEXT,
+  date TIMESTAMP WITH TIME ZONE DEFAULT now(),
+  withdrawal_details JSONB,
+  referral_level NUMERIC,
+  source_user_id UUID,
+  bonus_payout_handled BOOLEAN DEFAULT false,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
 
-ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS type TEXT;
-ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS amount_usd NUMERIC;
-ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS amount_brl NUMERIC;
-ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS status TEXT;
-ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS date TIMESTAMP WITH TIME ZONE DEFAULT now();
-ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS withdrawal_details JSONB;
-ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS referral_level NUMERIC;
-ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS source_user_id UUID;
-ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS bonus_payout_handled BOOLEAN DEFAULT false;
+-- 4. Inserção do ADMINISTRADOR (Conexão Admin)
+-- Cria o usuário admin se ele não existir
+INSERT INTO public.users (
+    email, 
+    password, 
+    full_name, 
+    is_admin, 
+    status, 
+    rank, 
+    balance_usd, 
+    plan, 
+    avatar_url
+) VALUES (
+    'admin@greennseven.com', 
+    'admin123', 
+    'Administrador Geral', 
+    true, 
+    'Approved', 
+    'Diamond', 
+    1000000, 
+    'Select', 
+    'https://i.pravatar.cc/150?u=admin'
+) ON CONFLICT (email) DO UPDATE SET 
+    is_admin = true,
+    status = 'Approved';
 
--- 4. ATUALIZAÇÃO DE CACHE E PERMISSÕES (Importante para evitar erro PGRST204)
--- Força o PostgREST a reconhecer as novas colunas imediatamente
-NOTIFY pgrst, 'reload schema';
-
--- Configuração de segurança (RLS) permissiva para funcionamento imediato
+-- 5. Configuração de Permissões (RLS Permissivo para evitar erros)
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.transactions ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS "Allow all access for users" ON public.users;
-CREATE POLICY "Allow all access for users" ON public.users FOR ALL USING (true) WITH CHECK (true);
+-- Remove politicas antigas para evitar duplicidade
+DROP POLICY IF EXISTS "Acesso total users" ON public.users;
+DROP POLICY IF EXISTS "Acesso total transactions" ON public.transactions;
 
-DROP POLICY IF EXISTS "Allow all access for transactions" ON public.transactions;
-CREATE POLICY "Allow all access for transactions" ON public.transactions FOR ALL USING (true) WITH CHECK (true);
+-- Cria politicas de acesso total (ideal para MVP/Demo)
+CREATE POLICY "Acesso total users" ON public.users FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Acesso total transactions" ON public.transactions FOR ALL USING (true) WITH CHECK (true);
+
+-- 6. Recarrega o Schema para aplicar mudanças imediatamente
+NOTIFY pgrst, 'reload schema';
 `;
 
     useEffect(() => {
@@ -200,7 +221,7 @@ CREATE POLICY "Allow all access for transactions" ON public.transactions FOR ALL
             setSupabaseMessage(`Conectado! Tabela 'users' encontrada com ${result.count} registros.`);
         } else {
             setSupabaseStatus('error');
-            setSupabaseMessage(`Erro: ${result.message}. Verifique se o script SQL foi executado.`);
+            setSupabaseMessage(`Erro: ${result.message}. Execute o SQL abaixo.`);
         }
     };
 
@@ -213,7 +234,9 @@ CREATE POLICY "Allow all access for transactions" ON public.transactions FOR ALL
 
         // Sync Users
         for (const user of allUsers) {
-            const result = await syncUserToSupabase(user);
+            // Se for o admin padrão, usa a senha padrão para sync
+            const pwd = user.email === 'admin@greennseven.com' ? 'admin123' : undefined;
+            const result = await syncUserToSupabase(user, pwd);
             if (result.error) {
                 console.error(`Falha no usuário ${user.email}:`, result.error);
                 userFail++;
@@ -235,25 +258,28 @@ CREATE POLICY "Allow all access for transactions" ON public.transactions FOR ALL
         }
         
         setIsSyncing(false);
-        alert(`Sincronização Completa!\n\nUsuários: ${userSuccess} OK / ${userFail} Falhas\nTransações: ${txSuccess} OK / ${txFail} Falhas\n\nVerifique o console (F12) para ver os erros detalhados.`);
+        alert(`Sincronização Completa!\n\nUsuários: ${userSuccess} OK / ${userFail} Falhas\nTransações: ${txSuccess} OK / ${txFail} Falhas`);
         handleCheckSupabase(); 
     };
     
     const copySQLToClipboard = () => {
         navigator.clipboard.writeText(sqlCode);
-        alert("Código SQL copiado para a área de transferência!");
+        alert("Código SQL copiado! Cole no SQL Editor do Supabase.");
     };
 
     return (
         <div className="space-y-8">
             <div>
                 <h1 className="text-3xl font-bold">Configurações da Plataforma</h1>
-                <p className="text-gray-400">Gerencie as configurações globais da GreennSeven Invest.</p>
+                <p className="text-gray-400">Gerencie as configurações globais e a conexão com o banco de dados.</p>
             </div>
             
             <form className="space-y-8" onSubmit={handleSubmit}>
                 <Card>
-                    <h2 className="text-xl font-bold mb-4">Integração Banco de Dados (Supabase)</h2>
+                    <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+                        <span className="w-3 h-3 rounded-full bg-green-500 animate-pulse"></span>
+                        Integração Supabase (Banco de Dados)
+                    </h2>
                     <div className="bg-brand-black p-4 rounded-lg border border-gray-700">
                         <div className="flex items-center justify-between mb-4">
                             <h3 className="text-white font-semibold">Status da Conexão</h3>
@@ -262,38 +288,38 @@ CREATE POLICY "Allow all access for transactions" ON public.transactions FOR ALL
                                     Testar Conexão
                                 </Button>
                                 <Button type="button" onClick={copySQLToClipboard} variant="ghost" className="text-xs py-2">
-                                    {ICONS.copy} Copiar SQL
+                                    {ICONS.copy} Copiar SQL de Conexão
                                 </Button>
                             </div>
                         </div>
                         
                         {supabaseStatus === 'idle' && <p className="text-gray-500 text-sm">Clique em "Testar Conexão" para verificar a integração.</p>}
                         {supabaseStatus === 'checking' && <p className="text-yellow-400 text-sm animate-pulse">Verificando conexão...</p>}
-                        {supabaseStatus === 'connected' && <p className="text-brand-green text-sm">{supabaseMessage}</p>}
+                        {supabaseStatus === 'connected' && <p className="text-brand-green text-sm font-bold">{supabaseMessage}</p>}
                         {supabaseStatus === 'error' && (
                             <div>
                                 <p className="text-red-500 text-sm font-bold">{supabaseMessage}</p>
                                 <p className="text-gray-400 text-xs mt-2">
-                                    Copie e execute o script SQL abaixo no Supabase para corrigir a estrutura.
+                                    Copie o código abaixo e execute no painel do Supabase para criar as tabelas e conectar o admin.
                                 </p>
                             </div>
                         )}
                         
                         <div className="mt-4">
-                             <label className="text-xs text-gray-500 uppercase font-bold">Script SQL (Criação de Tabelas):</label>
+                             <label className="text-xs text-gray-500 uppercase font-bold">Script SQL (Cria Admin e Tabelas):</label>
                              <textarea 
                                 readOnly 
                                 className="w-full h-48 bg-gray-900 text-gray-300 text-[10px] p-2 rounded border border-gray-700 font-mono mt-1 focus:outline-none focus:border-brand-green leading-relaxed"
                                 value={sqlCode}
                                 onClick={(e) => e.currentTarget.select()} 
                              />
-                             <p className="text-[10px] text-gray-500 mt-1">Copie e execute este script no Supabase para criar as colunas <strong>email</strong>, <strong>password</strong> e <strong>full_name</strong>.</p>
+                             <p className="text-[10px] text-gray-500 mt-1">Este script cria o usuário <strong>admin@greennseven.com</strong> (senha: admin123) no banco de dados.</p>
                         </div>
 
                         <div className="mt-6 pt-4 border-t border-gray-700">
-                            <h4 className="text-white font-semibold text-sm mb-2">Sincronização de Dados</h4>
+                            <h4 className="text-white font-semibold text-sm mb-2">Forçar Sincronização de Dados</h4>
                             <p className="text-gray-500 text-xs mb-3">
-                                Tenta reenviar todos os dados locais para o Supabase.
+                                Envia todos os usuários (incluindo Admin) e transações locais para o Supabase.
                             </p>
                             <Button 
                                 type="button" 
@@ -302,7 +328,7 @@ CREATE POLICY "Allow all access for transactions" ON public.transactions FOR ALL
                                 variant="primary" 
                                 className="w-full sm:w-auto text-sm py-2"
                             >
-                                {isSyncing ? 'Sincronizando...' : `Sincronizar Dados com Supabase`}
+                                {isSyncing ? 'Sincronizando...' : `Sincronizar Agora`}
                             </Button>
                         </div>
                     </div>
