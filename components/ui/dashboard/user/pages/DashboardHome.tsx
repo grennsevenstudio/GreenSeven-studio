@@ -1,6 +1,4 @@
 
-
-
 import React, { useState, useEffect } from 'react';
 import type { User, Transaction, WithdrawalDetails, Stock } from '../../../../../types';
 import { TransactionType, TransactionStatus } from '../../../../../types';
@@ -371,7 +369,18 @@ const WithdrawModalContent: React.FC<{
     
     return (
         <form onSubmit={handleAmountSubmit} className="space-y-4">
+             <div className="bg-brand-black border border-gray-700 rounded-lg p-4 flex justify-between items-center shadow-inner">
+                <div>
+                    <p className="text-sm text-gray-400">Saldo Disponível</p>
+                    <p className="text-xs text-gray-500">Lucros acumulados</p>
+                </div>
+                <p className="text-2xl font-bold text-brand-green">
+                    US$ {user.dailyWithdrawableUSD.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </p>
+            </div>
+            
             <p className="text-sm text-yellow-400 bg-yellow-500/10 p-3 rounded-lg">Apenas os lucros diários podem ser sacados. Seu capital e lucro mensal ficam bloqueados para garantir a rentabilidade.</p>
+            
             <Input 
                 label="Valor do Saque (USD)"
                 id="withdraw-usd"

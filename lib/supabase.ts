@@ -53,7 +53,8 @@ export const fetchUsersFromSupabase = async () => {
             monthlyProfitUSD: Number(row.monthly_profit_usd || 0),
             dailyWithdrawableUSD: Number(row.daily_withdrawable_usd || 0),
             joinedDate: row.created_at ? row.created_at.split('T')[0] : new Date().toISOString().split('T')[0],
-            
+            lastPlanChangeDate: row.last_plan_change_date || undefined,
+
             // Mapeia campos JSONB de additional_data
             cpf: row.additional_data?.cpf || '',
             phone: row.additional_data?.phone || '',
@@ -139,7 +140,8 @@ export const syncUserToSupabase = async (user: User, password?: string) => {
         capital_invested_usd: user.capitalInvestedUSD,
         monthly_profit_usd: user.monthlyProfitUSD,
         daily_withdrawable_usd: user.dailyWithdrawableUSD,
-        
+        last_plan_change_date: user.lastPlanChangeDate ? new Date(user.lastPlanChangeDate).toISOString() : null,
+
         is_admin: user.isAdmin,
         created_at: user.joinedDate ? new Date(user.joinedDate).toISOString() : new Date().toISOString(),
         
@@ -165,7 +167,21 @@ export const syncUserToSupabase = async (user: User, password?: string) => {
       .select();
 
     if (error) {
-      // Return the error object directly so checking for result.error works
+      // FALLBACK: Se a coluna 'last_plan_change_date' não existir (Erro PGRST204), tentamos salvar sem ela.
+      // Isso evita que a aplicação quebre se a migration não tiver sido rodada ainda.
+      if (error.code === 'PGRST204' && (error.message?.includes('last_plan_change_date') || JSON.stringify(error).includes('last_plan_change_date'))) {
+          console.warn("A coluna 'last_plan_change_date' não existe no Supabase. Tentando sincronizar sem este campo.");
+          delete payload.last_plan_change_date;
+          
+          const { data: retryData, error: retryError } = await supabase
+              .from('users')
+              .upsert(payload, { onConflict: 'id' })
+              .select();
+          
+          if (retryError) return { error: retryError };
+          return { data: retryData };
+      }
+
       return { error };
     }
     return { data };

@@ -25,7 +25,7 @@ const StatCard: React.FC<{ title: string; value: string; icon: React.ReactNode; 
 );
 
 const CareerPlan: React.FC<CareerPlanProps> = ({ user, allUsers, allTransactions }) => {
-    const referralLink = `https://greennseven.com/register?ref=${user.referralCode}`;
+    const referralLink = `https://green-seven-studio-cuqm.vercel.app/register?ref=${user.referralCode}`;
 
     const directReferrals = useMemo(() => {
         return allUsers.filter(u => u.referredById === user.id);

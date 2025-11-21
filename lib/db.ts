@@ -80,14 +80,15 @@ export const initializeDB = () => {
     },
     status: UserStatus.Approved,
     avatarUrl: `https://i.pravatar.cc/150?u=${ADMIN_ID}`,
-    rank: InvestorRank.Diamond,
-    balanceUSD: 999999,
-    capitalInvestedUSD: 0,
-    monthlyProfitUSD: 0,
-    dailyWithdrawableUSD: 0,
+    rank: InvestorRank.Platinum,
+    balanceUSD: 25420.50,
+    capitalInvestedUSD: 20000,
+    monthlyProfitUSD: 1200,
+    dailyWithdrawableUSD: 1240.50,
     isAdmin: true,
     joinedDate: '2023-01-01',
     referralCode: 'ADMINPRO',
+    transactionPin: '1234' // Added for easy testing of withdrawals
   };
 
   const MOCK_ALL_USERS: User[] = [MOCK_ADMIN]; // Strictly only Admin

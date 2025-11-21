@@ -164,7 +164,8 @@ const App: React.FC = () => {
             idBackUrl: 'https://via.placeholder.com/150',
             selfieUrl: 'https://via.placeholder.com/150'
         },
-        avatarUrl: `https://i.pravatar.cc/150?u=${faker.string.uuid()}`,
+        // Changed to use initials instead of random face
+        avatarUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(simpleUserData.name)}&background=00FF9C&color=000`,
         rank: InvestorRank.Bronze,
         balanceUSD: 0,
         capitalInvestedUSD: 0,
@@ -212,13 +213,58 @@ const App: React.FC = () => {
     
     if (tx.type === TransactionType.Withdrawal) {
       const withdrawalAmount = Math.abs(tx.amountUSD);
+      
+      // 1. Time Check (09:00 - 18:00)
+      const now = new Date();
+      const currentHour = now.getHours();
+      if (currentHour < 9 || currentHour >= 18) {
+          alert("Solicitações de saque são permitidas apenas entre 09:00 e 18:00.");
+          return;
+      }
+
+      // 2. Frequency Check (1 per day)
+      const today = tx.date; // Already formatted as YYYY-MM-DD
+      const hasWithdrawalToday = dbState.transactions.some(t => 
+          t.userId === loggedUser?.id && 
+          t.type === TransactionType.Withdrawal && 
+          t.date === today &&
+          t.status !== TransactionStatus.Failed // Allow retry if previous attempt failed
+      );
+
+      if (hasWithdrawalToday) {
+          alert("Você já solicitou um saque hoje. O limite é de 1 solicitação diária.");
+          return;
+      }
+
       if (tx.userId === loggedUser?.id) {
           if (withdrawalAmount > (loggedUser?.dailyWithdrawableUSD || 0)) {
             alert("Erro: Saldo insuficiente para saque.");
             return;
           }
+          
+          // Deduct from dailyWithdrawableUSD immediately
+          const updatedUser = {
+              ...loggedUser,
+              dailyWithdrawableUSD: loggedUser.dailyWithdrawableUSD - withdrawalAmount
+          };
+          setLoggedUser(updatedUser);
+          
+          setDbState(prev => ({
+              ...prev,
+              users: prev.users.map(u => u.id === updatedUser.id ? updatedUser : u),
+              transactions: [...prev.transactions, tx]
+          }));
+
+          syncUserToSupabase(updatedUser);
+          syncTransactionToSupabase(tx).then((result) => {
+             if (result.error) {
+                console.error("Erro ao salvar transação no Supabase:", JSON.stringify(result.error, null, 2));
+            }
+          });
+          return;
       }
     }
+
     syncTransactionToSupabase(tx).then((result) => {
          if (result.error) {
             console.error("Erro ao salvar transação no Supabase:", JSON.stringify(result.error, null, 2));
@@ -290,9 +336,9 @@ const App: React.FC = () => {
 
     let updatedUsers = [...dbState.users];
     
-    if (newStatus === TransactionStatus.Completed) {
-        updatedUsers = updatedUsers.map(u => {
-            if (u.id === user.id) {
+    updatedUsers = updatedUsers.map(u => {
+        if (u.id === user.id) {
+            if (newStatus === TransactionStatus.Completed) {
                 let newBalance = u.balanceUSD;
                 let newInvested = u.capitalInvestedUSD;
 
@@ -312,10 +358,18 @@ const App: React.FC = () => {
                 };
                 syncUserToSupabase(updated);
                 return updated;
+            } else if (newStatus === TransactionStatus.Failed && tx.type === TransactionType.Withdrawal) {
+                // Refund dailyWithdrawableUSD if withdrawal failed
+                const updated = {
+                    ...u,
+                    dailyWithdrawableUSD: u.dailyWithdrawableUSD + Math.abs(tx.amountUSD)
+                };
+                syncUserToSupabase(updated);
+                return updated;
             }
-            return u;
-        });
-    }
+        }
+        return u;
+    });
 
     referrersToUpdate.forEach(ref => {
         updatedUsers = updatedUsers.map(u => u.id === ref.id ? ref : u);
@@ -476,6 +530,20 @@ const App: React.FC = () => {
       syncUserToSupabase(updatedUser);
   };
 
+  const handleUpdatePassword = (userId: string, newPassword: string) => {
+      const user = users.find(u => u.id === userId);
+      if (user) {
+          syncUserToSupabase(user, newPassword).then(res => {
+              if (res.error) {
+                  console.error("Erro ao atualizar senha:", res.error);
+                  alert("Erro ao atualizar senha. Tente novamente.");
+              } else {
+                  alert("Senha de login atualizada com sucesso!");
+              }
+          });
+      }
+  };
+
   let content;
   if (view === View.Home) {
       content = <HomePage setView={setView} />;
@@ -499,6 +567,7 @@ const App: React.FC = () => {
                     onMarkAllNotificationsAsRead={handleMarkAllNotificationsAsRead}
                     onSendMessage={handleSendMessage}
                     onUpdateUser={handleUpdateUser}
+                    onUpdatePassword={handleUpdatePassword}
                     isDarkMode={isDarkMode}
                     toggleTheme={toggleTheme}
                 />;

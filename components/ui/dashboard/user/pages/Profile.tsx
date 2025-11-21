@@ -1,27 +1,77 @@
 
-
-import React, { useMemo, useState, useRef } from 'react';
+import React, { useMemo, useState, useRef, useEffect } from 'react';
 import type { User, Transaction } from '../../../../../types';
 import { InvestorRank, TransactionStatus, TransactionType } from '../../../../../types';
 import Card from '../../../../ui/Card';
 import Input from '../../../../ui/Input';
 import Button from '../../../../ui/Button';
 import { ICONS, RANK_COLORS } from '../../../../../constants';
+import { formatCPF } from '../../../../../lib/utils';
 
 interface ProfileProps {
     user: User;
     allTransactions: Transaction[];
     setActiveView: (view: string) => void;
     onUpdateUser: (updatedUser: User) => void;
+    onUpdatePassword: (userId: string, newPassword: string) => void;
 }
 
-const Profile: React.FC<ProfileProps> = ({ user, allTransactions, setActiveView, onUpdateUser }) => {
+const Toast: React.FC<{ message: string; type: 'success' | 'error' }> = ({ message, type }) => (
+    <div className={`fixed bottom-6 right-6 px-6 py-4 rounded-lg shadow-2xl z-50 flex items-center gap-3 animate-fade-in-up ${type === 'success' ? 'bg-brand-green text-brand-black' : 'bg-red-500 text-white'}`}>
+        <div className={`p-1 rounded-full ${type === 'success' ? 'bg-black/10' : 'bg-white/20'}`}>
+            {type === 'success' ? (
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+            ) : (
+                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                </svg>
+            )}
+        </div>
+        <span className="font-bold">{message}</span>
+        <style>{`
+            @keyframes fade-in-up {
+                from { opacity: 0; transform: translateY(20px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+            .animate-fade-in-up {
+                animation: fade-in-up 0.3s ease-out forwards;
+            }
+        `}</style>
+    </div>
+);
+
+const Profile: React.FC<ProfileProps> = ({ user, allTransactions, setActiveView, onUpdateUser, onUpdatePassword }) => {
+    // Personal Info State
+    const [name, setName] = useState(user.name);
+    const [cpf, setCpf] = useState(user.cpf || '');
+
+    // Security State
     const [currentPin, setCurrentPin] = useState('');
     const [newPin, setNewPin] = useState('');
     const [confirmNewPin, setConfirmNewPin] = useState('');
     const [pinError, setPinError] = useState<string | null>(null);
+    
+    const [newLoginPassword, setNewLoginPassword] = useState('');
+    const [confirmLoginPassword, setConfirmLoginPassword] = useState('');
+
     const [newAvatarUrl, setNewAvatarUrl] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // Toast State
+    const [toast, setToast] = useState<{message: string, type: 'success' | 'error'} | null>(null);
+
+    const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+        setToast({ message, type });
+        setTimeout(() => setToast(null), 3000);
+    };
+
+    // Sync state if user prop changes
+    useEffect(() => {
+        setName(user.name);
+        setCpf(user.cpf || '');
+    }, [user]);
 
     const handlePinUpdate = (e: React.FormEvent) => {
         e.preventDefault();
@@ -30,6 +80,7 @@ const Profile: React.FC<ProfileProps> = ({ user, allTransactions, setActiveView,
         // Validations
         if (user.transactionPin && currentPin !== user.transactionPin) {
             setPinError("PIN atual incorreto.");
+            showToast("PIN atual incorreto.", 'error');
             return;
         }
         if (!/^\d{4}$/.test(newPin)) {
@@ -42,10 +93,27 @@ const Profile: React.FC<ProfileProps> = ({ user, allTransactions, setActiveView,
         }
 
         onUpdateUser({ ...user, transactionPin: newPin });
-        alert("PIN de saque atualizado com sucesso!");
+        showToast("PIN de saque atualizado com sucesso!");
         setCurrentPin('');
         setNewPin('');
         setConfirmNewPin('');
+    };
+
+    const handleLoginPasswordUpdate = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (newLoginPassword.length < 6) {
+            showToast("A senha deve ter no mínimo 6 caracteres.", 'error');
+            return;
+        }
+        if (newLoginPassword !== confirmLoginPassword) {
+            showToast("As senhas não coincidem.", 'error');
+            return;
+        }
+        onUpdatePassword(user.id, newLoginPassword);
+        setNewLoginPassword('');
+        setConfirmLoginPassword('');
+        // Nota: App.tsx exibe o alerta de sucesso/erro para senha, 
+        // mas para consistência visual futura, a lógica poderia ser movida para cá.
     };
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -61,7 +129,11 @@ const Profile: React.FC<ProfileProps> = ({ user, allTransactions, setActiveView,
 
     const handleProfileSave = (e: React.FormEvent) => {
         e.preventDefault();
-        let updatedUser = { ...user };
+        let updatedUser = { 
+            ...user,
+            name: name,
+            cpf: cpf
+        };
         
         if (newAvatarUrl) {
             updatedUser.avatarUrl = newAvatarUrl;
@@ -69,7 +141,7 @@ const Profile: React.FC<ProfileProps> = ({ user, allTransactions, setActiveView,
 
         onUpdateUser(updatedUser);
         setNewAvatarUrl(null);
-        alert('Perfil atualizado com sucesso!');
+        showToast('Informações salvas com sucesso!');
     };
 
     const rankDetails: {[key in InvestorRank]: { next: InvestorRank | null, threshold: number, progress: number }} = {
@@ -90,6 +162,7 @@ const Profile: React.FC<ProfileProps> = ({ user, allTransactions, setActiveView,
 
     return (
         <div className="space-y-8">
+            {toast && <Toast message={toast.message} type={toast.type} />}
             <input
                 type="file"
                 ref={fileInputRef}
@@ -117,11 +190,29 @@ const Profile: React.FC<ProfileProps> = ({ user, allTransactions, setActiveView,
                                 </div>
                             </div>
                             <div className="grid md:grid-cols-2 gap-6">
-                                <Input label="Nome Completo" id="name" defaultValue={user.name} />
-                                <Input label="Email" id="email" type="email" defaultValue={user.email} disabled />
+                                <Input 
+                                    label="Nome Completo" 
+                                    id="name" 
+                                    value={name} 
+                                    onChange={(e) => setName(e.target.value)}
+                                />
+                                <Input 
+                                    label="Email" 
+                                    id="email" 
+                                    type="email" 
+                                    value={user.email} 
+                                    disabled 
+                                />
                             </div>
                             <div>
-                                <Input label="CPF (Opcional)" id="cpf" placeholder="000.000.000-00" />
+                                <Input 
+                                    label="CPF (Opcional)" 
+                                    id="cpf" 
+                                    placeholder="000.000.000-00" 
+                                    value={cpf}
+                                    onChange={(e) => setCpf(formatCPF(e.target.value))}
+                                    maxLength={14}
+                                />
                             </div>
                             <div className="pt-2">
                                 <Button type="submit">Salvar Alterações</Button>
@@ -132,6 +223,38 @@ const Profile: React.FC<ProfileProps> = ({ user, allTransactions, setActiveView,
                     {/* Security Card */}
                     <Card>
                          <h2 className="text-xl font-bold mb-6">Segurança</h2>
+                         
+                         {/* Login Password Section */}
+                         <div className="mb-8 border-b border-gray-800 pb-8">
+                            <h3 className="font-semibold text-white mb-4">Alterar Senha de Login</h3>
+                            <form onSubmit={handleLoginPasswordUpdate} className="space-y-4">
+                                <div className="grid sm:grid-cols-2 gap-4">
+                                    <Input 
+                                        label="Nova Senha" 
+                                        id="newLoginPass" 
+                                        type="password"
+                                        value={newLoginPassword}
+                                        onChange={e => setNewLoginPassword(e.target.value)}
+                                        required
+                                        minLength={6}
+                                    />
+                                    <Input 
+                                        label="Confirmar Nova Senha" 
+                                        id="confirmLoginPass" 
+                                        type="password" 
+                                        value={confirmLoginPassword}
+                                        onChange={e => setConfirmLoginPassword(e.target.value)}
+                                        required
+                                        minLength={6}
+                                    />
+                                </div>
+                                <div className="pt-2">
+                                    <Button type="submit" variant="secondary">Atualizar Senha</Button>
+                                </div>
+                            </form>
+                         </div>
+
+                         {/* Transaction PIN Section */}
                          <form className="space-y-4" onSubmit={handlePinUpdate}>
                             <h3 className="font-semibold text-white">{user.transactionPin ? 'Alterar PIN de Saque' : 'Criar PIN de Saque'}</h3>
                             <p className="text-sm text-gray-400">Este PIN de 4 dígitos será solicitado em todas as transações de saque para sua segurança.</p>

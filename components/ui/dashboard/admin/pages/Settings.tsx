@@ -52,6 +52,7 @@ CREATE TABLE IF NOT EXISTS public.users (
   capital_invested_usd NUMERIC DEFAULT 0,
   monthly_profit_usd NUMERIC DEFAULT 0,
   daily_withdrawable_usd NUMERIC DEFAULT 0,
+  last_plan_change_date TIMESTAMP WITH TIME ZONE,
   additional_data JSONB,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
@@ -60,6 +61,8 @@ CREATE TABLE IF NOT EXISTS public.users (
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS password TEXT;
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS full_name TEXT;
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS additional_data JSONB;
+-- CRUCIAL: Adiciona a coluna para controle de troca de plano
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS last_plan_change_date TIMESTAMP WITH TIME ZONE;
 
 -- 3. Criação da Tabela de Transações
 CREATE TABLE IF NOT EXISTS public.transactions (

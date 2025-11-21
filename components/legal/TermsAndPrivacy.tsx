@@ -84,7 +84,7 @@ export const PRIVACY_POLICY_CONTENT = (
         <p>Manteremos suas informações pessoais pelo tempo necessário para cumprir os propósitos para os quais foram coletadas, incluindo para fins de cumprimento de quaisquer obrigações legais, contratuais, ou de prestação de contas.</p>
 
         <h2>8. Contato</h2>
-        <p>Se você tiver alguma dúvida sobre esta Política de Privacidade, entre em contato com nosso Encarregado de Proteção de Dados (DPO) pelo e-mail: privacidade@greennseven.com.</p>
+        <p>Se você tiver alguma dúvida sobre esta Política de Privacidade, entre em contato com nosso Encarregado de Proteção de Dados (DPO) pelo e-mail: privacidade@greennseven.online.</p>
     </>
 );
 
@@ -116,7 +116,7 @@ export const CONTACT_CONTENT = (
         <p>Estamos aqui para ajudar. Entre em contato através dos nossos canais oficiais.</p>
         <div className="bg-brand-gray p-4 rounded-lg border border-gray-700">
             <p className="mb-2"><strong>Email de Suporte:</strong></p>
-            <p className="text-brand-green">suporte@greennseven.com</p>
+            <p className="text-brand-green">suporte@greennseven.online</p>
         </div>
         <div className="bg-brand-gray p-4 rounded-lg border border-gray-700">
             <p className="mb-2"><strong>Horário de Atendimento:</strong></p>
@@ -135,6 +135,6 @@ export const CAREERS_CONTENT = (
             <li>Blockchain Security Specialist</li>
             <li>Customer Success Manager</li>
         </ul>
-        <p className="mt-4">Envie seu CV e portfólio para: <span className="text-brand-green">jobs@greennseven.com</span></p>
+        <p className="mt-4">Envie seu CV e portfólio para: <span className="text-brand-green">jobs@greennseven.online</span></p>
     </div>
 );

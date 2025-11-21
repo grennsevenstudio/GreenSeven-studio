@@ -1,3 +1,4 @@
+
 export enum View {
   Home,
   Login,
@@ -46,6 +47,7 @@ export interface User {
   avatarUrl: string;
   rank: InvestorRank;
   plan?: string; // Current investment plan name
+  lastPlanChangeDate?: string; // Date of the last plan change
   balanceUSD: number; // Total balance: capital + monthly profit
   capitalInvestedUSD: number;
   monthlyProfitUSD: number;

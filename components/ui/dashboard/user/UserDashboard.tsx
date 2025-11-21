@@ -27,6 +27,7 @@ interface UserDashboardProps {
   onMarkAllNotificationsAsRead: () => void;
   onSendMessage: (senderId: string, receiverId: string, text: string, attachment?: File) => void;
   onUpdateUser: (updatedUser: User) => void;
+  onUpdatePassword: (userId: string, newPassword: string) => void;
   isDarkMode: boolean;
   toggleTheme: () => void;
 }
@@ -49,7 +50,7 @@ const BOTTOM_NAV_ITEMS = [
 
 
 const UserDashboard: React.FC<UserDashboardProps> = (props) => {
-  const { user, adminUser, transactions, allUsers, allTransactions, notifications, chatMessages, onLogout, onAddTransaction, onMarkAllNotificationsAsRead, onSendMessage, onUpdateUser, isDarkMode, toggleTheme } = props;
+  const { user, adminUser, transactions, allUsers, allTransactions, notifications, chatMessages, onLogout, onAddTransaction, onMarkAllNotificationsAsRead, onSendMessage, onUpdateUser, onUpdatePassword, isDarkMode, toggleTheme } = props;
   const [activeView, setActiveView] = useState('dashboard');
   const [isSidebarOpen, setSidebarOpen] = useState(false);
 
@@ -69,7 +70,7 @@ const UserDashboard: React.FC<UserDashboardProps> = (props) => {
       case 'transactions':
         return <Transactions transactions={transactions} />;
       case 'profile':
-        return <Profile user={user} onUpdateUser={onUpdateUser} allTransactions={allTransactions} setActiveView={setActiveView} />;
+        return <Profile user={user} onUpdateUser={onUpdateUser} onUpdatePassword={onUpdatePassword} allTransactions={allTransactions} setActiveView={setActiveView} />;
       case 'support':
         const userChatMessages = chatMessages
             .filter(m => (m.senderId === user.id && m.receiverId === adminUser.id) || (m.senderId === adminUser.id && m.receiverId === user.id))

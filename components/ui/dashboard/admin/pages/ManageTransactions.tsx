@@ -13,6 +13,26 @@ interface BonusPayoutDetails {
     bonusAmount: number;
 }
 
+const Toast: React.FC<{ message: string }> = ({ message }) => (
+    <div className="fixed bottom-6 right-6 bg-brand-green text-brand-black px-6 py-4 rounded-lg shadow-2xl z-50 flex items-center gap-3 animate-fade-in-up">
+        <div className="bg-black/10 p-1 rounded-full">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+            </svg>
+        </div>
+        <span className="font-bold">{message}</span>
+        <style>{`
+            @keyframes fade-in-up {
+                from { opacity: 0; transform: translateY(20px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+            .animate-fade-in-up {
+                animation: fade-in-up 0.3s ease-out forwards;
+            }
+        `}</style>
+    </div>
+);
+
 const PayoutConfirmationModal: React.FC<{
     isOpen: boolean;
     onClose: () => void;
@@ -127,6 +147,7 @@ interface ManageTransactionsProps {
 
 const ManageTransactions: React.FC<ManageTransactionsProps> = ({ transactions, allUsers, onUpdateTransaction, onPayoutBonus }) => {
     const [selectedTxForBonus, setSelectedTxForBonus] = useState<Transaction | null>(null);
+    const [toastMessage, setToastMessage] = useState<string | null>(null);
 
     const bonusPayoutDetails = useMemo((): BonusPayoutDetails[] => {
         if (!selectedTxForBonus) return [];
@@ -166,14 +187,24 @@ const ManageTransactions: React.FC<ManageTransactionsProps> = ({ transactions, a
     const handleConfirmPayout = () => {
         if (selectedTxForBonus) {
             onPayoutBonus(selectedTxForBonus);
+            setToastMessage('Bônus repassado com sucesso!');
+            setTimeout(() => setToastMessage(null), 3000);
             setSelectedTxForBonus(null);
         }
     }
+
+    const handleUpdateWithToast = (transactionId: string, newStatus: TransactionStatus) => {
+        onUpdateTransaction(transactionId, newStatus);
+        const action = newStatus === TransactionStatus.Completed ? "aprovada" : "recusada";
+        setToastMessage(`Transação ${action} com sucesso!`);
+        setTimeout(() => setToastMessage(null), 3000);
+    };
     
     const sourceUserForModal = selectedTxForBonus ? allUsers.find(u => u.id === selectedTxForBonus.userId) : undefined;
 
     return (
         <>
+        {toastMessage && <Toast message={toastMessage} />}
         {selectedTxForBonus && (
             <PayoutConfirmationModal 
                 isOpen={!!selectedTxForBonus}
@@ -209,7 +240,7 @@ const ManageTransactions: React.FC<ManageTransactionsProps> = ({ transactions, a
                                     key={tx.id} 
                                     tx={tx}
                                     allUsers={allUsers}
-                                    onUpdateTransaction={onUpdateTransaction} 
+                                    onUpdateTransaction={handleUpdateWithToast} 
                                     onOpenPayoutModal={setSelectedTxForBonus}
                                     isBonusEligible={isTxBonusEligible(tx, transactions)}
                                 />
