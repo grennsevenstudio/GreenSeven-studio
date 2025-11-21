@@ -29,6 +29,7 @@ interface AdminDashboardProps {
   onSendMessage: (senderId: string, receiverId: string, text: string, attachment?: File) => void;
   onUpdateSettings: (newSettings: PlatformSettings) => void;
   onAdminUpdateUserBalance: (userId: string, newBalance: number) => void;
+  onUpdateUser: (updatedUser: User) => void; // Add this
   isDarkMode: boolean;
   toggleTheme: () => void;
 }
@@ -44,7 +45,7 @@ const NAV_ITEMS = [
 ];
 
 const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
-  const { user, allUsers, allTransactions, chatMessages, platformSettings, adminActionLogs, onLogout, onUpdateTransaction, onUpdateUserStatus, onPayoutBonus, onSendMessage, onUpdateSettings, onAdminUpdateUserBalance, isDarkMode, toggleTheme } = props;
+  const { user, allUsers, allTransactions, chatMessages, platformSettings, adminActionLogs, onLogout, onUpdateTransaction, onUpdateUserStatus, onPayoutBonus, onSendMessage, onUpdateSettings, onAdminUpdateUserBalance, onUpdateUser, isDarkMode, toggleTheme } = props;
   const [activeView, setActiveView] = useState('dashboard');
   const [isSidebarOpen, setSidebarOpen] = useState(false);
 
@@ -59,7 +60,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
       case 'logs':
         return <AdminActionLogs adminActionLogs={adminActionLogs} />;
       case 'support':
-        return <ManageSupport adminUser={user} allUsers={allUsers} allMessages={chatMessages} onSendMessage={onSendMessage} />;
+        return <ManageSupport adminUser={user} allUsers={allUsers} allMessages={chatMessages} onSendMessage={onSendMessage} onUpdateUser={onUpdateUser} />;
       case 'plans':
         return <ManagePlans />;
       case 'settings':

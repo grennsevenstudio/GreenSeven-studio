@@ -22,6 +22,8 @@ export enum UserStatus {
   Rejected = 'Rejeitado',
 }
 
+export type SupportStatus = 'open' | 'pending' | 'resolved';
+
 export interface User {
   id: string;
   name: string;
@@ -57,6 +59,7 @@ export interface User {
   referralCode: string;
   referredById?: string;
   transactionPin?: string; // 4-digit PIN for withdrawals
+  supportStatus?: SupportStatus; // Status of the support ticket
 }
 
 export interface InvestmentPlan {
