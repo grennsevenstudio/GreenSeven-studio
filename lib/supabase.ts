@@ -72,7 +72,7 @@ export const syncUserToSupabase = async (user: User, password?: string) => {
       .select();
 
     if (error) {
-      console.error(`Erro ao sincronizar usuário ${user.email} com Supabase:`, JSON.stringify(error, null, 2));
+      console.error(`Erro ao sincronizar usuário ${user.email} com Supabase:`, error);
       return { error };
     }
     return { data };
@@ -105,7 +105,7 @@ export const syncTransactionToSupabase = async (tx: Transaction) => {
       .select();
 
     if (error) {
-      console.error(`Erro ao sincronizar transação ${tx.id} com Supabase:`, JSON.stringify(error, null, 2));
+      console.error(`Erro ao sincronizar transação ${tx.id} com Supabase:`, error);
       return { error };
     }
     return { data };

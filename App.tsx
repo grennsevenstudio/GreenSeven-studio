@@ -137,7 +137,8 @@ const App: React.FC = () => {
     // 2. Envia para o Supabase imediatamente, passando a senha
     syncUserToSupabase(newUser, simpleUserData.password).then((result) => {
         if (result.error) {
-            console.error("Erro ao registrar usuário no Supabase:", JSON.stringify(result.error, null, 2));
+            // Improved logging to see the full object
+            console.error("Erro ao registrar usuário no Supabase:", result.error);
         } else {
             console.log("Novo usuário sincronizado com Supabase:", newUser.email);
         }
@@ -177,7 +178,7 @@ const App: React.FC = () => {
     // Envia transação para Supabase
     syncTransactionToSupabase(tx).then((result) => {
          if (result.error) {
-            console.error("Erro ao salvar transação no Supabase:", JSON.stringify(result.error, null, 2));
+            console.error("Erro ao salvar transação no Supabase:", result.error);
         }
     });
     setDbState(prev => ({ ...prev, transactions: [...prev.transactions, tx] }));

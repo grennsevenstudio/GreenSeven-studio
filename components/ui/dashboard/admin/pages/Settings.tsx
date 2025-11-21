@@ -78,7 +78,7 @@ ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS referral_level NUMERIC;
 ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS source_user_id UUID;
 ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS bonus_payout_handled BOOLEAN DEFAULT false;
 
--- 4. ATUALIZAÇÃO DE CACHE E PERMISSÕES
+-- 4. ATUALIZAÇÃO DE CACHE E PERMISSÕES (Importante para evitar erro PGRST204)
 -- Força o PostgREST a reconhecer as novas colunas imediatamente
 NOTIFY pgrst, 'reload schema';
 
@@ -200,7 +200,7 @@ CREATE POLICY "Allow all access for transactions" ON public.transactions FOR ALL
             setSupabaseMessage(`Conectado! Tabela 'users' encontrada com ${result.count} registros.`);
         } else {
             setSupabaseStatus('error');
-            setSupabaseMessage(`Erro: ${result.message}. Verifique se a tabela 'users' foi criada no Supabase.`);
+            setSupabaseMessage(`Erro: ${result.message}. Verifique se o script SQL foi executado.`);
         }
     };
 
@@ -215,7 +215,7 @@ CREATE POLICY "Allow all access for transactions" ON public.transactions FOR ALL
         for (const user of allUsers) {
             const result = await syncUserToSupabase(user);
             if (result.error) {
-                console.error(`Falha no usuário ${user.email}:`, JSON.stringify(result.error, null, 2));
+                console.error(`Falha no usuário ${user.email}:`, result.error);
                 userFail++;
             } else {
                 userSuccess++;
@@ -227,7 +227,7 @@ CREATE POLICY "Allow all access for transactions" ON public.transactions FOR ALL
         for (const tx of transactionsToSync) {
             const result = await syncTransactionToSupabase(tx);
             if (result.error) {
-                console.error(`Falha na transação ${tx.id}:`, JSON.stringify(result.error, null, 2));
+                console.error(`Falha na transação ${tx.id}:`, result.error);
                 txFail++;
             } else {
                 txSuccess++;
