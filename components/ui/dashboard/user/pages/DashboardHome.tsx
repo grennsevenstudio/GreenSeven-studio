@@ -234,6 +234,9 @@ const WithdrawModalContent: React.FC<{
     const fee = (parseFloat(amountUSD) || 0) * (WITHDRAWAL_FEE_PERCENT / 100);
     const amountToReceiveUSD = (parseFloat(amountUSD) || 0) - fee;
     const amountToReceiveBRL = amountToReceiveUSD * DOLLAR_RATE;
+    
+    // Calculates the daily limit based on the plan (Monthly Profit / 30 days)
+    const dailyLimit = user.monthlyProfitUSD / 30;
 
     const handleAmountSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -242,8 +245,8 @@ const WithdrawModalContent: React.FC<{
             alert("Por favor, insira um valor de saque válido.");
             return;
         }
-        if (amount > user.dailyWithdrawableUSD) {
-            alert("Saldo insuficiente para realizar este saque. Você pode sacar apenas os seus lucros diários disponíveis.");
+        if (amount > dailyLimit) {
+            alert(`Saldo insuficiente para realizar este saque. Você pode sacar até US$ ${dailyLimit.toFixed(2)} por dia, referente aos seus lucros.`);
             return;
         }
         setStep(2);
@@ -371,15 +374,15 @@ const WithdrawModalContent: React.FC<{
         <form onSubmit={handleAmountSubmit} className="space-y-4">
              <div className="bg-brand-black border border-gray-700 rounded-lg p-4 flex justify-between items-center shadow-inner">
                 <div>
-                    <p className="text-sm text-gray-400">Saldo Disponível</p>
-                    <p className="text-xs text-gray-500">Lucros acumulados</p>
+                    <p className="text-sm text-gray-400">Saldo Disponível Hoje</p>
+                    <p className="text-xs text-gray-500">Baseado no seu plano</p>
                 </div>
                 <p className="text-2xl font-bold text-brand-green">
-                    US$ {user.dailyWithdrawableUSD.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    US$ {dailyLimit.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </p>
             </div>
             
-            <p className="text-sm text-yellow-400 bg-yellow-500/10 p-3 rounded-lg">Apenas os lucros diários podem ser sacados. Seu capital e lucro mensal ficam bloqueados para garantir a rentabilidade.</p>
+            <p className="text-sm text-yellow-400 bg-yellow-500/10 p-3 rounded-lg">Seu limite diário de saque é renovado a cada 24h baseado na rentabilidade do seu plano.</p>
             
             <Input 
                 label="Valor do Saque (USD)"
@@ -390,7 +393,7 @@ const WithdrawModalContent: React.FC<{
                 onChange={(e) => setAmountUSD(e.target.value)}
                 required
                 step="0.01"
-                max={user.dailyWithdrawableUSD}
+                max={dailyLimit}
             />
             <div className="p-4 bg-brand-black rounded-lg space-y-2 text-sm">
                 <div className="flex justify-between items-center text-gray-400">
@@ -469,6 +472,9 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions, onAdd
 
     const balanceBRL = user.balanceUSD * DOLLAR_RATE;
     const maskedValue = '••••••••';
+    
+    // Calculate daily available balance (Monthly Profit / 30)
+    const dailyAvailable = user.monthlyProfitUSD / 30;
 
     useEffect(() => {
         const totalDailyProfit = user.monthlyProfitUSD / 30;
@@ -632,7 +638,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions, onAdd
                     title="Saldo Disponível para Saque" 
                     value={
                         <AnimatedBalance 
-                            value={showBalance ? `$ ${user.dailyWithdrawableUSD.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : `$ ${maskedValue}`}
+                            value={showBalance ? `$ ${dailyAvailable.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : `$ ${maskedValue}`}
                             isShown={showBalance}
                         />
                     }

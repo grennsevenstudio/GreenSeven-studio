@@ -237,25 +237,22 @@ const App: React.FC = () => {
       }
 
       if (tx.userId === loggedUser?.id) {
-          if (withdrawalAmount > (loggedUser?.dailyWithdrawableUSD || 0)) {
-            alert("Erro: Saldo insuficiente para saque.");
+          // Check daily limit based on Plan (Monthly Profit / 30)
+          const dailyLimit = (loggedUser.monthlyProfitUSD / 30);
+          
+          if (withdrawalAmount > dailyLimit) {
+            alert(`Erro: Valor superior ao limite diário de saque (US$ ${dailyLimit.toFixed(2)}).`);
             return;
           }
           
-          // Deduct from dailyWithdrawableUSD immediately
-          const updatedUser = {
-              ...loggedUser,
-              dailyWithdrawableUSD: loggedUser.dailyWithdrawableUSD - withdrawalAmount
-          };
-          setLoggedUser(updatedUser);
+          // We do not deduct from 'dailyWithdrawableUSD' stored in DB anymore, 
+          // because the limit is based on the plan rate, reset daily.
           
           setDbState(prev => ({
               ...prev,
-              users: prev.users.map(u => u.id === updatedUser.id ? updatedUser : u),
               transactions: [...prev.transactions, tx]
           }));
 
-          syncUserToSupabase(updatedUser);
           syncTransactionToSupabase(tx).then((result) => {
              if (result.error) {
                 console.error("Erro ao salvar transação no Supabase:", JSON.stringify(result.error, null, 2));
@@ -359,11 +356,9 @@ const App: React.FC = () => {
                 syncUserToSupabase(updated);
                 return updated;
             } else if (newStatus === TransactionStatus.Failed && tx.type === TransactionType.Withdrawal) {
-                // Refund dailyWithdrawableUSD if withdrawal failed
-                const updated = {
-                    ...u,
-                    dailyWithdrawableUSD: u.dailyWithdrawableUSD + Math.abs(tx.amountUSD)
-                };
+                // Refund logic is no longer strictly necessary for 'dailyWithdrawableUSD' since we rely on plan rate,
+                // but we keep the user update consistent.
+                const updated = { ...u };
                 syncUserToSupabase(updated);
                 return updated;
             }
