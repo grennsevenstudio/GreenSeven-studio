@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { type InvestmentPlan, InvestorRank, type Stock } from './types';
 
@@ -5,10 +6,10 @@ export const DOLLAR_RATE = 5.45;
 export const REFERRAL_BONUS_RATES = { 1: 0.03, 2: 0.02, 3: 0.01 };
 
 export const INVESTMENT_PLANS: InvestmentPlan[] = [
-  { id: '1', name: 'Conservador', monthlyReturn: '1% a 5%', minDepositUSD: 10, color: 'text-brand-blue' },
-  { id: '2', name: 'Moderado', monthlyReturn: 'até 10%', minDepositUSD: 20, color: 'text-green-400' },
-  { id: '3', name: 'Agressivo', monthlyReturn: 'até 15%', minDepositUSD: 50, color: 'text-yellow-400' },
-  { id: '4', name: 'Select', monthlyReturn: 'até 25%', minDepositUSD: 100, color: 'text-red-500' },
+  { id: '1', name: 'Conservador', monthlyReturn: '1% a 5%', returnRate: 0.05, minDepositUSD: 10, color: 'text-brand-blue' },
+  { id: '2', name: 'Moderado', monthlyReturn: 'até 10%', returnRate: 0.10, minDepositUSD: 20, color: 'text-green-400' },
+  { id: '3', name: 'Agressivo', monthlyReturn: 'até 15%', returnRate: 0.15, minDepositUSD: 50, color: 'text-yellow-400' },
+  { id: '4', name: 'Select', monthlyReturn: 'até 25%', returnRate: 0.25, minDepositUSD: 100, color: 'text-red-500' },
 ];
 
 export const MOCK_STOCKS: Stock[] = [

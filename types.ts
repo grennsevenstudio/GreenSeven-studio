@@ -1,5 +1,3 @@
-
-
 export enum View {
   Home,
   Login,
@@ -63,6 +61,7 @@ export interface InvestmentPlan {
   id: string;
   name: string;
   monthlyReturn: string;
+  returnRate: number; // Taxa numérica para cálculo (ex: 0.25 para 25%)
   minDepositUSD: number;
   color: string;
 }
@@ -90,11 +89,11 @@ export interface WithdrawalDetails {
 export interface Transaction {
   id: string;
   userId: string;
-  date: string;
   type: TransactionType;
-  status: TransactionStatus;
   amountUSD: number;
   amountBRL?: number;
+  status: TransactionStatus;
+  date: string;
   withdrawalDetails?: WithdrawalDetails;
   referralLevel?: 1 | 2 | 3;
   sourceUserId?: string;
@@ -102,62 +101,61 @@ export interface Transaction {
 }
 
 export interface Stock {
-  symbol: string;
-  name: string;
-  price: number;
-  change: number;
-  changePercent: number;
+    symbol: string;
+    name: string;
+    price: number;
+    change: number;
+    changePercent: number;
 }
 
 export interface Notification {
-  id: string;
-  userId: string;
-  date: string;
-  message: string;
-  isRead: boolean;
+    id: string;
+    userId: string;
+    message: string;
+    date: string;
+    isRead: boolean;
 }
 
 export interface ChatMessage {
-  id: string;
-  senderId: string; // 'admin-001' or user.id
-  receiverId: string; // 'admin-001' or user.id
-  text: string;
-  timestamp: string; // ISO string
-  isRead: boolean;
-  attachment?: {
-    fileName: string;
-    fileUrl: string;
-    fileType: string;
-  };
+    id: string;
+    senderId: string;
+    receiverId: string;
+    text: string;
+    timestamp: string;
+    isRead: boolean;
+    attachment?: {
+        fileName: string;
+        fileUrl: string;
+        fileType: string;
+    };
 }
 
 export interface PlatformSettings {
-  dollarRate: number;
-  withdrawalFeePercent: number;
-  signupBonusUSD: number;
-  pixKey: string;
-  isMaintenanceMode: boolean;
-  allowNewRegistrations: boolean;
-  logoUrl?: string;
+    dollarRate: number;
+    withdrawalFeePercent: number;
+    signupBonusUSD: number;
+    pixKey: string;
+    isMaintenanceMode: boolean;
+    allowNewRegistrations: boolean;
+    logoUrl: string;
 }
 
 export enum AdminActionType {
-  TransactionApprove = 'Aprovação de Transação',
-  TransactionReject = 'Rejeição de Transação',
-  UserApprove = 'Aprovação de Usuário',
-  UserReject = 'Rejeição de Usuário',
-  BonusPayout = 'Pagamento de Bônus',
-  SettingsUpdate = 'Atualização de Configurações',
-  UserBalanceEdit = 'Edição de Saldo de Usuário',
-  UserBlock = 'Bloqueio de Usuário',
+    TransactionApprove = 'TransactionApprove',
+    TransactionReject = 'TransactionReject',
+    UserApprove = 'UserApprove',
+    UserReject = 'UserReject',
+    BonusPayout = 'BonusPayout',
+    UserBalanceEdit = 'UserBalanceEdit',
+    SettingsUpdate = 'SettingsUpdate',
 }
 
 export interface AdminActionLog {
-  id: string;
-  timestamp: string;
-  adminId: string;
-  adminName: string;
-  actionType: AdminActionType;
-  description: string;
-  targetId?: string; // e.g., userId or transactionId
+    id: string;
+    timestamp: string;
+    adminId: string;
+    adminName: string;
+    actionType: AdminActionType;
+    description: string;
+    targetId?: string;
 }

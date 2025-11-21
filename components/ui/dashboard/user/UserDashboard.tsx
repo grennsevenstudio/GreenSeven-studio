@@ -63,7 +63,7 @@ const UserDashboard: React.FC<UserDashboardProps> = (props) => {
                     setActiveView={setActiveView}
                 />;
       case 'plans':
-        return <Plans user={user} />;
+        return <Plans user={user} onUpdateUser={onUpdateUser} />;
       case 'career':
         return <CareerPlan user={user} allUsers={allUsers} allTransactions={allTransactions} />;
       case 'transactions':

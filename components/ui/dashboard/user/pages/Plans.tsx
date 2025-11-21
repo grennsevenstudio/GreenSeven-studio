@@ -6,15 +6,31 @@ import { INVESTMENT_PLANS } from '../../../../../constants';
 import type { InvestmentPlan, User } from '../../../../../types';
 
 
-const PlanCard: React.FC<{ plan: InvestmentPlan, isCurrent?: boolean, userBalance: number }> = ({ plan, isCurrent = false, userBalance }) => {
+const PlanCard: React.FC<{ 
+    plan: InvestmentPlan, 
+    isCurrent?: boolean, 
+    user: User,
+    onUpdateUser: (user: User) => void 
+}> = ({ plan, isCurrent = false, user, onUpdateUser }) => {
+    
     const handleChangePlan = () => {
-        if (userBalance < plan.minDepositUSD) {
-            alert(`Saldo insuficiente! Para migrar para o plano ${plan.name}, você precisa de um saldo mínimo de US$ ${plan.minDepositUSD}. Seu saldo atual é US$ ${userBalance.toFixed(2)}.`);
+        if (user.balanceUSD < plan.minDepositUSD) {
+            alert(`Saldo insuficiente! Para migrar para o plano ${plan.name}, você precisa de um saldo mínimo de US$ ${plan.minDepositUSD}. Seu saldo atual é US$ ${user.balanceUSD.toFixed(2)}.`);
             return;
         }
 
-        if (confirm(`Você tem certeza que deseja mudar para o plano ${plan.name}?`)) {
-            alert('Sua solicitação para mudar de plano foi enviada com sucesso!');
+        if (confirm(`Você tem certeza que deseja mudar para o plano ${plan.name}? A rentabilidade de ${plan.monthlyReturn} será aplicada ao seu saldo atual.`)) {
+            
+            // Recalcula o lucro mensal baseado no novo plano
+            const newProfit = user.balanceUSD * plan.returnRate;
+            
+            onUpdateUser({
+                ...user,
+                plan: plan.name,
+                monthlyProfitUSD: newProfit
+            });
+
+            alert(`Plano atualizado para ${plan.name} com sucesso!`);
         }
     };
 
@@ -42,9 +58,10 @@ const PlanCard: React.FC<{ plan: InvestmentPlan, isCurrent?: boolean, userBalanc
 
 interface PlansProps {
     user: User;
+    onUpdateUser: (user: User) => void;
 }
 
-const Plans: React.FC<PlansProps> = ({ user }) => {
+const Plans: React.FC<PlansProps> = ({ user, onUpdateUser }) => {
     // Determine current plan based on user data, defaulting to the first plan ID if not found or not set
     const userPlanName = user.plan || 'Conservador';
     const currentPlanObj = INVESTMENT_PLANS.find(p => p.name.toLowerCase() === userPlanName.toLowerCase());
@@ -63,7 +80,8 @@ const Plans: React.FC<PlansProps> = ({ user }) => {
                         key={plan.id} 
                         plan={plan} 
                         isCurrent={plan.id === currentPlanId}
-                        userBalance={user.balanceUSD} 
+                        user={user}
+                        onUpdateUser={onUpdateUser}
                     />
                 ))}
             </div>

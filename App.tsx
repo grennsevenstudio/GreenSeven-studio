@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import type { User, Transaction, Notification, ChatMessage, PlatformSettings, AdminActionLog } from './types';
 import { View, TransactionStatus, TransactionType, AdminActionType, UserStatus, InvestorRank } from './types';
-import { REFERRAL_BONUS_RATES } from './constants';
+import { REFERRAL_BONUS_RATES, INVESTMENT_PLANS } from './constants';
 import { initializeDB, getAllData, saveAllData, type AppDB } from './lib/db';
 import { syncUserToSupabase, syncTransactionToSupabase } from './lib/supabase';
 import { faker } from '@faker-js/faker';
@@ -23,6 +23,12 @@ const calculateRank = (balance: number): InvestorRank => {
   if (balance >= 5000) return InvestorRank.Gold;
   if (balance >= 1000) return InvestorRank.Silver;
   return InvestorRank.Bronze;
+};
+
+// Helper to calculate monthly profit based on current balance and plan
+const calculateProfit = (balance: number, planName: string = 'Conservador'): number => {
+    const plan = INVESTMENT_PLANS.find(p => p.name.toLowerCase() === planName.toLowerCase()) || INVESTMENT_PLANS[0];
+    return balance * plan.returnRate;
 };
 
 const App: React.FC = () => {
@@ -129,6 +135,7 @@ const App: React.FC = () => {
         referralCode: `${simpleUserData.name.split(' ')[0].toUpperCase()}${faker.string.numeric(4)}`,
         referredById: referredById,
         status: UserStatus.Pending, // Still pending approval
+        plan: 'Conservador', // Default plan
     };
     
     // 1. Atualiza o estado local
@@ -233,13 +240,15 @@ const App: React.FC = () => {
             syncTransactionToSupabase(bonusTx);
 
             // Update referrer balance and rank
-             const updatedReferrer = { 
+            const newBalance = referrer.balanceUSD + bonusAmount;
+            const updatedReferrer = { 
                 ...referrer, 
-                balanceUSD: referrer.balanceUSD + bonusAmount,
+                balanceUSD: newBalance,
+                monthlyProfitUSD: calculateProfit(newBalance, referrer.plan),
+                rank: calculateRank(newBalance)
             };
-            updatedReferrer.rank = calculateRank(updatedReferrer.balanceUSD);
-            syncUserToSupabase(updatedReferrer);
             
+            syncUserToSupabase(updatedReferrer);
             referrersToUpdate.push(updatedReferrer);
 
             currentUser = referrer;
@@ -274,7 +283,8 @@ const App: React.FC = () => {
                     ...u, 
                     balanceUSD: newBalance, 
                     capitalInvestedUSD: newInvested,
-                    rank: calculateRank(newBalance)
+                    rank: calculateRank(newBalance),
+                    monthlyProfitUSD: calculateProfit(newBalance, u.plan)
                 };
                 syncUserToSupabase(updated);
                 return updated;
@@ -329,11 +339,14 @@ const App: React.FC = () => {
           bonusTransactions.push(bonusTx);
           syncTransactionToSupabase(bonusTx);
 
+          const newBalance = referrer.balanceUSD + bonusAmount;
           const updatedReferrer = { 
               ...referrer, 
-              balanceUSD: referrer.balanceUSD + bonusAmount,
+              balanceUSD: newBalance,
+              monthlyProfitUSD: calculateProfit(newBalance, referrer.plan),
+              rank: calculateRank(newBalance)
           };
-          updatedReferrer.rank = calculateRank(updatedReferrer.balanceUSD);
+          
           syncUserToSupabase(updatedReferrer);
           
           referrersToUpdate.push(updatedReferrer);
@@ -378,7 +391,12 @@ const App: React.FC = () => {
   const handleAdminUpdateUserBalance = (userId: string, newBalance: number) => {
       const updatedUsers = dbState.users.map(u => {
           if (u.id === userId) {
-               const updated = { ...u, balanceUSD: newBalance, rank: calculateRank(newBalance) };
+               const updated = { 
+                   ...u, 
+                   balanceUSD: newBalance, 
+                   rank: calculateRank(newBalance),
+                   monthlyProfitUSD: calculateProfit(newBalance, u.plan)
+               };
                syncUserToSupabase(updated);
                return updated;
           }
