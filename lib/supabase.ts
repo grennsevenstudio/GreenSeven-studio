@@ -35,7 +35,7 @@ export const fetchUsersFromSupabase = async () => {
         
         if (error) {
             // Se a tabela não existir ou erro de cache de schema, retorna vazio para não quebrar o app
-            if (error.code === '42P01' || error.code === 'PGRST205') return { data: [] };
+            if (error.code === '42P01' || error.code === 'PGRST205' || error.message?.includes('does not exist')) return { data: [] };
             
             console.error('Erro ao buscar usuários:', JSON.stringify(error, null, 2));
             return { error };
@@ -89,7 +89,7 @@ export const fetchTransactionsFromSupabase = async () => {
 
         if (error) {
             // Se a tabela não existir ou erro de cache de schema, retorna vazio para não quebrar o app
-            if (error.code === '42P01' || error.code === 'PGRST205') return { data: [] };
+            if (error.code === '42P01' || error.code === 'PGRST205' || error.message?.includes('does not exist')) return { data: [] };
 
             console.error('Erro ao buscar transações:', JSON.stringify(error, null, 2));
             return { error };
@@ -130,7 +130,7 @@ export const fetchMessagesFromSupabase = async () => {
             // Se a tabela não existir (ainda não foi criada pelo script) ou erro de cache de schema, retorna vazio sem erro crítico
             // PGRST205: Could not find the table in the schema cache
             // 42P01: Undefined table
-            if (error.code === '42P01' || error.code === 'PGRST205') return { data: [] };
+            if (error.code === '42P01' || error.code === 'PGRST205' || error.message?.includes('does not exist')) return { data: [] };
             
             console.error('Erro ao buscar mensagens:', JSON.stringify(error, null, 2));
             return { error };
@@ -265,6 +265,8 @@ export const syncTransactionToSupabase = async (tx: Transaction) => {
       .select();
 
     if (error) {
+      // Ignorar erro se tabela não existir
+      if (error.code === '42P01' || error.code === 'PGRST205') return { data: null };
       return { error };
     }
     return { data };
@@ -292,6 +294,8 @@ export const syncMessageToSupabase = async (msg: ChatMessage) => {
       .select();
 
     if (error) {
+      // Ignorar erro se tabela não existir
+      if (error.code === '42P01' || error.code === 'PGRST205') return { data: null };
       console.error("Erro ao salvar mensagem no Supabase:", error);
       return { error };
     }

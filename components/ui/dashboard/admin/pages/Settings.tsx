@@ -31,7 +31,7 @@ const Settings: React.FC<SettingsProps> = ({ platformSettings, onUpdateSettings,
 
     // SQL Code Definition
     const sqlCode = `-- SCRIPT SQL COMPLETO PARA GREENNSEVEN (Supabase)
--- Execute este script no SQL Editor do Supabase.
+-- IMPORTANTE: Se você está vendo erros 'PGRST205' no console, execute este script para criar as tabelas.
 
 -- 1. Habilita extensão UUID
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
@@ -82,10 +82,11 @@ CREATE TABLE IF NOT EXISTS public.transactions (
 );
 
 -- 4. Criação da Tabela de Mensagens (Suporte)
+-- Conecta as mensagens aos usuários via Foreign Keys para integridade
 CREATE TABLE IF NOT EXISTS public.messages (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  sender_id UUID, 
-  receiver_id UUID,
+  sender_id UUID REFERENCES public.users(id), 
+  receiver_id UUID REFERENCES public.users(id),
   text TEXT,
   timestamp TIMESTAMP WITH TIME ZONE DEFAULT now(),
   is_read BOOLEAN DEFAULT false,
