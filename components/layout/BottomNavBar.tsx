@@ -1,6 +1,4 @@
 
-
-
 import React from 'react';
 
 interface NavItem {
@@ -17,7 +15,7 @@ interface BottomNavBarProps {
 
 const BottomNavBar: React.FC<BottomNavBarProps> = ({ navItems, activeView, setActiveView }) => {
   return (
-    <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-brand-gray border-t border-gray-800 z-40 flex justify-around items-center h-16">
+    <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-brand-gray border-t border-gray-800 z-50 flex justify-around items-center h-16">
       {navItems.map((item) => (
         <a
           key={item.label}

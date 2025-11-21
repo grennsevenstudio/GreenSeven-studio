@@ -1,8 +1,17 @@
+
 import React, { useState, useEffect } from 'react';
 import { View, type Stock, type InvestmentPlan } from '../../types';
 import Button from '../ui/Button';
 import Modal from '../layout/Modal';
 import { ICONS, INVESTMENT_PLANS } from '../../constants';
+import { 
+    TERMS_OF_USE_CONTENT, 
+    PRIVACY_POLICY_CONTENT,
+    SECURITY_CONTENT,
+    ABOUT_CONTENT,
+    CONTACT_CONTENT,
+    CAREERS_CONTENT
+} from '../legal/TermsAndPrivacy';
 
 const MOCK_TICKER_STOCKS: Stock[] = [
     { symbol: 'AMZN', name: 'Amazon.com, Inc.', price: 145.64, change: 0.06, changePercent: 0.04 },
@@ -73,6 +82,7 @@ const PlanPreviewCard: React.FC<{ plan: InvestmentPlan }> = ({ plan }) => (
 
 const HomePage: React.FC<{ setView: (view: View) => void; }> = ({ setView }) => {
     const [isLearnMoreOpen, setIsLearnMoreOpen] = useState(false);
+    const [infoModalContent, setInfoModalContent] = useState<{ title: string; content: React.ReactNode } | null>(null);
 
     const navItems = [
         { name: 'Início', href: '#home' },
@@ -103,16 +113,51 @@ const HomePage: React.FC<{ setView: (view: View) => void; }> = ({ setView }) => 
         };
     }, []);
 
+    const openInfoModal = (type: string) => {
+        let title = '';
+        let content: React.ReactNode = null;
+
+        switch (type) {
+            case 'security':
+                title = 'Segurança e Proteção';
+                content = SECURITY_CONTENT;
+                break;
+            case 'about':
+                title = 'Sobre a GreennSeven';
+                content = ABOUT_CONTENT;
+                break;
+            case 'contact':
+                title = 'Central de Atendimento';
+                content = CONTACT_CONTENT;
+                break;
+            case 'careers':
+                title = 'Carreiras e Oportunidades';
+                content = CAREERS_CONTENT;
+                break;
+            case 'terms':
+                title = 'Termos de Uso';
+                content = TERMS_OF_USE_CONTENT;
+                break;
+            case 'privacy':
+                title = 'Política de Privacidade';
+                content = PRIVACY_POLICY_CONTENT;
+                break;
+            default:
+                return;
+        }
+        setInfoModalContent({ title, content });
+    };
+
     const GridBackground = () => (
          <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
             <div className="absolute inset-0" style={{
                 backgroundImage: `
-                    linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
-                    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px)
+                    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px)
                 `,
                 backgroundSize: '40px 40px',
             }}></div>
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(0,255,156,0.1)_0%,rgba(10,10,10,0)_60%)]"></div>
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(0,255,156,0.08)_0%,rgba(0,0,0,0)_60%)]"></div>
         </div>
     );
     
@@ -218,6 +263,16 @@ const HomePage: React.FC<{ setView: (view: View) => void; }> = ({ setView }) => 
                 </div>
             </Modal>
 
+            <Modal
+                isOpen={!!infoModalContent}
+                onClose={() => setInfoModalContent(null)}
+                title={infoModalContent?.title || ''}
+            >
+                <div className="prose prose-invert prose-sm max-h-[60vh] overflow-y-auto pr-4 text-gray-300">
+                    {infoModalContent?.content}
+                </div>
+            </Modal>
+
             <header className="sticky top-0 bg-brand-black/80 backdrop-blur-md z-30 py-4 px-4 sm:px-6 lg:px-12 w-full border-b border-gray-900">
                 <div className="flex justify-between items-center">
                     <div className="flex items-center gap-2 cursor-pointer" onClick={() => window.location.reload()}>
@@ -272,16 +327,16 @@ const HomePage: React.FC<{ setView: (view: View) => void; }> = ({ setView }) => 
                     <h2 className="text-4xl font-black text-white">A Vantagem GreennSeven</h2>
                     <p className="mt-4 text-lg text-gray-400 max-w-3xl mx-auto">Potencialize seus investimentos com uma plataforma robusta, segura e projetada para o seu sucesso.</p>
                     <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 mt-12 text-left">
-                        <FeatureCard icon={ICONS.dollar} title="Rentabilidade Dolarizada">
+                        <FeatureCard icon={ICONS.featureProfit} title="Rentabilidade Dolarizada">
                             Proteja seu capital da inflação e invista em uma moeda forte, maximizando seu poder de compra e seus ganhos.
                         </FeatureCard>
-                        <FeatureCard icon={ICONS.shield} title="Segurança de Ponta">
+                        <FeatureCard icon={ICONS.featureSecurity} title="Segurança de Ponta">
                             Operamos com criptografia de nível bancário e as melhores práticas de segurança para proteger seus dados e seus investimentos.
                         </FeatureCard>
-                         <FeatureCard icon={ICONS.layout} title="Interface Intuitiva">
+                         <FeatureCard icon={ICONS.featureLayout} title="Interface Intuitiva">
                             Gerencie seus investimentos de forma simples e eficiente através de uma plataforma moderna e fácil de usar.
                         </FeatureCard>
-                        <FeatureCard icon={ICONS.support} title="Suporte Exclusivo">
+                        <FeatureCard icon={ICONS.featureSupport} title="Suporte Exclusivo">
                             Nossa equipe de especialistas está sempre disponível para tirar suas dúvidas e te auxiliar em cada passo da sua jornada.
                         </FeatureCard>
                     </div>
@@ -336,7 +391,7 @@ const HomePage: React.FC<{ setView: (view: View) => void; }> = ({ setView }) => 
             </div>
 
             <footer className="bg-brand-gray border-t border-gray-800 py-16 px-4 sm:px-6 lg:px-12 relative z-10">
-                <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-8">
+                <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
                     <div className="md:col-span-1">
                         <div className="flex items-center gap-2">
                             {React.cloneElement(ICONS.career as React.ReactElement<any>, {className: "h-7 w-7 text-brand-green"})}
@@ -344,35 +399,28 @@ const HomePage: React.FC<{ setView: (view: View) => void; }> = ({ setView }) => 
                         </div>
                         <p className="mt-4 text-gray-400">Sua plataforma de investimentos dolarizada, projetada para performance e segurança.</p>
                     </div>
-                    <div>
-                        <h4 className="font-bold text-white tracking-wider">Plataforma</h4>
-                        <ul className="mt-4 space-y-2">
-                            <li><a href="#features" className="text-gray-400 hover:text-white">Vantagens</a></li>
-                            <li><a href="#plans" className="text-gray-400 hover:text-white">Planos</a></li>
-                            <li><a href="#" className="text-gray-400 hover:text-white">Segurança</a></li>
-                        </ul>
-                    </div>
                      <div>
                         <h4 className="font-bold text-white tracking-wider">Empresa</h4>
                         <ul className="mt-4 space-y-2">
-                            <li><a href="#" className="text-gray-400 hover:text-white">Sobre Nós</a></li>
-                            <li><a href="#" className="text-gray-400 hover:text-white">Contato</a></li>
-                            <li><a href="#" className="text-gray-400 hover:text-white">Carreiras</a></li>
+                            <li><a href="#" onClick={(e) => {e.preventDefault(); openInfoModal('about')}} className="text-gray-400 hover:text-white">Sobre Nós</a></li>
+                            <li><a href="#" onClick={(e) => {e.preventDefault(); openInfoModal('contact')}} className="text-gray-400 hover:text-white">Contato</a></li>
+                            <li><a href="#" onClick={(e) => {e.preventDefault(); openInfoModal('careers')}} className="text-gray-400 hover:text-white">Carreiras</a></li>
                         </ul>
                     </div>
                      <div>
                         <h4 className="font-bold text-white tracking-wider">Legal</h4>
                         <ul className="mt-4 space-y-2">
-                            <li><a href="#" className="text-gray-400 hover:text-white">Termos de Serviço</a></li>
-                            <li><a href="#" className="text-gray-400 hover:text-white">Política de Privacidade</a></li>
+                            <li><a href="#" onClick={(e) => {e.preventDefault(); openInfoModal('terms')}} className="text-gray-400 hover:text-white">Termos de Serviço</a></li>
+                            <li><a href="#" onClick={(e) => {e.preventDefault(); openInfoModal('privacy')}} className="text-gray-400 hover:text-white">Política de Privacidade</a></li>
+                            <li><a href="#" onClick={(e) => {e.preventDefault(); openInfoModal('security')}} className="text-gray-400 hover:text-white">Segurança</a></li>
                         </ul>
                     </div>
                 </div>
                 <div className="max-w-7xl mx-auto mt-12 pt-8 border-t border-gray-800 flex flex-col sm:flex-row justify-between items-center">
-                    <p className="text-gray-500">&copy; {new Date().getFullYear()} GreennSeven. Todos os direitos reservados.</p>
+                    <p className="text-gray-500">&copy; 2025 GreennSeven. Todos os direitos reservados.</p>
                     <div className="flex gap-4 mt-4 sm:mt-0">
                         <a href="#" className="text-gray-400 hover:text-white">{ICONS.twitter}</a>
-                        <a href="#" className="text-gray-400 hover:text-white">{ICONS.instagram}</a>
+                        <a href="https://www.instagram.com/greennseven?igsh=amhsM2N6MWw1MzIx" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white">{ICONS.instagram}</a>
                         <a href="#" className="text-gray-400 hover:text-white">{ICONS.facebook}</a>
                     </div>
                 </div>

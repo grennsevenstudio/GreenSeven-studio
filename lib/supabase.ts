@@ -69,9 +69,9 @@ export const fetchUsersFromSupabase = async () => {
         }));
 
         return { data: users };
-    } catch (err) {
+    } catch (err: any) {
         console.error('Erro inesperado ao buscar usuários:', err);
-        return { error: err };
+        return { error: { message: err.message || 'Erro desconhecido ao buscar usuários' } };
     }
 };
 
@@ -102,9 +102,9 @@ export const fetchTransactionsFromSupabase = async () => {
         }));
 
         return { data: transactions };
-    } catch (err) {
+    } catch (err: any) {
         console.error('Erro inesperado ao buscar transações:', err);
-        return { error: err };
+        return { error: { message: err.message || 'Erro desconhecido ao buscar transações' } };
     }
 };
 
@@ -165,13 +165,13 @@ export const syncUserToSupabase = async (user: User, password?: string) => {
       .select();
 
     if (error) {
-      console.error(`Erro ao sincronizar usuário ${user.email} com Supabase:`, JSON.stringify(error, null, 2));
+      // Return the error object directly so checking for result.error works
       return { error };
     }
     return { data };
-  } catch (err) {
-    console.error('Erro inesperado na sincronização de usuário:', err);
-    return { error: err };
+  } catch (err: any) {
+    // Wrap the exception in a plain object so JSON.stringify doesn't produce {}
+    return { error: { message: err.message || 'Unexpected sync error', details: err } };
   }
 };
 
@@ -199,12 +199,10 @@ export const syncTransactionToSupabase = async (tx: Transaction) => {
       .select();
 
     if (error) {
-      console.error(`Erro ao sincronizar transação ${tx.id} com Supabase:`, JSON.stringify(error, null, 2));
       return { error };
     }
     return { data };
-  } catch (err) {
-    console.error('Erro inesperado na sincronização de transação:', err);
-    return { error: err };
+  } catch (err: any) {
+    return { error: { message: err.message || 'Unexpected transaction sync error', details: err } };
   }
 };

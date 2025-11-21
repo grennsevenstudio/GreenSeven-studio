@@ -61,7 +61,8 @@ const App: React.FC = () => {
         // Sync admin with default password to ensure they exist in cloud DB
         syncUserToSupabase(admin, 'admin123').then(res => {
             if (res.error) {
-                console.error("Erro ao conectar Admin ao Supabase:", JSON.stringify(res.error, null, 2));
+                const errorMsg = typeof res.error === 'object' ? JSON.stringify(res.error, null, 2) : String(res.error);
+                console.error("Erro ao conectar Admin ao Supabase:", errorMsg);
             } else {
                 console.log("Admin conectado ao Supabase com sucesso.");
             }
@@ -79,9 +80,6 @@ const App: React.FC = () => {
         if (remoteUsers && remoteUsers.length > 0) {
             console.log(`${remoteUsers.length} usuários carregados do Supabase.`);
             setDbState(prev => {
-                // Merge remote users with local users, preferring remote for persistence
-                // But ensure we don't lose the current session if for some reason it's not in remote yet
-                // For simplicity in this "permanent" requirement, we trust remote if it exists.
                 return {
                     ...prev,
                     users: remoteUsers,
@@ -102,7 +100,6 @@ const App: React.FC = () => {
   const toggleTheme = () => setIsDarkMode(!isDarkMode);
   
   const { users, transactions, notifications, chatMessages, platformSettings, adminActionLogs } = dbState;
-  // Ensure there is an admin user for props, though logic handles it
   const adminUser = users.find(u => u.isAdmin) || users[0]; 
 
   const handleLogin = (email: string, password?: string) => {
@@ -120,7 +117,6 @@ const App: React.FC = () => {
         return true;
     }
 
-    // Regular user checks
     if (userToLogin.status === UserStatus.Pending) {
         alert("Sua conta está pendente de aprovação pelo administrador.");
         return false;
@@ -141,7 +137,6 @@ const App: React.FC = () => {
   };
 
   const handleRegister = (simpleUserData: { name: string; email: string; password?: string; referralCode?: string }) => {
-    // Find referrer if code is provided
     let referredById: string | undefined = undefined;
     if (simpleUserData.referralCode) {
         const referrer = users.find(u => u.referralCode === simpleUserData.referralCode);
@@ -154,7 +149,6 @@ const App: React.FC = () => {
         id: faker.string.uuid(),
         name: simpleUserData.name,
         email: simpleUserData.email,
-        // Filling required fields with placeholders since we simplified the form
         cpf: 'Não informado',
         phone: 'Não informado',
         address: {
@@ -166,7 +160,7 @@ const App: React.FC = () => {
             state: 'UF'
         },
         documents: {
-            idFrontUrl: 'https://via.placeholder.com/150', // Placeholder
+            idFrontUrl: 'https://via.placeholder.com/150', 
             idBackUrl: 'https://via.placeholder.com/150',
             selfieUrl: 'https://via.placeholder.com/150'
         },
@@ -180,17 +174,14 @@ const App: React.FC = () => {
         joinedDate: new Date().toISOString().split('T')[0],
         referralCode: `${simpleUserData.name.split(' ')[0].toUpperCase()}${faker.string.numeric(4)}`,
         referredById: referredById,
-        status: UserStatus.Pending, // Still pending approval
-        plan: 'Conservador', // Default plan
+        status: UserStatus.Pending,
+        plan: 'Conservador', 
     };
     
-    // 1. Atualiza o estado local
     setDbState(prev => ({...prev, users: [...prev.users, newUser]}));
 
-    // 2. Envia para o Supabase imediatamente, passando a senha
     syncUserToSupabase(newUser, simpleUserData.password).then((result) => {
         if (result.error) {
-            // Improved logging to see the full object
             console.error("Erro ao registrar usuário no Supabase:", JSON.stringify(result.error, null, 2));
         } else {
             console.log("Novo usuário sincronizado com Supabase:", newUser.email);
@@ -228,7 +219,6 @@ const App: React.FC = () => {
           }
       }
     }
-    // Envia transação para Supabase
     syncTransactionToSupabase(tx).then((result) => {
          if (result.error) {
             console.error("Erro ao salvar transação no Supabase:", JSON.stringify(result.error, null, 2));
@@ -243,12 +233,10 @@ const App: React.FC = () => {
 
     if (!tx || !user || !loggedUser?.isAdmin) return;
 
-    // 1. Registro de Log do Admin
     const actionType = newStatus === TransactionStatus.Completed ? AdminActionType.TransactionApprove : AdminActionType.TransactionReject;
     const description = `${newStatus === TransactionStatus.Completed ? 'Aprovou' : 'Rejeitou'} transação de ${tx.type} no valor de US$ ${Math.abs(tx.amountUSD).toFixed(2)} para ${user.name}.`;
     handleAddAdminLog(loggedUser, actionType, description, transactionId);
 
-    // 2. Lógica de Bônus Automático (Se for depósito aprovado e bônus não pago)
     let bonusTransactions: Transaction[] = [];
     let referrersToUpdate: User[] = [];
     let shouldPayBonus = false;
@@ -257,17 +245,14 @@ const App: React.FC = () => {
         shouldPayBonus = true;
         let currentUser = user;
         
-        // Percorre até 3 níveis de indicação
         for (let level = 1; level <= 3 && currentUser?.referredById; level++) {
             const referrer = dbState.users.find(u => u.id === currentUser.referredById);
             if (!referrer) break;
 
-            // Calculate bonus
             const bonusRateKey = level as keyof typeof REFERRAL_BONUS_RATES;
             const bonusRate = REFERRAL_BONUS_RATES[bonusRateKey];
             const bonusAmount = tx.amountUSD * bonusRate;
 
-            // Create Bonus Transaction
             const bonusTx: Transaction = {
                 id: faker.string.uuid(),
                 userId: referrer.id,
@@ -281,11 +266,8 @@ const App: React.FC = () => {
             };
             
             bonusTransactions.push(bonusTx);
-            
-            // Sync Bonus
             syncTransactionToSupabase(bonusTx);
 
-            // Update referrer balance and rank
             const newBalance = referrer.balanceUSD + bonusAmount;
             const updatedReferrer = { 
                 ...referrer, 
@@ -301,16 +283,13 @@ const App: React.FC = () => {
         }
     }
     
-    // Update Tx State and Sync
     const updatedTx = { ...tx, status: newStatus, bonusPayoutHandled: shouldPayBonus ? true : tx.bonusPayoutHandled };
     syncTransactionToSupabase(updatedTx);
 
     const updatedTransactions = dbState.transactions.map(t => t.id === transactionId ? updatedTx : t);
 
-    // Update User Balance if Deposit Approved
     let updatedUsers = [...dbState.users];
     
-    // Update the user who made the transaction
     if (newStatus === TransactionStatus.Completed) {
         updatedUsers = updatedUsers.map(u => {
             if (u.id === user.id) {
@@ -321,7 +300,6 @@ const App: React.FC = () => {
                     newBalance += tx.amountUSD;
                     newInvested += tx.amountUSD;
                 } else if (tx.type === TransactionType.Withdrawal) {
-                     // Withdrawal amountUSD is negative
                      newBalance += tx.amountUSD; 
                 }
                 
@@ -339,7 +317,6 @@ const App: React.FC = () => {
         });
     }
 
-    // Apply updates from referrals
     referrersToUpdate.forEach(ref => {
         updatedUsers = updatedUsers.map(u => u.id === ref.id ? ref : u);
     });

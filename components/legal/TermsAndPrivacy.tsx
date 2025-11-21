@@ -1,3 +1,4 @@
+
 import React from 'react';
 
 export const TERMS_OF_USE_CONTENT = (
@@ -85,4 +86,55 @@ export const PRIVACY_POLICY_CONTENT = (
         <h2>8. Contato</h2>
         <p>Se você tiver alguma dúvida sobre esta Política de Privacidade, entre em contato com nosso Encarregado de Proteção de Dados (DPO) pelo e-mail: privacidade@greennseven.com.</p>
     </>
+);
+
+export const SECURITY_CONTENT = (
+    <div className="space-y-4">
+        <h3 className="text-xl font-bold text-brand-green">Segurança de Nível Bancário</h3>
+        <p>A GreennSeven utiliza infraestrutura de ponta para garantir a proteção dos seus dados e investimentos.</p>
+        <ul className="list-disc pl-5 space-y-2 text-gray-300">
+            <li><strong>Criptografia AES-256:</strong> Todos os dados sensíveis são criptografados em repouso e em trânsito.</li>
+            <li><strong>Autenticação de Dois Fatores (2FA):</strong> Camada extra de proteção para acesso à conta e saques.</li>
+            <li><strong>Custódia Segura:</strong> A maior parte dos ativos é mantida em "Cold Wallets" (offline), inacessíveis a ataques online.</li>
+            <li><strong>Monitoramento 24/7:</strong> Sistemas automatizados detectam atividades suspeitas em tempo real.</li>
+        </ul>
+    </div>
+);
+
+export const ABOUT_CONTENT = (
+    <div className="space-y-4">
+        <h3 className="text-xl font-bold text-brand-blue">Sobre a GreennSeven</h3>
+        <p>Somos uma fintech global dedicada a democratizar o acesso a investimentos em moeda forte.</p>
+        <p>Nossa missão é permitir que investidores de qualquer nível protejam seu patrimônio contra a inflação e desvalorização cambial, oferecendo uma plataforma simples, transparente e altamente rentável.</p>
+        <p>Fundada por especialistas em mercado financeiro e tecnologia blockchain, a GreennSeven combina a solidez do dólar com a eficiência da tecnologia moderna.</p>
+    </div>
+);
+
+export const CONTACT_CONTENT = (
+    <div className="space-y-4">
+        <h3 className="text-xl font-bold text-brand-green">Fale Conosco</h3>
+        <p>Estamos aqui para ajudar. Entre em contato através dos nossos canais oficiais.</p>
+        <div className="bg-brand-gray p-4 rounded-lg border border-gray-700">
+            <p className="mb-2"><strong>Email de Suporte:</strong></p>
+            <p className="text-brand-green">suporte@greennseven.com</p>
+        </div>
+        <div className="bg-brand-gray p-4 rounded-lg border border-gray-700">
+            <p className="mb-2"><strong>Horário de Atendimento:</strong></p>
+            <p className="text-gray-300">Segunda a Sexta: 09:00 - 18:00 (Horário de Brasília)</p>
+        </div>
+    </div>
+);
+
+export const CAREERS_CONTENT = (
+    <div className="space-y-4">
+        <h3 className="text-xl font-bold text-brand-blue">Trabalhe Conosco</h3>
+        <p>Estamos construindo o futuro dos investimentos globais. Se você é apaixonado por inovação, venha fazer parte do time!</p>
+        <p className="font-semibold text-white mt-4">Vagas em aberto:</p>
+        <ul className="list-disc pl-5 space-y-2 text-gray-300">
+            <li>Senior Frontend Developer (React/Next.js)</li>
+            <li>Blockchain Security Specialist</li>
+            <li>Customer Success Manager</li>
+        </ul>
+        <p className="mt-4">Envie seu CV e portfólio para: <span className="text-brand-green">jobs@greennseven.com</span></p>
+    </div>
 );

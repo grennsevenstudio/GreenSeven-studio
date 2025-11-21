@@ -463,20 +463,25 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions, onAdd
 
     useEffect(() => {
         const totalDailyProfit = user.monthlyProfitUSD / 30;
-        const profitPerSecond = totalDailyProfit / (24 * 60 * 60);
+        const msInDay = 24 * 60 * 60 * 1000;
+        const profitPerMs = totalDailyProfit / msInDay;
 
-        const now = new Date();
-        const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        const secondsElapsedToday = (now.getTime() - startOfDay.getTime()) / 1000;
-        const initialEarnings = Math.min(secondsElapsedToday * profitPerSecond, totalDailyProfit);
-        setDailyEarnings(initialEarnings);
+        const updateEarnings = () => {
+            const now = new Date();
+            const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const msElapsed = now.getTime() - startOfDay.getTime();
+            
+            // Calculate exact profit for this moment in time based on elapsed milliseconds
+            // This makes the decimal places roll smoothly like a financial ticker
+            const currentEarnings = Math.min(msElapsed * profitPerMs, totalDailyProfit);
+            setDailyEarnings(currentEarnings);
+        };
 
-        const earningsInterval = setInterval(() => {
-            setDailyEarnings(prevEarnings => {
-                const newEarnings = prevEarnings + profitPerSecond;
-                return Math.min(newEarnings, totalDailyProfit);
-            });
-        }, 1000);
+        // Initial update
+        updateEarnings();
+
+        // Update frequently (every 80ms) to create a smooth counting effect for the decimals
+        const earningsInterval = setInterval(updateEarnings, 80);
 
         return () => clearInterval(earningsInterval);
     }, [user.monthlyProfitUSD]);
@@ -546,6 +551,19 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions, onAdd
           }
           .balance-value-anim {
             animation: balance-fade 0.4s ease-out;
+          }
+          
+          .live-ticker {
+            font-variant-numeric: tabular-nums;
+          }
+          
+          @keyframes pulse-green {
+            0% { box-shadow: 0 0 0 0 rgba(0, 255, 156, 0.4); }
+            70% { box-shadow: 0 0 0 6px rgba(0, 255, 156, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(0, 255, 156, 0); }
+          }
+          .live-indicator {
+            animation: pulse-green 2s infinite;
           }
         `}</style>
         <Modal 
@@ -620,9 +638,24 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions, onAdd
                     icon={ICONS.plans}
                 />
                  <StatCard 
-                    title="Rendimentos Hoje (Tempo Real)" 
-                    value={`$ ${dailyEarnings.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 6 })}`}
-                    subValue={`Acumulando...`}
+                    title="Rendimentos Hoje" 
+                    value={
+                        <div className="flex items-center gap-3">
+                            <span className="live-ticker">
+                                {`$ ${dailyEarnings.toLocaleString('en-US', { minimumFractionDigits: 6, maximumFractionDigits: 6 })}`}
+                            </span>
+                            <span className="flex h-3 w-3 relative">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                            </span>
+                        </div>
+                    }
+                    subValue={
+                        <div className="flex items-center gap-1 text-brand-green font-semibold">
+                             <span className="text-xs">AO VIVO</span>
+                             <span className="text-gray-400 font-normal ml-1">| Acumulando em tempo real...</span>
+                        </div>
+                    }
                     icon={ICONS.arrowUp}
                 />
             </div>
