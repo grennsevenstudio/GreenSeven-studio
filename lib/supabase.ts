@@ -27,16 +27,109 @@ export const checkSupabaseConnection = async () => {
 }
 
 /**
+ * Busca todos os usuários do Supabase e mapeia para o tipo User.
+ */
+export const fetchUsersFromSupabase = async () => {
+    try {
+        const { data, error } = await supabase.from('users').select('*');
+        
+        if (error) {
+            console.error('Erro ao buscar usuários:', JSON.stringify(error, null, 2));
+            return { error };
+        }
+
+        const users: User[] = data.map((row: any) => ({
+            id: row.id,
+            name: row.full_name || 'Sem Nome',
+            email: row.email,
+            avatarUrl: row.avatar_url || 'https://via.placeholder.com/150',
+            plan: row.plan,
+            rank: row.rank,
+            status: row.status,
+            rejectionReason: row.rejection_reason,
+            isAdmin: row.is_admin,
+            balanceUSD: Number(row.balance_usd || 0),
+            capitalInvestedUSD: Number(row.capital_invested_usd || 0),
+            monthlyProfitUSD: Number(row.monthly_profit_usd || 0),
+            dailyWithdrawableUSD: Number(row.daily_withdrawable_usd || 0),
+            joinedDate: row.created_at ? row.created_at.split('T')[0] : new Date().toISOString().split('T')[0],
+            
+            // Mapeia campos JSONB de additional_data
+            cpf: row.additional_data?.cpf || '',
+            phone: row.additional_data?.phone || '',
+            address: row.additional_data?.address || {
+                cep: '', street: '', number: '', neighborhood: '', city: '', state: ''
+            },
+            documents: row.additional_data?.documents || {
+                idFrontUrl: '', idBackUrl: '', selfieUrl: ''
+            },
+            referralCode: row.additional_data?.referralCode || '',
+            referredById: row.additional_data?.referredById,
+            transactionPin: row.additional_data?.transactionPin
+        }));
+
+        return { data: users };
+    } catch (err) {
+        console.error('Erro inesperado ao buscar usuários:', err);
+        return { error: err };
+    }
+};
+
+/**
+ * Busca todas as transações do Supabase e mapeia para o tipo Transaction.
+ */
+export const fetchTransactionsFromSupabase = async () => {
+    try {
+        const { data, error } = await supabase.from('transactions').select('*');
+
+        if (error) {
+            console.error('Erro ao buscar transações:', JSON.stringify(error, null, 2));
+            return { error };
+        }
+
+        const transactions: Transaction[] = data.map((row: any) => ({
+            id: row.id,
+            userId: row.user_id,
+            type: row.type,
+            amountUSD: Number(row.amount_usd || 0),
+            amountBRL: row.amount_brl ? Number(row.amount_brl) : undefined,
+            status: row.status,
+            date: row.date ? row.date.split('T')[0] : new Date().toISOString().split('T')[0],
+            withdrawalDetails: row.withdrawal_details,
+            referralLevel: row.referral_level,
+            sourceUserId: row.source_user_id,
+            bonusPayoutHandled: row.bonus_payout_handled
+        }));
+
+        return { data: transactions };
+    } catch (err) {
+        console.error('Erro inesperado ao buscar transações:', err);
+        return { error: err };
+    }
+};
+
+/**
  * Sincroniza um usuário para a tabela 'users' no Supabase.
  */
 export const syncUserToSupabase = async (user: User, password?: string) => {
   try {
+    // 1. Tenta encontrar o usuário pelo email para pegar o ID correto (evita erro de chave duplicada)
+    const { data: existingUser } = await supabase
+        .from('users')
+        .select('id')
+        .eq('email', user.email)
+        .maybeSingle();
+
+    // Se o usuário já existe, usamos o ID dele para fazer o update.
+    // Se não existe, usamos o ID gerado localmente (ou novo).
+    const targetId = existingUser ? existingUser.id : user.id;
+
     const payload: any = {
-        id: user.id,
+        id: targetId,
         email: user.email,
         full_name: user.name, 
         avatar_url: user.avatarUrl,
-        plan: 'Conservador',
+        plan: user.plan || 'Conservador',
         rank: user.rank,
         
         status: user.status,
@@ -72,7 +165,7 @@ export const syncUserToSupabase = async (user: User, password?: string) => {
       .select();
 
     if (error) {
-      console.error(`Erro ao sincronizar usuário ${user.email} com Supabase:`, error);
+      console.error(`Erro ao sincronizar usuário ${user.email} com Supabase:`, JSON.stringify(error, null, 2));
       return { error };
     }
     return { data };
@@ -101,11 +194,12 @@ export const syncTransactionToSupabase = async (tx: Transaction) => {
         withdrawal_details: tx.withdrawalDetails || null,
         referral_level: tx.referralLevel || null,
         source_user_id: tx.sourceUserId || null,
+        bonus_payout_handled: tx.bonusPayoutHandled || false
       }, { onConflict: 'id' })
       .select();
 
     if (error) {
-      console.error(`Erro ao sincronizar transação ${tx.id} com Supabase:`, error);
+      console.error(`Erro ao sincronizar transação ${tx.id} com Supabase:`, JSON.stringify(error, null, 2));
       return { error };
     }
     return { data };

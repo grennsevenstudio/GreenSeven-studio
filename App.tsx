@@ -4,7 +4,7 @@ import type { User, Transaction, Notification, ChatMessage, PlatformSettings, Ad
 import { View, TransactionStatus, TransactionType, AdminActionType, UserStatus, InvestorRank } from './types';
 import { REFERRAL_BONUS_RATES, INVESTMENT_PLANS } from './constants';
 import { initializeDB, getAllData, saveAllData, type AppDB } from './lib/db';
-import { syncUserToSupabase, syncTransactionToSupabase } from './lib/supabase';
+import { syncUserToSupabase, syncTransactionToSupabase, fetchUsersFromSupabase, fetchTransactionsFromSupabase } from './lib/supabase';
 import { faker } from '@faker-js/faker';
 
 import HomePage from './components/views/HomePage';
@@ -60,10 +60,44 @@ const App: React.FC = () => {
         console.log("Tentando conectar Admin ao Supabase...");
         // Sync admin with default password to ensure they exist in cloud DB
         syncUserToSupabase(admin, 'admin123').then(res => {
-            if(!res.error) console.log("Admin conectado ao Supabase com sucesso.");
+            if (res.error) {
+                console.error("Erro ao conectar Admin ao Supabase:", JSON.stringify(res.error, null, 2));
+            } else {
+                console.log("Admin conectado ao Supabase com sucesso.");
+            }
         });
     }
-  }, []); // Empty dependency array = run once on mount
+  }, []); 
+
+  // Fetch Data from Supabase on Mount to ensure Admin sees all users
+  useEffect(() => {
+    const loadRemoteData = async () => {
+        console.log("Carregando dados do Supabase...");
+        const { data: remoteUsers, error: userError } = await fetchUsersFromSupabase();
+        const { data: remoteTxs, error: txError } = await fetchTransactionsFromSupabase();
+
+        if (remoteUsers && remoteUsers.length > 0) {
+            console.log(`${remoteUsers.length} usuários carregados do Supabase.`);
+            setDbState(prev => {
+                // Merge remote users with local users, preferring remote for persistence
+                // But ensure we don't lose the current session if for some reason it's not in remote yet
+                // For simplicity in this "permanent" requirement, we trust remote if it exists.
+                return {
+                    ...prev,
+                    users: remoteUsers,
+                    transactions: remoteTxs || []
+                };
+            });
+        } else if (userError) {
+            console.error("Erro ao carregar usuários do Supabase:", JSON.stringify(userError, null, 2));
+        }
+        
+        if (txError) {
+            console.error("Erro ao carregar transações do Supabase:", JSON.stringify(txError, null, 2));
+        }
+    };
+    loadRemoteData();
+  }, []);
 
   const toggleTheme = () => setIsDarkMode(!isDarkMode);
   
@@ -157,7 +191,7 @@ const App: React.FC = () => {
     syncUserToSupabase(newUser, simpleUserData.password).then((result) => {
         if (result.error) {
             // Improved logging to see the full object
-            console.error("Erro ao registrar usuário no Supabase:", result.error);
+            console.error("Erro ao registrar usuário no Supabase:", JSON.stringify(result.error, null, 2));
         } else {
             console.log("Novo usuário sincronizado com Supabase:", newUser.email);
         }
@@ -197,7 +231,7 @@ const App: React.FC = () => {
     // Envia transação para Supabase
     syncTransactionToSupabase(tx).then((result) => {
          if (result.error) {
-            console.error("Erro ao salvar transação no Supabase:", result.error);
+            console.error("Erro ao salvar transação no Supabase:", JSON.stringify(result.error, null, 2));
         }
     });
     setDbState(prev => ({ ...prev, transactions: [...prev.transactions, tx] }));

@@ -29,7 +29,7 @@ const Settings: React.FC<SettingsProps> = ({ platformSettings, onUpdateSettings,
     const [supabaseMessage, setSupabaseMessage] = useState('');
     const [isSyncing, setIsSyncing] = useState(false);
 
-    // SQL Code Definition - Includes Admin User Creation
+    // SQL Code Definition - Includes Admin User Creation and Column Fixes
     const sqlCode = `-- SCRIPT SQL COMPLETO PARA GREENNSEVEN (Supabase)
 -- Execute este script no SQL Editor do Supabase.
 
@@ -55,6 +55,11 @@ CREATE TABLE IF NOT EXISTS public.users (
   additional_data JSONB,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
+
+-- GARANTE QUE AS COLUNAS EXISTAM (CASO A TABELA JÁ TENHA SIDO CRIADA SEM ELAS)
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS password TEXT;
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS full_name TEXT;
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS additional_data JSONB;
 
 -- 3. Criação da Tabela de Transações
 CREATE TABLE IF NOT EXISTS public.transactions (
@@ -110,7 +115,7 @@ DROP POLICY IF EXISTS "Acesso total transactions" ON public.transactions;
 CREATE POLICY "Acesso total users" ON public.users FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Acesso total transactions" ON public.transactions FOR ALL USING (true) WITH CHECK (true);
 
--- 6. Recarrega o Schema para aplicar mudanças imediatamente
+-- 6. Recarrega o Schema para aplicar mudanças imediatamente (CORRIGE ERRO DE CACHE)
 NOTIFY pgrst, 'reload schema';
 `;
 
