@@ -1,6 +1,6 @@
 
 import { createClient } from '@supabase/supabase-js';
-import type { User, Transaction } from '../types';
+import type { User, Transaction, ChatMessage } from '../types';
 
 // ============================================================================
 // CONFIGURAÇÃO DO SUPABASE
@@ -34,6 +34,9 @@ export const fetchUsersFromSupabase = async () => {
         const { data, error } = await supabase.from('users').select('*');
         
         if (error) {
+            // Se a tabela não existir ou erro de cache de schema, retorna vazio para não quebrar o app
+            if (error.code === '42P01' || error.code === 'PGRST205') return { data: [] };
+            
             console.error('Erro ao buscar usuários:', JSON.stringify(error, null, 2));
             return { error };
         }
@@ -54,6 +57,7 @@ export const fetchUsersFromSupabase = async () => {
             dailyWithdrawableUSD: Number(row.daily_withdrawable_usd || 0),
             joinedDate: row.created_at ? row.created_at.split('T')[0] : new Date().toISOString().split('T')[0],
             lastPlanChangeDate: row.last_plan_change_date || undefined,
+            supportStatus: row.support_status, // Mapeia o status do suporte
 
             // Mapeia campos JSONB de additional_data
             cpf: row.additional_data?.cpf || '',
@@ -84,6 +88,9 @@ export const fetchTransactionsFromSupabase = async () => {
         const { data, error } = await supabase.from('transactions').select('*');
 
         if (error) {
+            // Se a tabela não existir ou erro de cache de schema, retorna vazio para não quebrar o app
+            if (error.code === '42P01' || error.code === 'PGRST205') return { data: [] };
+
             console.error('Erro ao buscar transações:', JSON.stringify(error, null, 2));
             return { error };
         }
@@ -110,19 +117,54 @@ export const fetchTransactionsFromSupabase = async () => {
 };
 
 /**
+ * Busca todas as mensagens de chat do Supabase.
+ */
+export const fetchMessagesFromSupabase = async () => {
+    try {
+        const { data, error } = await supabase
+            .from('messages')
+            .select('*')
+            .order('timestamp', { ascending: true });
+
+        if (error) {
+            // Se a tabela não existir (ainda não foi criada pelo script) ou erro de cache de schema, retorna vazio sem erro crítico
+            // PGRST205: Could not find the table in the schema cache
+            // 42P01: Undefined table
+            if (error.code === '42P01' || error.code === 'PGRST205') return { data: [] };
+            
+            console.error('Erro ao buscar mensagens:', JSON.stringify(error, null, 2));
+            return { error };
+        }
+
+        const messages: ChatMessage[] = data.map((row: any) => ({
+            id: row.id,
+            senderId: row.sender_id,
+            receiverId: row.receiver_id,
+            text: row.text,
+            timestamp: row.timestamp,
+            isRead: row.is_read,
+            attachment: row.attachment || undefined
+        }));
+
+        return { data: messages };
+    } catch (err: any) {
+        console.error('Erro inesperado ao buscar mensagens:', err);
+        return { error: { message: err.message || 'Erro desconhecido ao buscar mensagens' } };
+    }
+};
+
+/**
  * Sincroniza um usuário para a tabela 'users' no Supabase.
  */
 export const syncUserToSupabase = async (user: User, password?: string) => {
   try {
-    // 1. Tenta encontrar o usuário pelo email para pegar o ID correto (evita erro de chave duplicada)
+    // 1. Tenta encontrar o usuário pelo email para pegar o ID correto
     const { data: existingUser } = await supabase
         .from('users')
         .select('id')
         .eq('email', user.email)
         .maybeSingle();
 
-    // Se o usuário já existe, usamos o ID dele para fazer o update.
-    // Se não existe, usamos o ID gerado localmente (ou novo).
     const targetId = existingUser ? existingUser.id : user.id;
 
     const payload: any = {
@@ -141,6 +183,7 @@ export const syncUserToSupabase = async (user: User, password?: string) => {
         monthly_profit_usd: user.monthlyProfitUSD,
         daily_withdrawable_usd: user.dailyWithdrawableUSD,
         last_plan_change_date: user.lastPlanChangeDate ? new Date(user.lastPlanChangeDate).toISOString() : null,
+        support_status: user.supportStatus || 'open',
 
         is_admin: user.isAdmin,
         created_at: user.joinedDate ? new Date(user.joinedDate).toISOString() : new Date().toISOString(),
@@ -156,7 +199,6 @@ export const syncUserToSupabase = async (user: User, password?: string) => {
         }
     };
 
-    // Adiciona a senha ao payload se fornecida
     if (password) {
         payload.password = password;
     }
@@ -167,8 +209,6 @@ export const syncUserToSupabase = async (user: User, password?: string) => {
       .select();
 
     if (error) {
-      // FALLBACK: Se a coluna 'last_plan_change_date' não existir (Erro PGRST204), tentamos salvar sem ela.
-      // Isso evita que a aplicação quebre se a migration não tiver sido rodada ainda.
       if (error.code === 'PGRST204' && (error.message?.includes('last_plan_change_date') || JSON.stringify(error).includes('last_plan_change_date'))) {
           console.warn("A coluna 'last_plan_change_date' não existe no Supabase. Tentando sincronizar sem este campo.");
           delete payload.last_plan_change_date;
@@ -182,11 +222,21 @@ export const syncUserToSupabase = async (user: User, password?: string) => {
           return { data: retryData };
       }
 
+      // Fallback para support_status se a coluna não existir
+      if (error.code === 'PGRST204' && (error.message?.includes('support_status') || JSON.stringify(error).includes('support_status'))) {
+          delete payload.support_status;
+           const { data: retryData2, error: retryError2 } = await supabase
+              .from('users')
+              .upsert(payload, { onConflict: 'id' })
+              .select();
+           if (retryError2) return { error: retryError2 };
+           return { data: retryData2 };
+      }
+
       return { error };
     }
     return { data };
   } catch (err: any) {
-    // Wrap the exception in a plain object so JSON.stringify doesn't produce {}
     return { error: { message: err.message || 'Unexpected sync error', details: err } };
   }
 };
@@ -220,5 +270,33 @@ export const syncTransactionToSupabase = async (tx: Transaction) => {
     return { data };
   } catch (err: any) {
     return { error: { message: err.message || 'Unexpected transaction sync error', details: err } };
+  }
+};
+
+/**
+ * Sincroniza uma mensagem de chat para a tabela 'messages' no Supabase.
+ */
+export const syncMessageToSupabase = async (msg: ChatMessage) => {
+  try {
+    const { data, error } = await supabase
+      .from('messages')
+      .insert({
+        id: msg.id,
+        sender_id: msg.senderId,
+        receiver_id: msg.receiverId,
+        text: msg.text,
+        timestamp: msg.timestamp,
+        is_read: msg.isRead,
+        attachment: msg.attachment || null
+      })
+      .select();
+
+    if (error) {
+      console.error("Erro ao salvar mensagem no Supabase:", error);
+      return { error };
+    }
+    return { data };
+  } catch (err: any) {
+    return { error: { message: err.message || 'Unexpected message sync error', details: err } };
   }
 };

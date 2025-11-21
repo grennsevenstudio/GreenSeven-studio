@@ -29,7 +29,7 @@ const Settings: React.FC<SettingsProps> = ({ platformSettings, onUpdateSettings,
     const [supabaseMessage, setSupabaseMessage] = useState('');
     const [isSyncing, setIsSyncing] = useState(false);
 
-    // SQL Code Definition - Includes Admin User Creation and Column Fixes
+    // SQL Code Definition
     const sqlCode = `-- SCRIPT SQL COMPLETO PARA GREENNSEVEN (Supabase)
 -- Execute este script no SQL Editor do Supabase.
 
@@ -53,16 +53,17 @@ CREATE TABLE IF NOT EXISTS public.users (
   monthly_profit_usd NUMERIC DEFAULT 0,
   daily_withdrawable_usd NUMERIC DEFAULT 0,
   last_plan_change_date TIMESTAMP WITH TIME ZONE,
+  support_status TEXT DEFAULT 'open',
   additional_data JSONB,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
 
--- GARANTE QUE AS COLUNAS EXISTAM (CASO A TABELA JÁ TENHA SIDO CRIADA SEM ELAS)
+-- GARANTE QUE AS COLUNAS EXISTAM
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS password TEXT;
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS full_name TEXT;
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS additional_data JSONB;
--- CRUCIAL: Adiciona a coluna para controle de troca de plano
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS last_plan_change_date TIMESTAMP WITH TIME ZONE;
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS support_status TEXT DEFAULT 'open';
 
 -- 3. Criação da Tabela de Transações
 CREATE TABLE IF NOT EXISTS public.transactions (
@@ -80,8 +81,19 @@ CREATE TABLE IF NOT EXISTS public.transactions (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
 
--- 4. Inserção do ADMINISTRADOR (Conexão Admin)
--- Cria o usuário admin se ele não existir
+-- 4. Criação da Tabela de Mensagens (Suporte)
+CREATE TABLE IF NOT EXISTS public.messages (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  sender_id UUID, 
+  receiver_id UUID,
+  text TEXT,
+  timestamp TIMESTAMP WITH TIME ZONE DEFAULT now(),
+  is_read BOOLEAN DEFAULT false,
+  attachment JSONB,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+);
+
+-- 5. Inserção do ADMINISTRADOR (Conexão Admin)
 INSERT INTO public.users (
     email, 
     password, 
@@ -106,19 +118,19 @@ INSERT INTO public.users (
     is_admin = true,
     status = 'Approved';
 
--- 5. Configuração de Permissões (RLS Permissivo para evitar erros)
+-- 6. Configuração de Permissões (RLS Permissivo)
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.transactions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
 
--- Remove politicas antigas para evitar duplicidade
 DROP POLICY IF EXISTS "Acesso total users" ON public.users;
 DROP POLICY IF EXISTS "Acesso total transactions" ON public.transactions;
+DROP POLICY IF EXISTS "Acesso total messages" ON public.messages;
 
--- Cria politicas de acesso total (ideal para MVP/Demo)
 CREATE POLICY "Acesso total users" ON public.users FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Acesso total transactions" ON public.transactions FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Acesso total messages" ON public.messages FOR ALL USING (true) WITH CHECK (true);
 
--- 6. Recarrega o Schema para aplicar mudanças imediatamente (CORRIGE ERRO DE CACHE)
 NOTIFY pgrst, 'reload schema';
 `;
 
@@ -321,13 +333,13 @@ NOTIFY pgrst, 'reload schema';
                                 value={sqlCode}
                                 onClick={(e) => e.currentTarget.select()} 
                              />
-                             <p className="text-[10px] text-gray-500 mt-1">Este script cria o usuário <strong>admin@greennseven.com</strong> (senha: admin123) no banco de dados.</p>
+                             <p className="text-[10px] text-gray-500 mt-1">Este script cria o usuário <strong>admin@greennseven.com</strong> (senha: admin123) e as tabelas <strong>users</strong>, <strong>transactions</strong> e <strong>messages</strong>.</p>
                         </div>
 
                         <div className="mt-6 pt-4 border-t border-gray-700">
                             <h4 className="text-white font-semibold text-sm mb-2">Forçar Sincronização de Dados</h4>
                             <p className="text-gray-500 text-xs mb-3">
-                                Envia todos os usuários (incluindo Admin) e transações locais para o Supabase.
+                                Envia todos os dados locais para o Supabase.
                             </p>
                             <Button 
                                 type="button" 

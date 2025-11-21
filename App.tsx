@@ -4,7 +4,7 @@ import type { User, Transaction, Notification, ChatMessage, PlatformSettings, Ad
 import { View, TransactionStatus, TransactionType, AdminActionType, UserStatus, InvestorRank } from './types';
 import { REFERRAL_BONUS_RATES, INVESTMENT_PLANS } from './constants';
 import { initializeDB, getAllData, saveAllData, type AppDB } from './lib/db';
-import { syncUserToSupabase, syncTransactionToSupabase, fetchUsersFromSupabase, fetchTransactionsFromSupabase } from './lib/supabase';
+import { syncUserToSupabase, syncTransactionToSupabase, syncMessageToSupabase, fetchUsersFromSupabase, fetchTransactionsFromSupabase, fetchMessagesFromSupabase } from './lib/supabase';
 import { faker } from '@faker-js/faker';
 
 import HomePage from './components/views/HomePage';
@@ -70,12 +70,13 @@ const App: React.FC = () => {
     }
   }, []); 
 
-  // Fetch Data from Supabase on Mount to ensure Admin sees all users
+  // Fetch Data from Supabase on Mount
   useEffect(() => {
     const loadRemoteData = async () => {
         console.log("Carregando dados do Supabase...");
         const { data: remoteUsers, error: userError } = await fetchUsersFromSupabase();
         const { data: remoteTxs, error: txError } = await fetchTransactionsFromSupabase();
+        const { data: remoteMessages, error: msgError } = await fetchMessagesFromSupabase();
 
         if (remoteUsers && remoteUsers.length > 0) {
             console.log(`${remoteUsers.length} usuários carregados do Supabase.`);
@@ -83,7 +84,8 @@ const App: React.FC = () => {
                 return {
                     ...prev,
                     users: remoteUsers,
-                    transactions: remoteTxs || []
+                    transactions: remoteTxs || [],
+                    chatMessages: remoteMessages || []
                 };
             });
         } else if (userError) {
@@ -92,6 +94,10 @@ const App: React.FC = () => {
         
         if (txError) {
             console.error("Erro ao carregar transações do Supabase:", JSON.stringify(txError, null, 2));
+        }
+
+        if (msgError) {
+            console.error("Erro ao carregar mensagens do Supabase:", JSON.stringify(msgError, null, 2));
         }
     };
     loadRemoteData();
@@ -484,7 +490,7 @@ const App: React.FC = () => {
   const handleSendMessage = (senderId: string, receiverId: string, text: string, attachment?: File) => {
       const attachmentData = attachment ? {
           fileName: attachment.name,
-          fileUrl: URL.createObjectURL(attachment),
+          fileUrl: URL.createObjectURL(attachment), // Note: This is local only until Storage is implemented
           fileType: attachment.type
       } : undefined;
 
@@ -497,6 +503,14 @@ const App: React.FC = () => {
           isRead: false,
           attachment: attachmentData
       };
+      
+      // Save to Supabase
+      syncMessageToSupabase(newMessage).then(res => {
+          if (res.error) {
+              console.error("Failed to sync message to Supabase:", res.error);
+          }
+      });
+
       setDbState(prev => ({ ...prev, chatMessages: [...prev.chatMessages, newMessage] }));
   };
   
@@ -581,6 +595,7 @@ const App: React.FC = () => {
                     onSendMessage={handleSendMessage}
                     onUpdateSettings={handleUpdateSettings}
                     onAdminUpdateUserBalance={handleAdminUpdateUserBalance}
+                    onUpdateUser={handleUpdateUser}
                     isDarkMode={isDarkMode}
                     toggleTheme={toggleTheme}
                 />;
