@@ -35,6 +35,7 @@ interface UserDashboardProps {
   toggleTheme: () => void;
   language: Language;
   setLanguage: (lang: Language) => void;
+  onRefreshData?: () => void;
 }
 
 const MOTIVATIONAL_QUOTES = [
@@ -76,7 +77,7 @@ const DashboardSkeleton = () => (
 );
 
 const UserDashboard: React.FC<UserDashboardProps> = (props) => {
-  const { user, adminUser, transactions, allUsers, allTransactions, notifications, chatMessages, onLogout, onAddTransaction, onMarkAllNotificationsAsRead, onSendMessage, onUpdateUser, onUpdatePassword, isDarkMode, toggleTheme, language, setLanguage } = props;
+  const { user, adminUser, transactions, allUsers, allTransactions, notifications, chatMessages, onLogout, onAddTransaction, onMarkAllNotificationsAsRead, onSendMessage, onUpdateUser, onUpdatePassword, isDarkMode, toggleTheme, language, setLanguage, onRefreshData } = props;
   const [activeView, setActiveView] = useState('dashboard');
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -162,7 +163,7 @@ const UserDashboard: React.FC<UserDashboardProps> = (props) => {
   };
 
   return (
-    <div className="flex min-h-screen bg-gray-100 dark:bg-brand-black text-gray-900 dark:text-white transition-colors duration-300">
+    <div className="flex min-h-screen w-full overflow-x-hidden bg-gray-100 dark:bg-brand-black text-gray-900 dark:text-white transition-colors duration-300">
       
       <Modal
         isOpen={showWelcomeModal}
@@ -219,6 +220,7 @@ const UserDashboard: React.FC<UserDashboardProps> = (props) => {
             toggleTheme={toggleTheme}
             language={language}
             setLanguage={setLanguage}
+            onRefreshData={onRefreshData}
         />
         <main className="p-2 sm:p-6 lg:p-8">
           {isLoading ? <DashboardSkeleton /> : renderContent()}

@@ -258,7 +258,7 @@ const HomePage: React.FC<{ setView: (view: View) => void; }> = ({ setView }) => 
     );
 
     return (
-        <div className="bg-brand-black text-white min-h-screen relative">
+        <div className="bg-brand-black text-white min-h-screen relative w-full overflow-x-hidden">
             <GridBackground />
             
              <Modal 

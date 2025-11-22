@@ -101,43 +101,56 @@ const App: React.FC = () => {
     }
   }, []); 
 
+  const loadRemoteData = async () => {
+    console.log("Carregando dados do Supabase...");
+    
+    try {
+        const { data: remoteUsers, error: userError } = await fetchUsersFromSupabase();
+        const { data: remoteTxs, error: txError } = await fetchTransactionsFromSupabase();
+        const { data: remoteMessages, error: msgError } = await fetchMessagesFromSupabase();
+
+        if (remoteUsers && remoteUsers.length > 0) {
+            console.log(`${remoteUsers.length} usuários carregados do Supabase.`);
+            setDbState(prev => {
+                // Use remote data, but keep current admin logs and settings which might be local-only for now
+                return {
+                    ...prev,
+                    users: remoteUsers,
+                    transactions: remoteTxs || [],
+                    chatMessages: remoteMessages || []
+                };
+            });
+        } else if (userError) {
+            console.error("Erro ao carregar usuários do Supabase:", JSON.stringify(userError, null, 2));
+        }
+        
+        if (txError) {
+            console.error("Erro ao carregar transações do Supabase:", JSON.stringify(txError, null, 2));
+        }
+
+        if (msgError) {
+            console.error("Erro ao carregar mensagens do Supabase:", JSON.stringify(msgError, null, 2));
+        }
+        return true;
+    } catch (e) {
+        console.error("Fatal error loading remote data", e);
+        return false;
+    }
+  };
+
   // Fetch Data from Supabase on Mount
   useEffect(() => {
-    const loadRemoteData = async () => {
-        console.log("Carregando dados do Supabase...");
-        
-        try {
-            const { data: remoteUsers, error: userError } = await fetchUsersFromSupabase();
-            const { data: remoteTxs, error: txError } = await fetchTransactionsFromSupabase();
-            const { data: remoteMessages, error: msgError } = await fetchMessagesFromSupabase();
-
-            if (remoteUsers && remoteUsers.length > 0) {
-                console.log(`${remoteUsers.length} usuários carregados do Supabase.`);
-                setDbState(prev => {
-                    return {
-                        ...prev,
-                        users: remoteUsers,
-                        transactions: remoteTxs || [],
-                        chatMessages: remoteMessages || []
-                    };
-                });
-            } else if (userError) {
-                console.error("Erro ao carregar usuários do Supabase:", JSON.stringify(userError, null, 2));
-            }
-            
-            if (txError) {
-                console.error("Erro ao carregar transações do Supabase:", JSON.stringify(txError, null, 2));
-            }
-
-            if (msgError) {
-                console.error("Erro ao carregar mensagens do Supabase:", JSON.stringify(msgError, null, 2));
-            }
-        } catch (e) {
-            console.error("Fatal error loading remote data", e);
-        }
-    };
     loadRemoteData();
   }, []);
+  
+  const refreshData = async () => {
+      const success = await loadRemoteData();
+      if (success) {
+          alert("Dados atualizados com sucesso!");
+      } else {
+          alert("Falha ao atualizar dados. Verifique a conexão.");
+      }
+  };
 
   const toggleTheme = () => setIsDarkMode(!isDarkMode);
   
@@ -664,6 +677,7 @@ const App: React.FC = () => {
                     toggleTheme={toggleTheme}
                     language={language}
                     setLanguage={handleSetLanguage}
+                    onRefreshData={refreshData}
                 />;
   } else if (view === View.AdminDashboard && loggedUser?.isAdmin) {
       content = <AdminDashboard 
@@ -685,13 +699,14 @@ const App: React.FC = () => {
                     toggleTheme={toggleTheme}
                     language={language}
                     setLanguage={handleSetLanguage}
+                    onRefreshData={refreshData}
                 />;
   } else {
       content = <HomePage setView={setView} />;
   }
 
   return (
-    <div className={`min-h-screen ${isDarkMode ? 'dark' : ''} bg-gray-100 dark:bg-brand-black text-gray-900 dark:text-white`}>
+    <div className={`min-h-screen w-full overflow-x-hidden ${isDarkMode ? 'dark' : ''} bg-gray-100 dark:bg-brand-black text-gray-900 dark:text-white`}>
         {content}
     </div>
   );

@@ -72,6 +72,7 @@ export const fetchUsersFromSupabase = async () => {
         const { data, error } = await supabase.from('users').select('*');
         
         if (error) {
+            console.error("Erro ao buscar usuários:", error);
             if (isNetworkError(error) || error.code === '42P01' || error.code === 'PGRST205') {
                 return { data: [], error: null };
             }
@@ -80,35 +81,41 @@ export const fetchUsersFromSupabase = async () => {
         
         if (!data) return { data: [], error: null };
 
-        const mappedUsers: User[] = data.map((u: any) => ({
-            id: u.id,
-            name: u.full_name || u.email.split('@')[0],
-            email: u.email,
-            password: u.password, // Mapped password for local auth check
-            cpf: u.additional_data?.cpf || '',
-            phone: u.additional_data?.phone || '',
-            address: u.additional_data?.address || {},
-            documents: u.additional_data?.documents || {},
-            status: u.status,
-            rejectionReason: u.rejection_reason,
-            avatarUrl: u.avatar_url || 'https://via.placeholder.com/150',
-            rank: u.rank,
-            plan: u.plan,
-            lastPlanChangeDate: u.last_plan_change_date,
-            balanceUSD: Number(u.balance_usd || 0),
-            capitalInvestedUSD: Number(u.capital_invested_usd || 0),
-            monthlyProfitUSD: Number(u.monthly_profit_usd || 0),
-            dailyWithdrawableUSD: Number(u.daily_withdrawable_usd || 0),
-            isAdmin: u.is_admin,
-            joinedDate: u.created_at ? new Date(u.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-            referralCode: u.additional_data?.referralCode || '',
-            referredById: u.additional_data?.referredById,
-            transactionPin: u.additional_data?.transactionPin,
-            supportStatus: u.support_status || 'open'
-        }));
+        const mappedUsers: User[] = data.map((u: any) => {
+            // Defensive coding for additional_data which might be null
+            const extra = u.additional_data || {};
+            
+            return {
+                id: u.id,
+                name: u.full_name || u.email?.split('@')[0] || 'Sem Nome',
+                email: u.email,
+                password: u.password, // Mapped password for local auth check
+                cpf: extra.cpf || '',
+                phone: extra.phone || '',
+                address: extra.address || { cep: '', street: '', number: '', neighborhood: '', city: '', state: '' },
+                documents: extra.documents || { idFrontUrl: '', idBackUrl: '', selfieUrl: '' },
+                status: u.status || 'Pending',
+                rejectionReason: u.rejection_reason,
+                avatarUrl: u.avatar_url || 'https://via.placeholder.com/150',
+                rank: u.rank || 'Bronze',
+                plan: u.plan || 'Conservador',
+                lastPlanChangeDate: u.last_plan_change_date,
+                balanceUSD: Number(u.balance_usd || 0),
+                capitalInvestedUSD: Number(u.capital_invested_usd || 0),
+                monthlyProfitUSD: Number(u.monthly_profit_usd || 0),
+                dailyWithdrawableUSD: Number(u.daily_withdrawable_usd || 0),
+                isAdmin: u.is_admin || false,
+                joinedDate: u.created_at ? new Date(u.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+                referralCode: extra.referralCode || '',
+                referredById: extra.referredById,
+                transactionPin: extra.transactionPin,
+                supportStatus: u.support_status || 'open'
+            };
+        });
 
         return { data: mappedUsers, error: null };
     } catch (e) {
+        console.error("Exceção ao mapear usuários:", e);
         return { data: [], error: null };
     }
 };
@@ -220,11 +227,13 @@ export const syncUserToSupabase = async (user: User, password?: string) => {
             dbUser.password = user.password;
         }
         
+        // Remove undefined keys
         Object.keys(dbUser).forEach(key => dbUser[key] === undefined && delete dbUser[key]);
 
         const { error } = await supabase.from('users').upsert(dbUser, { onConflict: 'id' });
         
         if (error) {
+             console.error("Erro syncUserToSupabase:", error);
              if (isNetworkError(error) || error.code === '42P01') return { error: null };
              return { error };
         }

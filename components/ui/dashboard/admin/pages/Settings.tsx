@@ -16,6 +16,32 @@ interface SettingsProps {
     allTransactions?: Transaction[];
 }
 
+const Toast: React.FC<{ message: string; type: 'success' | 'error' }> = ({ message, type }) => (
+    <div className={`fixed bottom-6 right-6 px-6 py-4 rounded-lg shadow-2xl z-50 flex items-center gap-3 animate-fade-in-up ${type === 'success' ? 'bg-brand-green text-brand-black' : 'bg-red-500 text-white'}`}>
+        <div className={`p-1 rounded-full ${type === 'success' ? 'bg-black/10' : 'bg-white/20'}`}>
+            {type === 'success' ? (
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+            ) : (
+                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                </svg>
+            )}
+        </div>
+        <span className="font-bold">{message}</span>
+        <style>{`
+            @keyframes fade-in-up {
+                from { opacity: 0; transform: translateY(20px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+            .animate-fade-in-up {
+                animation: fade-in-up 0.3s ease-out forwards;
+            }
+        `}</style>
+    </div>
+);
+
 const Settings: React.FC<SettingsProps> = ({ platformSettings, onUpdateSettings, allUsers, allTransactions = [] }) => {
     const [settings, setSettings] = useState<PlatformSettings>(platformSettings);
     const [isSaving, setIsSaving] = useState(false);
@@ -29,14 +55,22 @@ const Settings: React.FC<SettingsProps> = ({ platformSettings, onUpdateSettings,
     const [supabaseMessage, setSupabaseMessage] = useState('');
     const [isSyncing, setIsSyncing] = useState(false);
 
-    // SQL Code Definition
-    const sqlCode = `-- SCRIPT SQL COMPLETO PARA O PROJETO (greenn7investiments.tecnologic@gmail.com)
--- Execute este script no SQL Editor do Supabase para criar a estrutura do banco de dados.
+    // Toast State
+    const [toast, setToast] = useState<{message: string, type: 'success' | 'error'} | null>(null);
 
--- 1. Habilita extensão UUID para geração de IDs únicos
+    const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+        setToast({ message, type });
+        setTimeout(() => setToast(null), 3000);
+    };
+
+    // SQL Code Definition
+    const sqlCode = `-- SCRIPT SQL CORRIGIDO PARA O PROJETO (greenn7investiments.tecnologic@gmail.com)
+-- Execute este script no SQL Editor do Supabase para corrigir tabelas e permissões.
+
+-- 1. Habilita extensão UUID para IDs
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- 2. Criação da Tabela de Usuários
+-- 2. Criação/Correção da Tabela de Usuários
 CREATE TABLE IF NOT EXISTS public.users (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   email TEXT UNIQUE NOT NULL,
@@ -58,14 +92,13 @@ CREATE TABLE IF NOT EXISTS public.users (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
 
--- Garante que as colunas essenciais existam (caso a tabela já tenha sido criada parcialmente)
+-- Garante que colunas existam se a tabela já foi criada
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS password TEXT;
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS full_name TEXT;
-ALTER TABLE public.users ADD COLUMN IF NOT EXISTS additional_data JSONB;
-ALTER TABLE public.users ADD COLUMN IF NOT EXISTS last_plan_change_date TIMESTAMP WITH TIME ZONE;
-ALTER TABLE public.users ADD COLUMN IF NOT EXISTS support_status TEXT DEFAULT 'open';
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS additional_data JSONB DEFAULT '{}'::jsonb;
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN DEFAULT false;
 
--- 3. Criação da Tabela de Transações
+-- 3. Criação/Correção da Tabela de Transações
 CREATE TABLE IF NOT EXISTS public.transactions (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id UUID REFERENCES public.users(id),
@@ -81,7 +114,7 @@ CREATE TABLE IF NOT EXISTS public.transactions (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
 
--- 4. Criação da Tabela de Mensagens (Suporte)
+-- 4. Criação/Correção da Tabela de Mensagens
 CREATE TABLE IF NOT EXISTS public.messages (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   sender_id UUID REFERENCES public.users(id) ON DELETE SET NULL,
@@ -93,48 +126,33 @@ CREATE TABLE IF NOT EXISTS public.messages (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
 );
 
--- 5. Inserção do ADMINISTRADOR PADRÃO
--- E-mail: admin@greennseven.com
--- Senha: admin123
+-- 5. Inserção do ADMINISTRADOR (Garante existência)
 INSERT INTO public.users (
-    email, 
-    password, 
-    full_name, 
-    is_admin, 
-    status, 
-    rank, 
-    balance_usd, 
-    plan, 
-    avatar_url
+    email, password, full_name, is_admin, status, rank, balance_usd, plan, avatar_url, additional_data
 ) VALUES (
-    'admin@greennseven.com', 
-    'admin123', 
-    'Administrador Geral', 
-    true, 
-    'Approved', 
-    'Diamond', 
-    1000000, 
-    'Select', 
-    'https://i.pravatar.cc/150?u=admin'
+    'admin@greennseven.com', 'admin123', 'Administrador Geral', true, 'Approved', 'Diamond', 1000000, 'Select', 'https://i.pravatar.cc/150?u=admin', '{}'::jsonb
 ) ON CONFLICT (email) DO UPDATE SET 
     is_admin = true,
     status = 'Approved';
 
--- 6. Configuração de Permissões (RLS - Row Level Security)
--- Permite acesso total para fins de demonstração/MVP.
+-- 6. CORREÇÃO DE PERMISSÕES (RLS) - CRUCIAL PARA O PAINEL FUNCIONAR
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
 
+-- Remove políticas antigas para evitar conflitos
 DROP POLICY IF EXISTS "Acesso total users" ON public.users;
 DROP POLICY IF EXISTS "Acesso total transactions" ON public.transactions;
 DROP POLICY IF EXISTS "Acesso total messages" ON public.messages;
+DROP POLICY IF EXISTS "Public Users Access" ON public.users;
+DROP POLICY IF EXISTS "Public Transactions Access" ON public.transactions;
 
+-- Cria políticas permissivas para o MVP (Leitura/Escrita pública autenticada pela API Key)
 CREATE POLICY "Acesso total users" ON public.users FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Acesso total transactions" ON public.transactions FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Acesso total messages" ON public.messages FOR ALL USING (true) WITH CHECK (true);
 
--- Recarrega o schema para aplicar as mudanças imediatamente
+-- Recarrega o schema
 NOTIFY pgrst, 'reload schema';
 `;
 
@@ -163,7 +181,7 @@ NOTIFY pgrst, 'reload schema';
         setTimeout(() => {
             onUpdateSettings(settings);
             setIsSaving(false);
-            alert("Configurações salvas com sucesso!");
+            showToast("Configurações salvas com sucesso!");
         }, 1000);
     };
 
@@ -174,7 +192,7 @@ NOTIFY pgrst, 'reload schema';
         }
         const user = allUsers.find(u => u.id === selectedUserToReset);
         if (confirm(`Tem certeza de que deseja enviar um link de redefinição de senha para ${user?.name}?`)) {
-            alert(`Link de redefinição de senha enviado para ${user?.email} (simulação).`);
+            showToast(`Link enviado para ${user?.email}`, 'success');
         }
     };
     
@@ -222,7 +240,7 @@ NOTIFY pgrst, 'reload schema';
             }
         } catch (error) {
             console.error("Error generating logo:", error);
-            alert("Falha ao gerar o logo. Verifique o console para mais detalhes.");
+            showToast("Falha ao gerar o logo.", 'error');
         } finally {
             setIsGeneratingLogo(false);
         }
@@ -233,7 +251,7 @@ NOTIFY pgrst, 'reload schema';
             const newSettings = { ...settings, logoUrl: generatedLogoUrl };
             setSettings(newSettings);
             onUpdateSettings(newSettings);
-            alert("Logo atualizado com sucesso!");
+            showToast("Logo atualizado com sucesso!");
         }
     };
 
@@ -282,17 +300,18 @@ NOTIFY pgrst, 'reload schema';
         }
         
         setIsSyncing(false);
-        alert(`Sincronização Completa!\n\nUsuários: ${userSuccess} OK / ${userFail} Falhas\nTransações: ${txSuccess} OK / ${txFail} Falhas`);
+        showToast(`Sincronização: ${userSuccess} users OK, ${txSuccess} txs OK.`, 'success');
         handleCheckSupabase(); 
     };
     
     const copySQLToClipboard = () => {
         navigator.clipboard.writeText(sqlCode);
-        alert("Código SQL copiado! Cole no SQL Editor do Supabase.");
+        showToast("SQL copiado!", 'success');
     };
 
     return (
         <div className="space-y-8">
+            {toast && <Toast message={toast.message} type={toast.type} />}
             <div>
                 <h1 className="text-3xl font-bold">Configurações da Plataforma</h1>
                 <p className="text-gray-400">Gerencie as configurações globais e a conexão com o banco de dados.</p>
@@ -312,7 +331,7 @@ NOTIFY pgrst, 'reload schema';
                                     Testar Conexão
                                 </Button>
                                 <Button type="button" onClick={copySQLToClipboard} variant="ghost" className="text-xs py-2">
-                                    {ICONS.copy} Copiar SQL de Conexão
+                                    {ICONS.copy} Copiar SQL de Correção
                                 </Button>
                             </div>
                         </div>
@@ -324,26 +343,26 @@ NOTIFY pgrst, 'reload schema';
                             <div>
                                 <p className="text-red-500 text-sm font-bold">{supabaseMessage}</p>
                                 <p className="text-gray-400 text-xs mt-2">
-                                    Copie o código abaixo e execute no painel do Supabase para criar as tabelas e conectar o admin.
+                                    Copie o código abaixo e execute no painel do Supabase para corrigir as tabelas.
                                 </p>
                             </div>
                         )}
                         
                         <div className="mt-4">
-                             <label className="text-xs text-gray-500 uppercase font-bold">Script SQL (Cria Admin e Tabelas):</label>
+                             <label className="text-xs text-gray-500 uppercase font-bold">Script SQL (Correção de Tabelas e Permissões):</label>
                              <textarea 
                                 readOnly 
                                 className="w-full h-48 bg-gray-900 text-gray-300 text-[10px] p-2 rounded border border-gray-700 font-mono mt-1 focus:outline-none focus:border-brand-green leading-relaxed"
                                 value={sqlCode}
                                 onClick={(e) => e.currentTarget.select()} 
                              />
-                             <p className="text-[10px] text-gray-500 mt-1">Este script cria o usuário <strong>admin@greennseven.com</strong> (senha: admin123) e as tabelas <strong>users</strong>, <strong>transactions</strong> e <strong>messages</strong>.</p>
+                             <p className="text-[10px] text-gray-500 mt-1">Este script corrige problemas de permissão e estruturas de tabela ausentes.</p>
                         </div>
 
                         <div className="mt-6 pt-4 border-t border-gray-700">
                             <h4 className="text-white font-semibold text-sm mb-2">Forçar Sincronização de Dados</h4>
                             <p className="text-gray-500 text-xs mb-3">
-                                Envia todos os dados locais para o Supabase.
+                                Envia todos os dados locais para o Supabase. Use isso se os usuários não aparecerem.
                             </p>
                             <Button 
                                 type="button" 

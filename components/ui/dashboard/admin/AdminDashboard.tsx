@@ -35,10 +35,11 @@ interface AdminDashboardProps {
   toggleTheme: () => void;
   language: Language;
   setLanguage: (lang: Language) => void;
+  onRefreshData: () => void;
 }
 
 const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
-  const { user, allUsers, allTransactions, chatMessages, platformSettings, adminActionLogs, onLogout, onUpdateTransaction, onUpdateUserStatus, onPayoutBonus, onSendMessage, onUpdateSettings, onAdminUpdateUserBalance, onUpdateUser, isDarkMode, toggleTheme, language, setLanguage } = props;
+  const { user, allUsers, allTransactions, chatMessages, platformSettings, adminActionLogs, onLogout, onUpdateTransaction, onUpdateUserStatus, onPayoutBonus, onSendMessage, onUpdateSettings, onAdminUpdateUserBalance, onUpdateUser, isDarkMode, toggleTheme, language, setLanguage, onRefreshData } = props;
   const [activeView, setActiveView] = useState('dashboard');
   const [isSidebarOpen, setSidebarOpen] = useState(false);
 
@@ -76,7 +77,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
   };
 
   return (
-    <div className="flex min-h-screen bg-gray-100 dark:bg-brand-black text-gray-900 dark:text-white transition-colors duration-300">
+    <div className="flex min-h-screen w-full overflow-x-hidden bg-gray-100 dark:bg-brand-black text-gray-900 dark:text-white transition-colors duration-300">
       <Sidebar
         user={user}
         navItems={navItems}
@@ -95,6 +96,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
             toggleTheme={toggleTheme}
             language={language}
             setLanguage={setLanguage}
+            onRefreshData={onRefreshData}
         />
         <main className="p-4 sm:p-6 lg:p-8">
           {renderContent()}

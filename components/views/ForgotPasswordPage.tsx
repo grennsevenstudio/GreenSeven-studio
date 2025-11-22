@@ -25,7 +25,18 @@ const ForgotPasswordPage: React.FC<ForgotPasswordPageProps> = ({ setView }) => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-brand-black p-4">
+    <div className="min-h-screen flex items-center justify-center bg-brand-black p-4 relative">
+        {/* Back Button */}
+        <button 
+            onClick={() => setView(View.Home)} 
+            className="absolute top-6 left-6 flex items-center gap-2 text-gray-400 hover:text-brand-green transition-colors z-10"
+        >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
+            </svg>
+            <span className="hidden sm:inline font-medium">Voltar para Home</span>
+        </button>
+
       <div className="w-full max-w-md">
         <div className="flex justify-center items-center gap-2 mb-8">
             <span className="text-3xl font-bold">

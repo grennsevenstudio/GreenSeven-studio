@@ -8,8 +8,6 @@ import { TRANSLATIONS } from '../../lib/translations';
 function timeAgo(date: Date): string {
     const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
     
-    if (seconds < 60) return "agora mesmo";
-    
     let interval = seconds / 31536000;
     if (interval > 1) {
         const years = Math.floor(interval);
@@ -38,10 +36,10 @@ function timeAgo(date: Date): string {
     return "agora mesmo";
 }
 
-const LANGUAGES: { code: Language; label: string; flag: string }[] = [
-    { code: 'pt', label: 'PT', flag: '🇧🇷' },
-    { code: 'en', label: 'EN', flag: '🇺🇸' },
-    { code: 'es', label: 'ES', flag: '🇪🇸' },
+const LANGUAGE_OPTIONS: { code: Language; flag: string; label: string }[] = [
+  { code: 'pt', flag: '🇧🇷', label: 'Português' },
+  { code: 'en', flag: '🇺🇸', label: 'English' },
+  { code: 'es', flag: '🇪🇸', label: 'Español' },
 ];
 
 interface HeaderProps {
@@ -52,183 +50,204 @@ interface HeaderProps {
   onMarkAllAsRead?: () => void;
   isDarkMode: boolean;
   toggleTheme: () => void;
-  language?: Language;
-  setLanguage?: (lang: Language) => void;
+  language: Language;
+  setLanguage: (lang: Language) => void;
+  onRefreshData?: () => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ 
-    user, 
-    onLogout, 
-    toggleSidebar, 
-    notifications = [], 
-    onMarkAllAsRead,
-    isDarkMode,
-    toggleTheme,
-    language = 'pt',
-    setLanguage
-}) => {
-  const [isNotificationsOpen, setNotificationsOpen] = useState(false);
-  const [isProfileOpen, setProfileOpen] = useState(false);
-  const [isLangOpen, setLangOpen] = useState(false);
+const Header: React.FC<HeaderProps> = ({ user, onLogout, toggleSidebar, notifications = [], onMarkAllAsRead, isDarkMode, toggleTheme, language, setLanguage, onRefreshData }) => {
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isLangMenuOpen, setIsLangMenuOpen] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   
-  const notifRef = useRef<HTMLDivElement>(null);
+  const notificationRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
-  const langRef = useRef<HTMLDivElement>(null);
+  const langMenuRef = useRef<HTMLDivElement>(null);
 
   const unreadCount = notifications.filter(n => !n.isRead).length;
   const t = TRANSLATIONS[language];
+  const firstName = user.name.split(' ')[0];
 
-  // Click outside handler
+  // Close dropdowns when clicking outside
   useEffect(() => {
-      const handleClickOutside = (event: MouseEvent) => {
-          if (notifRef.current && !notifRef.current.contains(event.target as Node)) {
-              setNotificationsOpen(false);
-          }
-          if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
-              setProfileOpen(false);
-          }
-          if (langRef.current && !langRef.current.contains(event.target as Node)) {
-              setLangOpen(false);
-          }
-      };
+    const handleClickOutside = (event: MouseEvent) => {
+      if (notificationRef.current && !notificationRef.current.contains(event.target as Node)) {
+        setIsNotificationsOpen(false);
+      }
+      if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
+        setIsProfileOpen(false);
+      }
+      if (langMenuRef.current && !langMenuRef.current.contains(event.target as Node)) {
+        setIsLangMenuOpen(false);
+      }
+    };
 
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
   }, []);
 
+  const handleNotificationClick = () => {
+      setIsNotificationsOpen(!isNotificationsOpen);
+  };
+  
+  const handleRefresh = () => {
+      if (onRefreshData) {
+          setIsRefreshing(true);
+          onRefreshData();
+          // Animate for at least 1s
+          setTimeout(() => setIsRefreshing(false), 1000);
+      }
+  };
+
   return (
-    <header className="bg-white dark:bg-brand-gray border-b border-gray-200 dark:border-gray-800 h-16 flex items-center justify-between px-4 lg:px-8 transition-colors duration-300 sticky top-0 z-20">
+    <header className="h-16 bg-brand-gray border-b border-gray-800 flex items-center justify-between px-4 lg:px-8 sticky top-0 z-30">
       <div className="flex items-center gap-4">
         <button
           onClick={toggleSidebar}
-          className="lg:hidden text-gray-500 dark:text-gray-400 hover:text-brand-green"
+          className="text-gray-400 hover:text-white lg:hidden focus:outline-none"
         >
           {ICONS.menu}
         </button>
-        <h2 className="text-xl font-bold text-gray-800 dark:text-white hidden sm:block">
-           {t.welcome}, <span className="text-brand-green">{user.name.split(' ')[0]}</span>
-        </h2>
+        {/* Welcome Message - Visible on Mobile and Desktop (as per user screenshot) */}
+        <div className="flex items-center gap-2">
+             {/* Icon only on mobile to avoid duplicity with sidebar */}
+            <div className="lg:hidden">
+                {React.cloneElement(ICONS.logo as React.ReactElement<any>, {className: "h-6 w-6 text-brand-green"})}
+            </div>
+            <span className="font-bold text-white truncate max-w-[200px]">{t.welcome}, {firstName}</span>
+        </div>
       </div>
 
-      <div className="flex items-center gap-3 sm:gap-6">
-        {/* Language Selector */}
-        {setLanguage && (
-            <div className="relative" ref={langRef}>
-                <button 
-                    onClick={() => setLangOpen(!isLangOpen)}
-                    className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                >
-                    <span className="text-xl">{LANGUAGES.find(l => l.code === language)?.flag}</span>
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300 hidden sm:block">
-                        {LANGUAGES.find(l => l.code === language)?.label}
-                    </span>
-                    <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
-                </button>
+      <div className="flex items-center gap-5">
+         {/* Refresh Data Button (Hidden on small screens to match image minimalism, active on click) */}
+         {onRefreshData && (
+             <button 
+                onClick={handleRefresh} 
+                className={`text-gray-400 hover:text-brand-green transition-colors hidden md:block ${isRefreshing ? 'animate-spin text-brand-green' : ''}`}
+                title="Atualizar Dados"
+             >
+                 {ICONS.refresh}
+             </button>
+         )}
 
-                {isLangOpen && (
-                    <div className="absolute right-0 mt-2 w-32 bg-white dark:bg-brand-gray border border-gray-200 dark:border-gray-700 rounded-xl shadow-2xl overflow-hidden z-50 animate-fade-in-up">
-                        {LANGUAGES.map((lang) => (
-                            <button
-                                key={lang.code}
-                                onClick={() => {
-                                    setLanguage(lang.code);
-                                    setLangOpen(false);
-                                }}
-                                className={`w-full flex items-center gap-3 px-4 py-3 text-sm transition-colors ${language === lang.code ? 'bg-brand-green/10 text-brand-green font-bold' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
-                            >
-                                <span className="text-lg">{lang.flag}</span>
-                                {lang.label}
-                            </button>
-                        ))}
-                    </div>
-                )}
-            </div>
-        )}
+         {/* Language Selector (Flag + Arrow) */}
+         <div className="relative" ref={langMenuRef}>
+            <button 
+                onClick={() => setIsLangMenuOpen(!isLangMenuOpen)}
+                className="flex items-center gap-1.5 focus:outline-none hover:opacity-80 transition-opacity"
+            >
+                <span className="text-2xl leading-none">{LANGUAGE_OPTIONS.find(l => l.code === language)?.flag}</span>
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                </svg>
+            </button>
+            
+            {isLangMenuOpen && (
+                <div className="absolute right-0 mt-2 w-36 bg-brand-gray border border-gray-700 rounded-lg shadow-xl py-1 animate-fade-in-up z-50">
+                    {LANGUAGE_OPTIONS.map((option) => (
+                        <button
+                            key={option.code}
+                            onClick={() => {
+                                setLanguage(option.code);
+                                setIsLangMenuOpen(false);
+                            }}
+                            className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-800 flex items-center gap-3 transition-colors ${language === option.code ? 'bg-gray-800/50 text-brand-green' : 'text-gray-300'}`}
+                        >
+                            <span className="text-lg">{option.flag}</span>
+                            <span className="font-medium">{option.code.toUpperCase()}</span>
+                        </button>
+                    ))}
+                </div>
+            )}
+         </div>
 
         {/* Theme Toggle */}
         <button
-            onClick={toggleTheme}
-            className="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-            title={isDarkMode ? t.theme_light : t.theme_dark}
+          onClick={toggleTheme}
+          className="text-gray-400 hover:text-white transition-colors"
+          title={isDarkMode ? t.theme_light : t.theme_dark}
         >
-            {isDarkMode ? ICONS.sun : ICONS.moon}
+          {isDarkMode ? ICONS.sun : ICONS.moon}
         </button>
 
         {/* Notifications */}
-        <div className="relative" ref={notifRef}>
+        <div className="relative" ref={notificationRef}>
           <button
-            onClick={() => setNotificationsOpen(!isNotificationsOpen)}
-            className="relative p-2 text-gray-500 dark:text-gray-400 hover:text-brand-green transition-colors"
+            className="text-gray-400 hover:text-white relative flex items-center"
+            onClick={handleNotificationClick}
           >
             {ICONS.bell}
             {unreadCount > 0 && (
-              <span className="absolute top-1 right-1 h-2.5 w-2.5 bg-red-500 rounded-full border-2 border-white dark:border-brand-gray"></span>
+              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full animate-pulse">
+                {unreadCount}
+              </span>
             )}
           </button>
 
           {isNotificationsOpen && (
-            <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-brand-gray border border-gray-200 dark:border-gray-700 rounded-xl shadow-2xl overflow-hidden z-50 animate-fade-in-up">
-              <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
-                <h3 className="font-bold text-gray-800 dark:text-white">Notificações</h3>
+            <div className="absolute right-0 mt-2 w-80 bg-brand-gray border border-gray-700 rounded-lg shadow-xl overflow-hidden animate-fade-in-up z-50">
+              <div className="p-3 border-b border-gray-700 flex justify-between items-center">
+                <h3 className="font-bold text-white">Notificações</h3>
                 {unreadCount > 0 && onMarkAllAsRead && (
                     <button onClick={onMarkAllAsRead} className="text-xs text-brand-green hover:underline">
-                        Marcar lidas
+                        Marcar todas como lidas
                     </button>
                 )}
               </div>
               <div className="max-h-80 overflow-y-auto">
-                {notifications.length > 0 ? (
-                  notifications.map((notif) => (
-                    <div key={notif.id} className={`p-4 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors ${!notif.isRead ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''}`}>
-                      <p className="text-sm text-gray-700 dark:text-gray-300">{notif.message}</p>
-                      <p className="text-xs text-gray-400 mt-1">{timeAgo(new Date(notif.date))}</p>
+                {notifications.length === 0 ? (
+                    <div className="p-6 text-center text-gray-500 text-sm">
+                        Nenhuma notificação.
                     </div>
-                  ))
                 ) : (
-                  <div className="p-6 text-center text-gray-500 dark:text-gray-400 text-sm">
-                    Nenhuma notificação no momento.
-                  </div>
+                    notifications.map((notification) => (
+                    <div
+                        key={notification.id}
+                        className={`p-3 border-b border-gray-700 hover:bg-gray-800 transition-colors ${!notification.isRead ? 'bg-gray-800/50' : ''}`}
+                    >
+                        <p className="text-sm text-gray-200">{notification.message}</p>
+                        <p className="text-xs text-gray-500 mt-1">{timeAgo(new Date(notification.date))}</p>
+                    </div>
+                    ))
                 )}
               </div>
             </div>
           )}
         </div>
 
-        {/* Profile Dropdown */}
+        {/* User Profile Dropdown (Image Only) */}
         <div className="relative" ref={profileRef}>
-          <button
-            onClick={() => setProfileOpen(!isProfileOpen)}
-            className="flex items-center gap-3 hover:opacity-80 transition-opacity"
-          >
-            <img
-              src={user.avatarUrl}
-              alt={user.name}
-              className={`h-9 w-9 rounded-full object-cover border-2 ${user.isAdmin ? 'border-brand-blue' : 'border-brand-green'}`}
-            />
-            <div className="hidden md:block text-left">
-                <p className="text-sm font-bold text-gray-800 dark:text-white leading-none">{user.name}</p>
-                <span className={`text-[10px] px-1.5 py-0.5 rounded-full mt-1 inline-block ${user.isAdmin ? 'bg-brand-blue/20 text-brand-blue' : RANK_COLORS[user.rank] || 'bg-gray-700 text-gray-300'}`}>
-                    {user.isAdmin ? t.admin : user.rank}
-                </span>
-            </div>
-            <svg className="w-4 h-4 text-gray-500 hidden md:block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
-          </button>
-
-          {isProfileOpen && (
-            <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-brand-gray border border-gray-200 dark:border-gray-700 rounded-xl shadow-2xl overflow-hidden z-50 animate-fade-in-up">
-              <div className="p-4 border-b border-gray-200 dark:border-gray-700 md:hidden">
-                 <p className="text-sm font-bold text-gray-800 dark:text-white">{user.name}</p>
-                 <p className="text-xs text-gray-500 dark:text-gray-400">{user.email}</p>
-              </div>
-              <button
-                onClick={onLogout}
-                className="w-full text-left px-4 py-3 text-sm text-red-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex items-center gap-2"
-              >
-                {ICONS.logout}
-                {t.logout}
-              </button>
-            </div>
-          )}
+            <button 
+                className="flex items-center focus:outline-none"
+                onClick={() => setIsProfileOpen(!isProfileOpen)}
+            >
+                <img
+                    src={user.avatarUrl}
+                    alt="User Avatar"
+                    className="h-10 w-10 rounded-full border-2 border-brand-green object-cover hover:border-white transition-colors"
+                />
+            </button>
+            
+            {isProfileOpen && (
+                <div className="absolute right-0 mt-2 w-56 bg-brand-gray border border-gray-700 rounded-lg shadow-xl py-1 animate-fade-in-up z-50">
+                    <div className="px-4 py-3 border-b border-gray-700">
+                        <p className="text-sm font-bold text-white truncate">{user.name}</p>
+                        <p className={`text-[10px] px-2 py-0.5 mt-1 rounded-full inline-block ${RANK_COLORS[user.rank]}`}>
+                            {user.rank}
+                        </p>
+                    </div>
+                    <button
+                        onClick={onLogout}
+                        className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-gray-800 flex items-center gap-2"
+                    >
+                        {ICONS.logout}
+                        {t.logout}
+                    </button>
+                </div>
+            )}
         </div>
       </div>
     </header>

@@ -5,7 +5,7 @@ import Button from '../../../../ui/Button';
 import Modal from '../../../../layout/Modal';
 import type { User } from '../../../../../types';
 import { UserStatus } from '../../../../../types';
-import { RANK_COLORS } from '../../../../../constants';
+import { RANK_COLORS, ICONS } from '../../../../../constants';
 
 const DataItem: React.FC<{ label: string; value: React.ReactNode }> = ({ label, value }) => (
     <div>
@@ -182,7 +182,7 @@ const UserRow: React.FC<{
                 </td>
                 <td className="p-4">{user.joinedDate}</td>
                 <td className="p-4">
-                    <div className="flex gap-2 flex-wrap">
+                    <div className="flex gap-2 flex-wrap items-center">
                         {user.status === UserStatus.Pending ? (
                             <Button onClick={() => setVerificationModalOpen(true)} variant="secondary" className="px-3 py-1 text-sm">Analisar</Button>
                         ) : (
@@ -215,7 +215,7 @@ const ManageUsers: React.FC<ManageUsersProps> = ({ allUsers, onAdminUpdateUserBa
         <div className="space-y-8">
             <div>
                 <h1 className="text-3xl font-bold">Gestão de Usuários</h1>
-                <p className="text-gray-400">Gerencie contas, saldos e status dos investidores.</p>
+                <p className="text-gray-400">Gerencie contas, saldos e visualize investidores.</p>
             </div>
             <Card>
                 <div className="overflow-x-auto">
