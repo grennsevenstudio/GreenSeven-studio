@@ -63,18 +63,18 @@ const Settings: React.FC<SettingsProps> = ({ platformSettings, onUpdateSettings,
         setTimeout(() => setToast(null), 3000);
     };
 
-    // SQL Code Definition - CORRIGIDO PARA APLICAR RLS E ESTRUTURA CORRETA
+    // SQL Code Definition - REFINED FOR ROBUSTNESS
     const sqlCode = `-- SCRIPT SQL DE CONFIGURAÇÃO (GreennSeven Invest)
--- Copie e cole este código no SQL Editor do Supabase para corrigir a conexão.
+-- Projeto: grennsevenstudio's Project
 
--- 1. Habilita extensão para gerar IDs únicos
+-- 1. Habilita extensão para gerar IDs únicos (UUID)
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- 2. TABELA DE USUÁRIOS
 CREATE TABLE IF NOT EXISTS public.users (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   email TEXT UNIQUE NOT NULL,
-  password TEXT, -- Armazena a senha (hash ou texto conforme lógica do app local)
+  password TEXT,
   full_name TEXT,
   avatar_url TEXT,
   plan TEXT,
@@ -88,7 +88,7 @@ CREATE TABLE IF NOT EXISTS public.users (
   daily_withdrawable_usd NUMERIC DEFAULT 0,
   last_plan_change_date TEXT,
   support_status TEXT DEFAULT 'open',
-  additional_data JSONB DEFAULT '{}'::jsonb, -- Armazena endereço, documentos, CPF, telefone
+  additional_data JSONB DEFAULT '{}'::jsonb,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
 
@@ -100,7 +100,7 @@ CREATE TABLE IF NOT EXISTS public.transactions (
   amount_usd NUMERIC,
   amount_brl NUMERIC,
   status TEXT,
-  date TEXT, -- Formato YYYY-MM-DD
+  date TEXT,
   withdrawal_details JSONB,
   referral_level NUMERIC,
   source_user_id UUID,
@@ -114,48 +114,33 @@ CREATE TABLE IF NOT EXISTS public.messages (
   sender_id UUID REFERENCES public.users(id) ON DELETE SET NULL,
   receiver_id UUID REFERENCES public.users(id) ON DELETE SET NULL,
   text TEXT,
-  timestamp TEXT, -- ISO String
+  timestamp TEXT,
   is_read BOOLEAN DEFAULT false,
   attachment JSONB,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
 
 -- 5. SEGURANÇA (RLS - Row Level Security)
--- Habilita RLS nas tabelas
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
 
--- Remove políticas antigas para evitar conflitos
-DROP POLICY IF EXISTS "Allow all operations for users" ON public.users;
-DROP POLICY IF EXISTS "Allow all operations for transactions" ON public.transactions;
-DROP POLICY IF EXISTS "Allow all operations for messages" ON public.messages;
+-- Limpa políticas antigas se existirem
+DROP POLICY IF EXISTS "Public Access Users" ON public.users;
+DROP POLICY IF EXISTS "Public Access Transactions" ON public.transactions;
+DROP POLICY IF EXISTS "Public Access Messages" ON public.messages;
 
--- Cria políticas permissivas para o App (Leitura e Escrita pública/anon)
-CREATE POLICY "Allow all operations for users" 
-ON public.users 
-FOR ALL 
-USING (true) 
-WITH CHECK (true);
+-- Cria políticas permissivas para o App
+CREATE POLICY "Public Access Users" ON public.users FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Public Access Transactions" ON public.transactions FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Public Access Messages" ON public.messages FOR ALL USING (true) WITH CHECK (true);
 
-CREATE POLICY "Allow all operations for transactions" 
-ON public.transactions 
-FOR ALL 
-USING (true) 
-WITH CHECK (true);
-
-CREATE POLICY "Allow all operations for messages" 
-ON public.messages 
-FOR ALL 
-USING (true) 
-WITH CHECK (true);
-
--- Garante permissões para a role anon e authenticated
+-- Garante permissões
 GRANT ALL ON TABLE public.users TO anon, authenticated, service_role;
 GRANT ALL ON TABLE public.transactions TO anon, authenticated, service_role;
 GRANT ALL ON TABLE public.messages TO anon, authenticated, service_role;
 
--- 6. CRIAÇÃO DO ADMINISTRADOR PADRÃO (Se não existir)
+-- 6. CRIAÇÃO DO ADMINISTRADOR PADRÃO
 INSERT INTO public.users (
     email, password, full_name, is_admin, status, rank, balance_usd, plan, additional_data
 ) VALUES (

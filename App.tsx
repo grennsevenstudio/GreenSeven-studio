@@ -499,8 +499,8 @@ const App: React.FC = () => {
               balanceUSD: newBalance,
               monthlyProfitUSD: calculateProfit(newBalance, referrer.plan),
               rank: calculateRank(newBalance)
-          };
-          
+            };
+            
           syncUserToSupabase(updatedReferrer);
           
           referrersToUpdate.push(updatedReferrer);
