@@ -37,11 +37,29 @@ const App: React.FC = () => {
   const [isDarkMode, setIsDarkMode] = useState(true);
   
   // Centralized state for the entire application, loaded from our DB service
-  const [dbState, setDbState] = useState<AppDB>(getAllData());
+  const [dbState, setDbState] = useState<AppDB>(() => {
+      try {
+          const data = getAllData();
+          // Safe check to ensure arrays exist
+          return {
+              users: data?.users || [],
+              transactions: data?.transactions || [],
+              chatMessages: data?.chatMessages || [],
+              notifications: data?.notifications || [],
+              adminActionLogs: data?.adminActionLogs || [],
+              platformSettings: data?.platformSettings || {} as any
+          };
+      } catch(e) {
+          // Emergency fallback if DB init fails completely
+          return { users: [], transactions: [], chatMessages: [], notifications: [], adminActionLogs: [], platformSettings: {} as any };
+      }
+  });
 
   // Persist state to localStorage whenever it changes
   useEffect(() => {
-    saveAllData(dbState);
+    if (dbState) {
+        saveAllData(dbState);
+    }
   }, [dbState]);
 
   // Handle Theme
@@ -55,14 +73,13 @@ const App: React.FC = () => {
 
   // Automatically sync Admin user to Supabase on load to ensure connection
   useEffect(() => {
+    if (!dbState?.users || dbState.users.length === 0) return;
     const admin = dbState.users.find(u => u.isAdmin);
     if (admin) {
-        console.log("Tentando conectar Admin ao Supabase...");
         // Sync admin with default password to ensure they exist in cloud DB
         syncUserToSupabase(admin, 'admin123').then(res => {
             if (res.error) {
-                const errorMsg = typeof res.error === 'object' ? JSON.stringify(res.error, null, 2) : String(res.error);
-                console.error("Erro ao conectar Admin ao Supabase:", errorMsg);
+                console.error("Erro ao conectar Admin ao Supabase:", res.error);
             } else {
                 console.log("Admin conectado ao Supabase com sucesso.");
             }
@@ -74,30 +91,35 @@ const App: React.FC = () => {
   useEffect(() => {
     const loadRemoteData = async () => {
         console.log("Carregando dados do Supabase...");
-        const { data: remoteUsers, error: userError } = await fetchUsersFromSupabase();
-        const { data: remoteTxs, error: txError } = await fetchTransactionsFromSupabase();
-        const { data: remoteMessages, error: msgError } = await fetchMessagesFromSupabase();
-
-        if (remoteUsers && remoteUsers.length > 0) {
-            console.log(`${remoteUsers.length} usuários carregados do Supabase.`);
-            setDbState(prev => {
-                return {
-                    ...prev,
-                    users: remoteUsers,
-                    transactions: remoteTxs || [],
-                    chatMessages: remoteMessages || []
-                };
-            });
-        } else if (userError) {
-            console.error("Erro ao carregar usuários do Supabase:", JSON.stringify(userError, null, 2));
-        }
         
-        if (txError) {
-            console.error("Erro ao carregar transações do Supabase:", JSON.stringify(txError, null, 2));
-        }
+        try {
+            const { data: remoteUsers, error: userError } = await fetchUsersFromSupabase();
+            const { data: remoteTxs, error: txError } = await fetchTransactionsFromSupabase();
+            const { data: remoteMessages, error: msgError } = await fetchMessagesFromSupabase();
 
-        if (msgError) {
-            console.error("Erro ao carregar mensagens do Supabase:", JSON.stringify(msgError, null, 2));
+            if (remoteUsers && remoteUsers.length > 0) {
+                console.log(`${remoteUsers.length} usuários carregados do Supabase.`);
+                setDbState(prev => {
+                    return {
+                        ...prev,
+                        users: remoteUsers,
+                        transactions: remoteTxs || [],
+                        chatMessages: remoteMessages || []
+                    };
+                });
+            } else if (userError) {
+                console.error("Erro ao carregar usuários do Supabase:", JSON.stringify(userError, null, 2));
+            }
+            
+            if (txError) {
+                console.error("Erro ao carregar transações do Supabase:", JSON.stringify(txError, null, 2));
+            }
+
+            if (msgError) {
+                console.error("Erro ao carregar mensagens do Supabase:", JSON.stringify(msgError, null, 2));
+            }
+        } catch (e) {
+            console.error("Fatal error loading remote data", e);
         }
     };
     loadRemoteData();
@@ -105,10 +127,32 @@ const App: React.FC = () => {
 
   const toggleTheme = () => setIsDarkMode(!isDarkMode);
   
-  const { users, transactions, notifications, chatMessages, platformSettings, adminActionLogs } = dbState;
-  const adminUser = users.find(u => u.isAdmin) || users[0]; 
+  // Safe destructuring with defaults to prevent crashes
+  const { users = [], transactions = [], notifications = [], chatMessages = [], platformSettings, adminActionLogs } = dbState || {};
+  
+  // ROBUST FALLBACK ADMIN to prevent crashes when users list is empty or loading
+  const fallbackAdmin: User = {
+      id: 'admin-fallback',
+      name: 'Admin System',
+      email: 'admin@system.com',
+      cpf: '', phone: '', address: { cep: '', street: '', number: '', neighborhood: '', city: '', state: '' },
+      documents: { idFrontUrl: '', idBackUrl: '', selfieUrl: '' },
+      status: UserStatus.Approved,
+      avatarUrl: 'https://via.placeholder.com/150',
+      rank: InvestorRank.Diamond,
+      balanceUSD: 0, capitalInvestedUSD: 0, monthlyProfitUSD: 0, dailyWithdrawableUSD: 0,
+      isAdmin: true, joinedDate: new Date().toISOString(), referralCode: 'ADMIN', plan: 'Select'
+  };
+  
+  // Ensure adminUser is never undefined, even if users array is empty
+  const adminUser = (users && users.length > 0 ? users.find(u => u.isAdmin) : undefined) || fallbackAdmin;
 
   const handleLogin = (email: string, password?: string) => {
+    if (!users) {
+         alert("Sistema carregando, tente novamente em instantes.");
+         return false;
+    }
+    
     const cleanEmail = email.trim().toLowerCase();
     const userToLogin = users.find(u => u.email.toLowerCase() === cleanEmail);
     
@@ -144,7 +188,7 @@ const App: React.FC = () => {
 
   const handleRegister = (simpleUserData: { name: string; email: string; password?: string; referralCode?: string }) => {
     let referredById: string | undefined = undefined;
-    if (simpleUserData.referralCode) {
+    if (simpleUserData.referralCode && users) {
         const referrer = users.find(u => u.referralCode === simpleUserData.referralCode);
         if (referrer) {
             referredById = referrer.id;
@@ -242,7 +286,7 @@ const App: React.FC = () => {
           return;
       }
 
-      if (tx.userId === loggedUser?.id) {
+      if (tx.userId === loggedUser?.id && loggedUser) {
           // Check daily limit based on Plan (Monthly Profit / 30)
           const dailyLimit = (loggedUser.monthlyProfitUSD / 30);
           
@@ -250,9 +294,6 @@ const App: React.FC = () => {
             alert(`Erro: Valor superior ao limite diário de saque (US$ ${dailyLimit.toFixed(2)}).`);
             return;
           }
-          
-          // We do not deduct from 'dailyWithdrawableUSD' stored in DB anymore, 
-          // because the limit is based on the plan rate, reset daily.
           
           setDbState(prev => ({
               ...prev,
@@ -278,9 +319,9 @@ const App: React.FC = () => {
 
   const handleUpdateTransactionStatus = (transactionId: string, newStatus: TransactionStatus) => {
     const tx = dbState.transactions.find(t => t.id === transactionId);
-    const user = dbState.users.find(u => u.id === tx?.userId);
-
-    if (!tx || !user || !loggedUser?.isAdmin) return;
+    if (!tx) return;
+    const user = dbState.users.find(u => u.id === tx.userId);
+    if (!user || !loggedUser?.isAdmin) return;
 
     const actionType = newStatus === TransactionStatus.Completed ? AdminActionType.TransactionApprove : AdminActionType.TransactionReject;
     const description = `${newStatus === TransactionStatus.Completed ? 'Aprovou' : 'Rejeitou'} transação de ${tx.type} no valor de US$ ${Math.abs(tx.amountUSD).toFixed(2)} para ${user.name}.`;
@@ -362,8 +403,6 @@ const App: React.FC = () => {
                 syncUserToSupabase(updated);
                 return updated;
             } else if (newStatus === TransactionStatus.Failed && tx.type === TransactionType.Withdrawal) {
-                // Refund logic is no longer strictly necessary for 'dailyWithdrawableUSD' since we rely on plan rate,
-                // but we keep the user update consistent.
                 const updated = { ...u };
                 syncUserToSupabase(updated);
                 return updated;
@@ -443,7 +482,9 @@ const App: React.FC = () => {
           transactions: prev.transactions.map(t => t.id === depositTx.id ? updatedDepositTx : t).concat(bonusTransactions)
       }));
       
-      handleAddAdminLog(loggedUser!, AdminActionType.BonusPayout, `Pagamento manual de bônus para o depósito de ${currentUser?.name}.`, depositTx.id);
+      if (loggedUser) {
+        handleAddAdminLog(loggedUser, AdminActionType.BonusPayout, `Pagamento manual de bônus para o depósito de ${currentUser?.name}.`, depositTx.id);
+      }
       alert("Bônus repassados com sucesso!");
   };
 
@@ -457,10 +498,10 @@ const App: React.FC = () => {
           return u;
       });
       
-      if (newStatus !== UserStatus.Pending) {
+      if (newStatus !== UserStatus.Pending && loggedUser) {
            const actionType = newStatus === UserStatus.Approved ? AdminActionType.UserApprove : AdminActionType.UserReject;
            const description = `${newStatus === UserStatus.Approved ? 'Aprovou' : 'Rejeitou'} o cadastro do usuário ${dbState.users.find(u => u.id === userId)?.name}.`;
-           handleAddAdminLog(loggedUser!, actionType, description, userId);
+           handleAddAdminLog(loggedUser, actionType, description, userId);
       }
       
       setDbState(prev => ({ ...prev, users: updatedUsers }));
@@ -482,7 +523,9 @@ const App: React.FC = () => {
       });
       
       const user = dbState.users.find(u => u.id === userId);
-      handleAddAdminLog(loggedUser!, AdminActionType.UserBalanceEdit, `Alterou o saldo de ${user?.name} para US$ ${newBalance.toFixed(2)}.`, userId);
+      if (loggedUser) {
+        handleAddAdminLog(loggedUser, AdminActionType.UserBalanceEdit, `Alterou o saldo de ${user?.name} para US$ ${newBalance.toFixed(2)}.`, userId);
+      }
 
       setDbState(prev => ({ ...prev, users: updatedUsers }));
   };

@@ -30,10 +30,10 @@ const Settings: React.FC<SettingsProps> = ({ platformSettings, onUpdateSettings,
     const [isSyncing, setIsSyncing] = useState(false);
 
     // SQL Code Definition
-    const sqlCode = `-- SCRIPT SQL COMPLETO PARA GREENNSEVEN (Supabase)
--- IMPORTANTE: Se você está vendo erros 'PGRST205' no console, execute este script para criar as tabelas.
+    const sqlCode = `-- SCRIPT SQL COMPLETO PARA O PROJETO (greenn7investiments.tecnologic@gmail.com)
+-- Execute este script no SQL Editor do Supabase para criar a estrutura do banco de dados.
 
--- 1. Habilita extensão UUID
+-- 1. Habilita extensão UUID para geração de IDs únicos
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- 2. Criação da Tabela de Usuários
@@ -58,7 +58,7 @@ CREATE TABLE IF NOT EXISTS public.users (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
 
--- GARANTE QUE AS COLUNAS EXISTAM (MIGRATION)
+-- Garante que as colunas essenciais existam (caso a tabela já tenha sido criada parcialmente)
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS password TEXT;
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS full_name TEXT;
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS additional_data JSONB;
@@ -83,20 +83,19 @@ CREATE TABLE IF NOT EXISTS public.transactions (
 
 -- 4. Criação da Tabela de Mensagens (Suporte)
 CREATE TABLE IF NOT EXISTS public.messages (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  sender_id UUID REFERENCES public.users(id) ON DELETE SET NULL, 
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  sender_id UUID REFERENCES public.users(id) ON DELETE SET NULL,
   receiver_id UUID REFERENCES public.users(id) ON DELETE SET NULL,
   text TEXT,
-  timestamp TIMESTAMP WITH TIME ZONE DEFAULT now(),
+  timestamp TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
   is_read BOOLEAN DEFAULT false,
   attachment JSONB,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
 );
 
--- GARANTE QUE A COLUNA ATTACHMENT EXISTA (MIGRATION)
-ALTER TABLE public.messages ADD COLUMN IF NOT EXISTS attachment JSONB;
-
--- 5. Inserção do ADMINISTRADOR (Conexão Admin)
+-- 5. Inserção do ADMINISTRADOR PADRÃO
+-- E-mail: admin@greennseven.com
+-- Senha: admin123
 INSERT INTO public.users (
     email, 
     password, 
@@ -121,7 +120,8 @@ INSERT INTO public.users (
     is_admin = true,
     status = 'Approved';
 
--- 6. Configuração de Permissões (RLS Permissivo)
+-- 6. Configuração de Permissões (RLS - Row Level Security)
+-- Permite acesso total para fins de demonstração/MVP.
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
@@ -134,6 +134,7 @@ CREATE POLICY "Acesso total users" ON public.users FOR ALL USING (true) WITH CHE
 CREATE POLICY "Acesso total transactions" ON public.transactions FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Acesso total messages" ON public.messages FOR ALL USING (true) WITH CHECK (true);
 
+-- Recarrega o schema para aplicar as mudanças imediatamente
 NOTIFY pgrst, 'reload schema';
 `;
 
@@ -336,7 +337,7 @@ NOTIFY pgrst, 'reload schema';
                                 value={sqlCode}
                                 onClick={(e) => e.currentTarget.select()} 
                              />
-                             <p className="text-[10px] text-gray-500 mt-1">Este script cria o usuário <strong>admin@greennseven.com</strong> (senha: admin123) e as tabelas <strong>users</strong>, <strong>transactions</strong> e <strong>messages</strong> (incluindo suporte a arquivos).</p>
+                             <p className="text-[10px] text-gray-500 mt-1">Este script cria o usuário <strong>admin@greennseven.com</strong> (senha: admin123) e as tabelas <strong>users</strong>, <strong>transactions</strong> e <strong>messages</strong>.</p>
                         </div>
 
                         <div className="mt-6 pt-4 border-t border-gray-700">

@@ -23,7 +23,17 @@ const QUICK_REPLIES = [
 ];
 
 const AttachmentDisplay: React.FC<{ attachment: NonNullable<ChatMessage['attachment']> }> = ({ attachment }) => {
-    const isImage = attachment.fileType?.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp)$/i.test(attachment.fileName);
+    const fileType = attachment.fileType || '';
+    const fileName = attachment.fileName || 'Unknown File';
+    const isImage = fileType.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp)$/i.test(fileName);
+    
+    // Safe extension extraction
+    let extension = 'FILE';
+    if (fileType && fileType.includes('/')) {
+        extension = fileType.split('/')[1].toUpperCase();
+    } else if (fileName && fileName.includes('.')) {
+        extension = fileName.split('.').pop()?.toUpperCase() || 'FILE';
+    }
 
     if (isImage) {
         return (
@@ -36,7 +46,7 @@ const AttachmentDisplay: React.FC<{ attachment: NonNullable<ChatMessage['attachm
                 <div className="relative aspect-video bg-gray-900 w-full overflow-hidden">
                     <img 
                         src={attachment.fileUrl} 
-                        alt={attachment.fileName} 
+                        alt={fileName} 
                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" 
                     />
                     <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
@@ -46,8 +56,8 @@ const AttachmentDisplay: React.FC<{ attachment: NonNullable<ChatMessage['attachm
                         {ICONS.file}
                      </div>
                      <div className="overflow-hidden">
-                         <p className="text-xs text-gray-200 font-medium truncate group-hover:text-brand-green transition-colors">{attachment.fileName}</p>
-                         <p className="text-[10px] text-gray-500 uppercase">{attachment.fileType.split('/')[1] || 'IMAGE'}</p>
+                         <p className="text-xs text-gray-200 font-medium truncate group-hover:text-brand-green transition-colors">{fileName}</p>
+                         <p className="text-[10px] text-gray-500 uppercase">{extension}</p>
                      </div>
                 </div>
             </a>
@@ -65,8 +75,8 @@ const AttachmentDisplay: React.FC<{ attachment: NonNullable<ChatMessage['attachm
                 {ICONS.file}
             </div>
             <div className="truncate flex-1">
-                <p className="font-semibold text-sm text-gray-200 truncate group-hover:text-brand-green transition-colors">{attachment.fileName}</p>
-                <p className="text-xs text-gray-500 uppercase">{attachment.fileType || 'FILE'}</p>
+                <p className="font-semibold text-sm text-gray-200 truncate group-hover:text-brand-green transition-colors">{fileName}</p>
+                <p className="text-xs text-gray-500 uppercase">{extension}</p>
             </div>
         </a>
     );
@@ -202,8 +212,7 @@ const ManageSupport: React.FC<ManageSupportProps> = ({ adminUser, allUsers, allM
                 type="file" 
                 ref={fileInputRef} 
                 onChange={handleFileChange} 
-                className="hidden"
-                accept="image/*,.pdf,.doc,.docx,.xls,.xlsx"
+                className="hidden" 
             />
             <div className="flex justify-between items-center flex-shrink-0">
                 <div>
