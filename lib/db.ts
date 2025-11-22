@@ -63,6 +63,7 @@ export const initializeDB = () => {
     id: ADMIN_ID,
     name: 'Admin GreennSeven',
     email: 'admin@greennseven.com',
+    password: 'admin123', // Password for local auth
     cpf: '000.000.000-00',
     phone: '(00) 00000-0000',
     address: {

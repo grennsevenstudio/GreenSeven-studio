@@ -5,6 +5,8 @@ import Sidebar from '../../../layout/Sidebar';
 import Header from '../../../layout/Header';
 import BottomNavBar from '../../../layout/BottomNavBar';
 import { ICONS } from '../../../../constants';
+import Modal from '../../../layout/Modal';
+import Button from '../../../ui/Button';
 
 // Import pages
 import DashboardHome from './pages/DashboardHome';
@@ -48,6 +50,19 @@ const BOTTOM_NAV_ITEMS = [
     { label: 'Perfil', icon: ICONS.profile, view: 'profile' },
 ];
 
+const MOTIVATIONAL_QUOTES = [
+  { text: "O melhor momento para plantar uma árvore foi há 20 anos. O segundo melhor momento é agora.", author: "Provérbio Chinês" },
+  { text: "Não trabalhe pelo dinheiro, faça o dinheiro trabalhar por você.", author: "Robert Kiyosaki" },
+  { text: "O risco vem de você não saber o que está fazendo.", author: "Warren Buffett" },
+  { text: "Investir em conhecimento rende sempre os melhores juros.", author: "Benjamin Franklin" },
+  { text: "A riqueza não consiste em ter grandes possessões, mas em ter poucas necessidades.", author: "Epicteto" },
+  { text: "O segredo para ficar à frente é começar.", author: "Mark Twain" },
+  { text: "Não espere para comprar ativos. Compre ativos e espere.", author: "Will Rogers" },
+  { text: "Se você não encontrar um jeito de ganhar dinheiro enquanto dorme, vai trabalhar até morrer.", author: "Warren Buffett" },
+  { text: "Oportunidades não surgem. É você que as cria.", author: "Chris Grosser" },
+  { text: "Sucesso é a soma de pequenos esforços repetidos dia após dia.", author: "Robert Collier" }
+];
+
 const DashboardSkeleton = () => (
   <div className="space-y-8 animate-pulse max-w-7xl mx-auto">
     <div className="space-y-3">
@@ -78,6 +93,10 @@ const UserDashboard: React.FC<UserDashboardProps> = (props) => {
   const [activeView, setActiveView] = useState('dashboard');
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Welcome Modal State
+  const [showWelcomeModal, setShowWelcomeModal] = useState(false);
+  const [dailyQuote, setDailyQuote] = useState({ text: "", author: "" });
 
   useEffect(() => {
     // Simulate a subtle data fetching delay for better UX smoothness
@@ -86,6 +105,22 @@ const UserDashboard: React.FC<UserDashboardProps> = (props) => {
     }, 1000);
     return () => clearTimeout(timer);
   }, []);
+
+  // Effect for Welcome Modal
+  useEffect(() => {
+    const sessionKey = `hasSeenWelcome_${user.id}`;
+    const hasSeen = sessionStorage.getItem(sessionKey);
+
+    if (!hasSeen) {
+      const randomQuote = MOTIVATIONAL_QUOTES[Math.floor(Math.random() * MOTIVATIONAL_QUOTES.length)];
+      setDailyQuote(randomQuote);
+      // Small delay to ensure the dashboard is visible behind the modal
+      setTimeout(() => {
+          setShowWelcomeModal(true);
+          sessionStorage.setItem(sessionKey, 'true');
+      }, 1500);
+    }
+  }, [user.id]);
 
   const renderContent = () => {
     switch (activeView) {
@@ -121,6 +156,43 @@ const UserDashboard: React.FC<UserDashboardProps> = (props) => {
 
   return (
     <div className="flex min-h-screen bg-gray-100 dark:bg-brand-black text-gray-900 dark:text-white transition-colors duration-300">
+      
+      <Modal
+        isOpen={showWelcomeModal}
+        onClose={() => setShowWelcomeModal(false)}
+        title="Bem-vindo(a) de volta!"
+      >
+        <div className="text-center space-y-6">
+            <div className="flex justify-center">
+                <div className="h-20 w-20 bg-gradient-to-tr from-brand-green to-brand-blue rounded-full flex items-center justify-center shadow-lg shadow-brand-green/20">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-brand-black" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                </div>
+            </div>
+            
+            <h3 className="text-xl font-bold text-white">
+                Olá, {user.name.split(' ')[0]}!
+            </h3>
+            
+            <div className="bg-brand-black/50 p-6 rounded-xl border border-gray-700 relative">
+                <span className="absolute top-2 left-4 text-4xl text-brand-green opacity-50">“</span>
+                <p className="text-lg text-gray-300 italic font-medium relative z-10 px-2">
+                    {dailyQuote.text}
+                </p>
+                <p className="text-right text-sm text-brand-green mt-4 font-bold">— {dailyQuote.author}</p>
+            </div>
+
+            <p className="text-gray-400 text-sm">
+                Seus investimentos estão trabalhando por você. Vamos conferir seus resultados de hoje?
+            </p>
+            
+            <Button fullWidth onClick={() => setShowWelcomeModal(false)}>
+                Acessar Meu Dashboard
+            </Button>
+        </div>
+      </Modal>
+
       <Sidebar
         user={user}
         navItems={SIDEBAR_NAV_ITEMS}
@@ -139,7 +211,7 @@ const UserDashboard: React.FC<UserDashboardProps> = (props) => {
             isDarkMode={isDarkMode}
             toggleTheme={toggleTheme}
         />
-        <main className="p-4 sm:p-6 lg:p-8">
+        <main className="p-2 sm:p-6 lg:p-8">
           {isLoading ? <DashboardSkeleton /> : renderContent()}
         </main>
       </div>

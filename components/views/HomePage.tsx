@@ -23,6 +23,56 @@ const MOCK_TICKER_STOCKS: Stock[] = [
     { symbol: 'MSFT', name: 'Microsoft Corp.', price: 442.57, change: 2.11, changePercent: 0.48 },
 ];
 
+const FAQ_CONTENT = [
+    {
+        question: "POR QUE INVESTIR NA GREENNSEVEN?",
+        answer: "A GreennSeven oferece uma oportunidade única de dolarizar seu patrimônio. Enquanto moedas locais sofrem com a inflação, investir em Dólar Americano (a moeda mais forte do mundo) protege seu poder de compra. Além disso, nossos planos oferecem rentabilidades diárias competitivas que superam investimentos tradicionais."
+    },
+    {
+        question: "O QUE É A DOLARIZAÇÃO DE CAPITAL?",
+        answer: "Dolarizar significa converter seu saldo em Reais para Dólares no momento do depósito. Isso blinda seu dinheiro contra a desvalorização do Real. Na GreennSeven, você deposita via PIX, nós convertemos para USD, e seus rendimentos são calculados sobre esse saldo em dólar."
+    },
+    {
+        question: "COMO FUNCIONAM OS DEPÓSITOS E SAQUES?",
+        answer: "Depósitos são feitos instantaneamente via PIX. Para sacar, você solicita o valor desejado na plataforma, nós convertemos seus dólares de volta para Reais e enviamos para sua chave PIX. Saques solicitados até as 18h em dias úteis são processados no mesmo dia."
+    },
+    {
+        question: "A PLATAFORMA É SEGURA?",
+        answer: "Sim. Utilizamos criptografia de ponta (AES-256) para proteger seus dados e transações. Além disso, operamos com 'Cold Wallets' para custódia segura dos ativos e exigimos autenticação em etapas para saques."
+    },
+    {
+        question: "QUAL O VALOR MÍNIMO PARA COMEÇAR?",
+        answer: "Você pode começar a investir com o plano Conservador a partir de apenas US$ 10,00. Isso torna o investimento internacional acessível a todos."
+    }
+];
+
+const FAQList = () => {
+    const [openIndex, setOpenIndex] = useState<number | null>(null);
+
+    return (
+        <div className="space-y-2">
+            {FAQ_CONTENT.map((item, index) => (
+                <div key={index} className="border border-gray-700 rounded-lg bg-brand-black/50 overflow-hidden">
+                    <button
+                        onClick={() => setOpenIndex(openIndex === index ? null : index)}
+                        className="w-full flex justify-between items-center p-4 text-left hover:bg-gray-800 transition-colors"
+                    >
+                        <span className="font-bold text-white">{item.question}</span>
+                        <span className={`transform transition-transform duration-200 text-brand-green ${openIndex === index ? 'rotate-180' : ''}`}>
+                            {ICONS.arrowDown}
+                        </span>
+                    </button>
+                    {openIndex === index && (
+                        <div className="p-4 pt-0 text-gray-400 text-sm leading-relaxed border-t border-gray-700/50 mt-2">
+                            {item.answer}
+                        </div>
+                    )}
+                </div>
+            ))}
+        </div>
+    );
+};
+
 const StockTickerItem: React.FC<{ stock: Stock }> = ({ stock }) => {
     const isPositive = stock.change >= 0;
     return (
@@ -84,35 +134,6 @@ const HomePage: React.FC<{ setView: (view: View) => void; }> = ({ setView }) => 
     const [isLearnMoreOpen, setIsLearnMoreOpen] = useState(false);
     const [infoModalContent, setInfoModalContent] = useState<{ title: string; content: React.ReactNode } | null>(null);
 
-    const navItems = [
-        { name: 'Início', href: '#home' },
-        { name: 'Vantagens', href: '#features' },
-        { name: 'Como Funciona', href: '#how-it-works' },
-        { name: 'Planos', href: '#plans' },
-    ];
-
-    useEffect(() => {
-        const handleScroll = (e: MouseEvent) => {
-            const target = e.target as HTMLAnchorElement;
-            const href = target.getAttribute('href');
-            if (target.tagName === 'A' && href && href.startsWith('#')) {
-                e.preventDefault();
-                const elementId = href.substring(1);
-                const element = document.getElementById(elementId);
-                if (element) {
-                    element.scrollIntoView({ behavior: 'smooth' });
-                }
-            }
-        };
-
-        const nav = document.querySelector('nav');
-        nav?.addEventListener('click', handleScroll);
-
-        return () => {
-            nav?.removeEventListener('click', handleScroll);
-        };
-    }, []);
-
     const openInfoModal = (type: string) => {
         let title = '';
         let content: React.ReactNode = null;
@@ -142,11 +163,45 @@ const HomePage: React.FC<{ setView: (view: View) => void; }> = ({ setView }) => 
                 title = 'Política de Privacidade';
                 content = PRIVACY_POLICY_CONTENT;
                 break;
+            case 'faq':
+                title = 'Perguntas Frequentes';
+                content = <FAQList />;
+                break;
             default:
                 return;
         }
         setInfoModalContent({ title, content });
     };
+
+    const navItems = [
+        { name: 'INÍCIO', href: '#home' },
+        { name: 'VANTAGENS', href: '#features' },
+        { name: 'COMO FUNCIONA', href: '#how-it-works' },
+        { name: 'PLANOS', href: '#plans' },
+        { name: 'FAQ', href: '#faq', action: () => openInfoModal('faq') },
+    ];
+
+    useEffect(() => {
+        const handleScroll = (e: MouseEvent) => {
+            const target = e.target as HTMLAnchorElement;
+            const href = target.getAttribute('href');
+            if (target.tagName === 'A' && href && href.startsWith('#') && !href.includes('faq')) {
+                e.preventDefault();
+                const elementId = href.substring(1);
+                const element = document.getElementById(elementId);
+                if (element) {
+                    element.scrollIntoView({ behavior: 'smooth' });
+                }
+            }
+        };
+
+        const nav = document.querySelector('nav');
+        nav?.addEventListener('click', handleScroll);
+
+        return () => {
+            nav?.removeEventListener('click', handleScroll);
+        };
+    }, []);
 
     const GridBackground = () => (
          <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
@@ -281,17 +336,27 @@ const HomePage: React.FC<{ setView: (view: View) => void; }> = ({ setView }) => 
                     </div>
                     <nav className="hidden md:flex items-center gap-8">
                         {navItems.map(item => (
-                            <a key={item.name} href={item.href} className="font-semibold text-gray-300 hover:text-brand-green transition-colors">
+                            <a 
+                                key={item.name} 
+                                href={item.href} 
+                                onClick={(e) => {
+                                    if (item.action) {
+                                        e.preventDefault();
+                                        item.action();
+                                    }
+                                }}
+                                className="font-semibold text-gray-300 hover:text-brand-green transition-colors"
+                            >
                                 {item.name}
                             </a>
                         ))}
                     </nav>
                     <div className="flex items-center gap-3">
                          <Button onClick={() => setView(View.Login)} variant="secondary" className="px-5 py-2 !rounded-md">
-                           Login
+                           LOGIN
                          </Button>
                          <Button onClick={() => setView(View.Register)} variant="primary" className="px-5 py-2 !rounded-md">
-                           Abrir Conta
+                           ABRIR CONTA
                          </Button>
                     </div>
                 </div>

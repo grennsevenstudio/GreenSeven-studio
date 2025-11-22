@@ -22,24 +22,24 @@ interface DashboardHomeProps {
 const StatCard: React.FC<{ title: string; value: React.ReactNode; icon: React.ReactNode; subValue?: React.ReactNode; highlight?: boolean }> = ({ title, value, icon, subValue, highlight = false }) => {
     const borderGradient = highlight 
         ? 'from-brand-green via-brand-green/50 to-brand-gray' 
-        : 'from-brand-blue/30 via-brand-gray to-brand-black/0';
+        : 'from-brand-blue/30 via-brand-gray to-brand-gray/30'; // Fixed gradient to be visible at end
 
     return (
         <div className={`relative p-[2px] rounded-2xl bg-gradient-to-br ${borderGradient} transition-all duration-300 hover:shadow-lg hover:shadow-brand-green/10 transform hover:-translate-y-1`}>
-            <div className="bg-brand-gray rounded-[14px] p-4 sm:p-6 h-full flex flex-col justify-between overflow-hidden group">
+            <div className="bg-brand-gray rounded-[14px] p-3 sm:p-6 h-full flex flex-col justify-between overflow-hidden group">
                 {/* Decorative Glow on highlight cards */}
                 {highlight && <div className="absolute -top-1/4 -right-1/4 w-1/2 h-1/2 bg-brand-green/10 rounded-full blur-3xl opacity-50 group-hover:opacity-80 transition-opacity duration-500"></div>}
 
                 <div className="flex justify-between items-start">
-                    <p className="text-gray-300 font-medium">{title}</p>
+                    <p className="text-gray-300 font-medium text-sm sm:text-base">{title}</p>
                     <div className={`transition-colors ${highlight ? 'text-brand-green' : 'text-gray-500 group-hover:text-brand-green'}`}>
-                        {React.cloneElement(icon as React.ReactElement<any>, { className: "h-7 w-7" })}
+                        {React.cloneElement(icon as React.ReactElement<any>, { className: "h-5 w-5 sm:h-7 sm:w-7" })}
                     </div>
                 </div>
                 
                 <div className="z-10">
-                    <div className="text-3xl sm:text-4xl font-black text-white leading-tight mt-2">{value}</div>
-                    {subValue && <div className="text-sm text-gray-400 mt-1">{subValue}</div>}
+                    <div className="text-2xl sm:text-4xl font-black text-white leading-tight mt-2">{value}</div>
+                    {subValue && <div className="text-xs sm:text-sm text-gray-400 mt-1">{subValue}</div>}
                 </div>
             </div>
         </div>
@@ -602,11 +602,11 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions, onAdd
             />
         </Modal>
 
-        <div className="space-y-8">
+        <div className="space-y-4 md:space-y-8">
             <div className="flex justify-between items-start">
                 <div>
-                    <h1 className="text-3xl font-bold">Dashboard Financeiro</h1>
-                    <p className="text-gray-400">Aqui está um resumo de sua conta.</p>
+                    <h1 className="text-xl md:text-3xl font-bold">Dashboard Financeiro</h1>
+                    <p className="text-gray-400 text-sm md:text-base">Aqui está um resumo de sua conta.</p>
                 </div>
                 <button 
                     onClick={() => setShowBalance(!showBalance)}
@@ -617,7 +617,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions, onAdd
                 </button>
             </div>
             {/* Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-6">
                 <StatCard 
                     title="Saldo Total (USD)" 
                     value={
@@ -676,20 +676,20 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions, onAdd
             </div>
 
             {/* Actions */}
-             <Card>
-                <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-                    <p className="font-semibold text-center md:text-left">Movimente sua conta de forma rápida e segura.</p>
-                    <div className="flex gap-4 w-full md:w-auto">
-                        <Button onClick={() => setDepositModalOpen(true)} variant="primary" fullWidth>{ICONS.deposit} Depositar</Button>
-                        <Button onClick={() => setWithdrawModalOpen(true)} variant="secondary" fullWidth>{ICONS.withdraw} Sacar</Button>
+             <Card className="p-4 md:p-6">
+                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                    <p className="font-semibold text-left text-sm md:text-base w-full">Movimente sua conta de forma rápida e segura.</p>
+                    <div className="flex gap-3 w-full md:w-auto">
+                        <Button onClick={() => setDepositModalOpen(true)} variant="primary" fullWidth className="py-2 md:py-3 text-sm md:text-base">{ICONS.deposit} Depositar</Button>
+                        <Button onClick={() => setWithdrawModalOpen(true)} variant="secondary" fullWidth className="py-2 md:py-3 text-sm md:text-base">{ICONS.withdraw} Sacar</Button>
                     </div>
                 </div>
             </Card>
 
             {/* Market Overview */}
             <Card>
-                <h2 className="text-xl font-bold mb-4">Mercado Americano (Tempo Real)</h2>
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <h2 className="text-lg md:text-xl font-bold mb-4">Mercado Americano (Tempo Real)</h2>
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
                     {stocks.map(stock => (
                         <StockTickerCard key={stock.symbol} stock={stock} />
                     ))}
@@ -707,7 +707,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions, onAdd
 
             {/* Recent Transactions */}
             <Card>
-                <h2 className="text-xl font-bold mb-4">Movimentações Recentes</h2>
+                <h2 className="text-lg md:text-xl font-bold mb-4">Movimentações Recentes</h2>
                 <div className="space-y-2">
                     {transactions.slice(0, 5).map(tx => (
                         <TransactionRow key={tx.id} tx={tx} />

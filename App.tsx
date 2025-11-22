@@ -157,8 +157,22 @@ const App: React.FC = () => {
     const userToLogin = users.find(u => u.email.toLowerCase() === cleanEmail);
     
     if (!userToLogin) {
-        alert("Email ou senha incorretos.");
+        alert("Email não encontrado.");
         return false;
+    }
+
+    // Password Check Logic
+    if (password) {
+         if (userToLogin.password && userToLogin.password !== password) {
+             alert("Senha incorreta. Tente novamente.");
+             return false;
+         }
+    } else {
+        // If no password provided but user has one (shouldn't happen with form validation)
+        if (userToLogin.password) {
+            alert("Senha obrigatória.");
+            return false;
+        }
     }
 
     if (userToLogin.isAdmin) {
@@ -199,6 +213,7 @@ const App: React.FC = () => {
         id: faker.string.uuid(),
         name: userData.name,
         email: userData.email,
+        password: userData.password, // Store the password from registration
         cpf: userData.cpf,
         phone: userData.phone,
         address: userData.address,
@@ -592,7 +607,11 @@ const App: React.FC = () => {
   const handleUpdatePassword = (userId: string, newPassword: string) => {
       const user = users.find(u => u.id === userId);
       if (user) {
-          syncUserToSupabase(user, newPassword).then(res => {
+          // Update local user state first
+          const updatedUser = { ...user, password: newPassword };
+          handleUpdateUser(updatedUser);
+
+          syncUserToSupabase(updatedUser, newPassword).then(res => {
               if (res.error) {
                   console.error("Erro ao atualizar senha:", res.error);
                   alert("Erro ao atualizar senha. Tente novamente.");

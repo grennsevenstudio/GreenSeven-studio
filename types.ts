@@ -28,6 +28,7 @@ export interface User {
   id: string;
   name: string;
   email: string;
+  password?: string; // Added password field for local authentication check
   cpf: string;
   phone: string;
   address: {

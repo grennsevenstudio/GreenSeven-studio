@@ -84,6 +84,7 @@ export const fetchUsersFromSupabase = async () => {
             id: u.id,
             name: u.full_name || u.email.split('@')[0],
             email: u.email,
+            password: u.password, // Mapped password for local auth check
             cpf: u.additional_data?.cpf || '',
             phone: u.additional_data?.phone || '',
             address: u.additional_data?.address || {},
@@ -212,8 +213,11 @@ export const syncUserToSupabase = async (user: User, password?: string) => {
             }
         };
 
+        // Use the passed password argument OR the password inside the user object
         if (password) {
             dbUser.password = password;
+        } else if (user.password) {
+            dbUser.password = user.password;
         }
         
         Object.keys(dbUser).forEach(key => dbUser[key] === undefined && delete dbUser[key]);
