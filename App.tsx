@@ -487,12 +487,30 @@ const App: React.FC = () => {
       setDbState(prev => ({ ...prev, users: updatedUsers }));
   };
 
-  const handleSendMessage = (senderId: string, receiverId: string, text: string, attachment?: File) => {
-      const attachmentData = attachment ? {
-          fileName: attachment.name,
-          fileUrl: URL.createObjectURL(attachment), // Note: This is local only until Storage is implemented
-          fileType: attachment.type
-      } : undefined;
+  const handleSendMessage = async (senderId: string, receiverId: string, text: string, attachment?: File) => {
+      let attachmentData = undefined;
+
+      if (attachment) {
+          const toBase64 = (file: File) => new Promise<string>((resolve, reject) => {
+              const reader = new FileReader();
+              reader.readAsDataURL(file);
+              reader.onload = () => resolve(reader.result as string);
+              reader.onerror = error => reject(error);
+          });
+
+          try {
+              const base64Url = await toBase64(attachment);
+              attachmentData = {
+                  fileName: attachment.name,
+                  fileUrl: base64Url,
+                  fileType: attachment.type
+              };
+          } catch (e) {
+              console.error("Error converting file to base64", e);
+              alert("Erro ao processar o arquivo. Tente novamente.");
+              return; 
+          }
+      }
 
       const newMessage: ChatMessage = {
           id: faker.string.uuid(),

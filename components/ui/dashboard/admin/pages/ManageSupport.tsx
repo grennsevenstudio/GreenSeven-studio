@@ -22,20 +22,55 @@ const QUICK_REPLIES = [
     { label: "Encerrar", text: "Obrigado pelo contato! Se precisar de mais alguma coisa, estamos à disposição. Tenha um ótimo dia!" },
 ];
 
-const AttachmentDisplay: React.FC<{ attachment: NonNullable<ChatMessage['attachment']> }> = ({ attachment }) => (
-    <a 
-        href={attachment.fileUrl} 
-        target="_blank" 
-        rel="noopener noreferrer" 
-        className="mt-2 flex items-center gap-2 bg-black/20 p-2 rounded-lg hover:bg-black/40 transition-colors w-full max-w-xs"
-    >
-        {ICONS.file}
-        <div className="truncate">
-            <p className="font-semibold text-sm truncate">{attachment.fileName}</p>
-            <p className="text-xs opacity-70">{attachment.fileType}</p>
-        </div>
-    </a>
-);
+const AttachmentDisplay: React.FC<{ attachment: NonNullable<ChatMessage['attachment']> }> = ({ attachment }) => {
+    const isImage = attachment.fileType?.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp)$/i.test(attachment.fileName);
+
+    if (isImage) {
+        return (
+            <a 
+                href={attachment.fileUrl} 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="mt-2 block rounded-xl overflow-hidden border border-gray-800 bg-black transition-all duration-300 hover:border-brand-green/50 hover:shadow-lg hover:shadow-brand-green/10 group max-w-xs"
+            >
+                <div className="relative aspect-video bg-gray-900 w-full overflow-hidden">
+                    <img 
+                        src={attachment.fileUrl} 
+                        alt={attachment.fileName} 
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" 
+                    />
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
+                </div>
+                <div className="p-3 flex items-center gap-3 bg-gray-900/50">
+                     <div className="p-1.5 rounded bg-brand-green/20 text-brand-green">
+                        {ICONS.file}
+                     </div>
+                     <div className="overflow-hidden">
+                         <p className="text-xs text-gray-200 font-medium truncate group-hover:text-brand-green transition-colors">{attachment.fileName}</p>
+                         <p className="text-[10px] text-gray-500 uppercase">{attachment.fileType.split('/')[1] || 'IMAGE'}</p>
+                     </div>
+                </div>
+            </a>
+        );
+    }
+
+    return (
+         <a 
+            href={attachment.fileUrl} 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            className="mt-2 flex items-center gap-3 bg-gray-800/50 border border-gray-700 p-3 rounded-xl hover:bg-gray-700 hover:border-brand-green/30 transition-all max-w-xs group"
+        >
+            <div className="p-2 bg-gray-900 rounded-lg text-brand-green group-hover:bg-brand-green/20 transition-colors">
+                {ICONS.file}
+            </div>
+            <div className="truncate flex-1">
+                <p className="font-semibold text-sm text-gray-200 truncate group-hover:text-brand-green transition-colors">{attachment.fileName}</p>
+                <p className="text-xs text-gray-500 uppercase">{attachment.fileType || 'FILE'}</p>
+            </div>
+        </a>
+    );
+};
 
 const ChatBubble: React.FC<{ message: ChatMessage; isSender: boolean; avatarUrl: string }> = ({ message, isSender, avatarUrl }) => {
     const bubbleColor = isSender ? 'bg-brand-green text-brand-black' : 'bg-brand-black';
@@ -167,7 +202,8 @@ const ManageSupport: React.FC<ManageSupportProps> = ({ adminUser, allUsers, allM
                 type="file" 
                 ref={fileInputRef} 
                 onChange={handleFileChange} 
-                className="hidden" 
+                className="hidden"
+                accept="image/*,.pdf,.doc,.docx,.xls,.xlsx"
             />
             <div className="flex justify-between items-center flex-shrink-0">
                 <div>

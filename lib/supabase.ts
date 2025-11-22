@@ -19,7 +19,13 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 export const checkSupabaseConnection = async () => {
     try {
         const { count, error } = await supabase.from('users').select('*', { count: 'exact', head: true });
-        if (error) return { success: false, message: error.message };
+        if (error) {
+             // Ignora erros de tabela inexistente na verificação inicial
+            if (error.code === '42P01' || error.code === 'PGRST205') {
+                return { success: false, message: 'Tabelas não criadas (Execute o SQL em Settings)' };
+            }
+            return { success: false, message: error.message };
+        }
         return { success: true, count: count || 0 };
     } catch (e: any) {
         return { success: false, message: e.message || 'Unknown error' };
@@ -35,7 +41,10 @@ export const fetchUsersFromSupabase = async () => {
         
         if (error) {
             // Se a tabela não existir ou erro de cache de schema, retorna vazio para não quebrar o app
-            if (error.code === '42P01' || error.code === 'PGRST205' || error.message?.includes('does not exist')) return { data: [] };
+            if (error.code === '42P01' || error.code === 'PGRST205' || error.message?.includes('does not exist')) {
+                console.warn("Tabela 'users' não encontrada no Supabase. Retornando lista vazia.");
+                return { data: [] };
+            }
             
             console.error('Erro ao buscar usuários:', JSON.stringify(error, null, 2));
             return { error };
@@ -89,7 +98,10 @@ export const fetchTransactionsFromSupabase = async () => {
 
         if (error) {
             // Se a tabela não existir ou erro de cache de schema, retorna vazio para não quebrar o app
-            if (error.code === '42P01' || error.code === 'PGRST205' || error.message?.includes('does not exist')) return { data: [] };
+            if (error.code === '42P01' || error.code === 'PGRST205' || error.message?.includes('does not exist')) {
+                console.warn("Tabela 'transactions' não encontrada no Supabase. Retornando lista vazia.");
+                return { data: [] };
+            }
 
             console.error('Erro ao buscar transações:', JSON.stringify(error, null, 2));
             return { error };
@@ -130,7 +142,10 @@ export const fetchMessagesFromSupabase = async () => {
             // Se a tabela não existir (ainda não foi criada pelo script) ou erro de cache de schema, retorna vazio sem erro crítico
             // PGRST205: Could not find the table in the schema cache
             // 42P01: Undefined table
-            if (error.code === '42P01' || error.code === 'PGRST205' || error.message?.includes('does not exist')) return { data: [] };
+            if (error.code === '42P01' || error.code === 'PGRST205' || error.message?.includes('does not exist')) {
+                 console.warn("Tabela 'messages' não encontrada no Supabase. Retornando lista vazia.");
+                 return { data: [] };
+            }
             
             console.error('Erro ao buscar mensagens:', JSON.stringify(error, null, 2));
             return { error };
@@ -209,15 +224,10 @@ export const syncUserToSupabase = async (user: User, password?: string) => {
       .select();
 
     if (error) {
+      // Fallback para last_plan_change_date se a coluna não existir
       if (error.code === 'PGRST204' && (error.message?.includes('last_plan_change_date') || JSON.stringify(error).includes('last_plan_change_date'))) {
-          console.warn("A coluna 'last_plan_change_date' não existe no Supabase. Tentando sincronizar sem este campo.");
           delete payload.last_plan_change_date;
-          
-          const { data: retryData, error: retryError } = await supabase
-              .from('users')
-              .upsert(payload, { onConflict: 'id' })
-              .select();
-          
+          const { data: retryData, error: retryError } = await supabase.from('users').upsert(payload, { onConflict: 'id' }).select();
           if (retryError) return { error: retryError };
           return { data: retryData };
       }
@@ -225,13 +235,13 @@ export const syncUserToSupabase = async (user: User, password?: string) => {
       // Fallback para support_status se a coluna não existir
       if (error.code === 'PGRST204' && (error.message?.includes('support_status') || JSON.stringify(error).includes('support_status'))) {
           delete payload.support_status;
-           const { data: retryData2, error: retryError2 } = await supabase
-              .from('users')
-              .upsert(payload, { onConflict: 'id' })
-              .select();
+           const { data: retryData2, error: retryError2 } = await supabase.from('users').upsert(payload, { onConflict: 'id' }).select();
            if (retryError2) return { error: retryError2 };
            return { data: retryData2 };
       }
+
+      // Ignorar erro se tabela não existir
+      if (error.code === '42P01' || error.code === 'PGRST205') return { data: null };
 
       return { error };
     }

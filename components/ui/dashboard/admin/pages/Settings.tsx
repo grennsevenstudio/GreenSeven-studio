@@ -58,7 +58,7 @@ CREATE TABLE IF NOT EXISTS public.users (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
 
--- GARANTE QUE AS COLUNAS EXISTAM
+-- GARANTE QUE AS COLUNAS EXISTAM (MIGRATION)
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS password TEXT;
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS full_name TEXT;
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS additional_data JSONB;
@@ -82,17 +82,19 @@ CREATE TABLE IF NOT EXISTS public.transactions (
 );
 
 -- 4. Criação da Tabela de Mensagens (Suporte)
--- Conecta as mensagens aos usuários via Foreign Keys para integridade
 CREATE TABLE IF NOT EXISTS public.messages (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  sender_id UUID REFERENCES public.users(id), 
-  receiver_id UUID REFERENCES public.users(id),
+  sender_id UUID REFERENCES public.users(id) ON DELETE SET NULL, 
+  receiver_id UUID REFERENCES public.users(id) ON DELETE SET NULL,
   text TEXT,
   timestamp TIMESTAMP WITH TIME ZONE DEFAULT now(),
   is_read BOOLEAN DEFAULT false,
   attachment JSONB,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
+
+-- GARANTE QUE A COLUNA ATTACHMENT EXISTA (MIGRATION)
+ALTER TABLE public.messages ADD COLUMN IF NOT EXISTS attachment JSONB;
 
 -- 5. Inserção do ADMINISTRADOR (Conexão Admin)
 INSERT INTO public.users (
@@ -334,7 +336,7 @@ NOTIFY pgrst, 'reload schema';
                                 value={sqlCode}
                                 onClick={(e) => e.currentTarget.select()} 
                              />
-                             <p className="text-[10px] text-gray-500 mt-1">Este script cria o usuário <strong>admin@greennseven.com</strong> (senha: admin123) e as tabelas <strong>users</strong>, <strong>transactions</strong> e <strong>messages</strong>.</p>
+                             <p className="text-[10px] text-gray-500 mt-1">Este script cria o usuário <strong>admin@greennseven.com</strong> (senha: admin123) e as tabelas <strong>users</strong>, <strong>transactions</strong> e <strong>messages</strong> (incluindo suporte a arquivos).</p>
                         </div>
 
                         <div className="mt-6 pt-4 border-t border-gray-700">
