@@ -6,10 +6,10 @@ import type { User, Transaction, ChatMessage } from '../types';
 // CONFIGURAÇÃO DO SUPABASE
 // ============================================================================
 
-// Credenciais do Projeto: grennsevenstudio's Project
-// Project ID: kcwbtbjngrthtxtojqus
-const SUPABASE_URL = 'https://kcwbtbjngrthtxtojqus.supabase.co'; 
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtjd2J0YmpuZ3J0aHR4dG9qcXVzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM4NDc5MjUsImV4cCI6MjA3OTQyMzkyNX0.44rjV4beXn-MZwK9CXx1j8AgXqoSeHOfOh1X2pjaTrk';
+// Credenciais do Projeto: greenn7investiments.tecnologic@gmail.com's Project
+// Project ID: dvmaukjrkepgktfnuesf
+const SUPABASE_URL = 'https://dvmaukjrkepgktfnuesf.supabase.co'; 
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR2bWF1a2pya2VwZ2t0Zm51ZXNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM3NjE2NTAsImV4cCI6MjA3OTMzNzY1MH0.t84GRCDCTZcqjzQZgRFUAn_25xjsIKjJ-wvXjjmMaiY';
 
 // Inicializa o cliente
 export const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
@@ -140,7 +140,8 @@ export const fetchTransactionsFromSupabase = async () => {
 
         const mappedTxs: Transaction[] = data.map((t: any) => ({
             id: t.id,
-            userId: t.user_id,
+            user_id: t.user_id,
+            userId: t.user_id, // Mapped for frontend
             type: t.type,
             amountUSD: Number(t.amount_usd),
             amountBRL: Number(t.amount_brl),
