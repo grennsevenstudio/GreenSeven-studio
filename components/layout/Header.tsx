@@ -113,10 +113,6 @@ const Header: React.FC<HeaderProps> = ({ user, onLogout, toggleSidebar, notifica
         </button>
         {/* Welcome Message - Visible on Mobile and Desktop (as per user screenshot) */}
         <div className="flex items-center gap-2">
-             {/* Icon only on mobile to avoid duplicity with sidebar */}
-            <div className="lg:hidden">
-                {React.cloneElement(ICONS.logo as React.ReactElement<any>, {className: "h-6 w-6 text-brand-green"})}
-            </div>
             <span className="font-bold text-white truncate max-w-[200px]">{t.welcome}, {firstName}</span>
         </div>
       </div>
