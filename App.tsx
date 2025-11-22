@@ -93,7 +93,7 @@ const App: React.FC = () => {
         // Sync admin with default password to ensure they exist in cloud DB
         syncUserToSupabase(admin, 'admin123').then(res => {
             if (res.error) {
-                console.error("Erro ao conectar Admin ao Supabase:", res.error);
+                console.error("Erro ao conectar Admin ao Supabase:", JSON.stringify(res.error, null, 2));
             } else {
                 console.log("Admin conectado ao Supabase com sucesso.");
             }
@@ -109,29 +109,35 @@ const App: React.FC = () => {
         const { data: remoteTxs, error: txError } = await fetchTransactionsFromSupabase();
         const { data: remoteMessages, error: msgError } = await fetchMessagesFromSupabase();
 
-        if (remoteUsers && remoteUsers.length > 0) {
-            console.log(`${remoteUsers.length} usuários carregados do Supabase.`);
-            setDbState(prev => {
-                // Use remote data, but keep current admin logs and settings which might be local-only for now
-                return {
-                    ...prev,
-                    users: remoteUsers,
-                    transactions: remoteTxs || [],
-                    chatMessages: remoteMessages || []
-                };
-            });
-        } else if (userError) {
-            console.error("Erro ao carregar usuários do Supabase:", JSON.stringify(userError, null, 2));
-        }
-        
-        if (txError) {
-            console.error("Erro ao carregar transações do Supabase:", JSON.stringify(txError, null, 2));
-        }
+        setDbState(prev => {
+            let newState = { ...prev };
+            
+            // Only update if data is not null. If it's null, it means connection failed.
+            // If it's an empty array [], it means the DB is empty, which is a valid state.
+            if (remoteUsers !== null) {
+                console.log(`${remoteUsers.length} usuários carregados do Supabase.`);
+                newState.users = remoteUsers;
+            } else if (userError) {
+                 console.error("Erro ao carregar usuários do Supabase:", JSON.stringify(userError, null, 2));
+            }
 
-        if (msgError) {
-            console.error("Erro ao carregar mensagens do Supabase:", JSON.stringify(msgError, null, 2));
-        }
-        return true;
+            if (remoteTxs !== null) {
+                newState.transactions = remoteTxs;
+            } else if (txError) {
+                 console.error("Erro ao carregar transações do Supabase:", JSON.stringify(txError, null, 2));
+            }
+
+            if (remoteMessages !== null) {
+                 newState.chatMessages = remoteMessages;
+            } else if (msgError) {
+                 console.error("Erro ao carregar mensagens do Supabase:", JSON.stringify(msgError, null, 2));
+            }
+            
+            return newState;
+        });
+
+        // Return true if at least users loaded successfully
+        return remoteUsers !== null;
     } catch (e) {
         console.error("Fatal error loading remote data", e);
         return false;

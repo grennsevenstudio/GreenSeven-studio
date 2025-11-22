@@ -63,18 +63,18 @@ const Settings: React.FC<SettingsProps> = ({ platformSettings, onUpdateSettings,
         setTimeout(() => setToast(null), 3000);
     };
 
-    // SQL Code Definition
-    const sqlCode = `-- SCRIPT SQL CORRIGIDO PARA O PROJETO (greenn7investiments.tecnologic@gmail.com)
--- Execute este script no SQL Editor do Supabase para corrigir tabelas e permissões.
+    // SQL Code Definition - CORRIGIDO PARA APLICAR RLS E ESTRUTURA CORRETA
+    const sqlCode = `-- SCRIPT SQL DE CONFIGURAÇÃO (GreennSeven Invest)
+-- Copie e cole este código no SQL Editor do Supabase para corrigir a conexão.
 
--- 1. Habilita extensão UUID para IDs
+-- 1. Habilita extensão para gerar IDs únicos
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- 2. Criação/Correção da Tabela de Usuários
+-- 2. TABELA DE USUÁRIOS
 CREATE TABLE IF NOT EXISTS public.users (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   email TEXT UNIQUE NOT NULL,
-  password TEXT,
+  password TEXT, -- Armazena a senha (hash ou texto conforme lógica do app local)
   full_name TEXT,
   avatar_url TEXT,
   plan TEXT,
@@ -86,27 +86,21 @@ CREATE TABLE IF NOT EXISTS public.users (
   capital_invested_usd NUMERIC DEFAULT 0,
   monthly_profit_usd NUMERIC DEFAULT 0,
   daily_withdrawable_usd NUMERIC DEFAULT 0,
-  last_plan_change_date TIMESTAMP WITH TIME ZONE,
+  last_plan_change_date TEXT,
   support_status TEXT DEFAULT 'open',
-  additional_data JSONB,
+  additional_data JSONB DEFAULT '{}'::jsonb, -- Armazena endereço, documentos, CPF, telefone
   created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
 
--- Garante que colunas existam se a tabela já foi criada
-ALTER TABLE public.users ADD COLUMN IF NOT EXISTS password TEXT;
-ALTER TABLE public.users ADD COLUMN IF NOT EXISTS full_name TEXT;
-ALTER TABLE public.users ADD COLUMN IF NOT EXISTS additional_data JSONB DEFAULT '{}'::jsonb;
-ALTER TABLE public.users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN DEFAULT false;
-
--- 3. Criação/Correção da Tabela de Transações
+-- 3. TABELA DE TRANSAÇÕES
 CREATE TABLE IF NOT EXISTS public.transactions (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  user_id UUID REFERENCES public.users(id),
+  user_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
   type TEXT,
   amount_usd NUMERIC,
   amount_brl NUMERIC,
   status TEXT,
-  date TIMESTAMP WITH TIME ZONE DEFAULT now(),
+  date TEXT, -- Formato YYYY-MM-DD
   withdrawal_details JSONB,
   referral_level NUMERIC,
   source_user_id UUID,
@@ -114,46 +108,67 @@ CREATE TABLE IF NOT EXISTS public.transactions (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
 
--- 4. Criação/Correção da Tabela de Mensagens
+-- 4. TABELA DE MENSAGENS (CHAT)
 CREATE TABLE IF NOT EXISTS public.messages (
-  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   sender_id UUID REFERENCES public.users(id) ON DELETE SET NULL,
   receiver_id UUID REFERENCES public.users(id) ON DELETE SET NULL,
   text TEXT,
-  timestamp TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
+  timestamp TEXT, -- ISO String
   is_read BOOLEAN DEFAULT false,
   attachment JSONB,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
 
--- 5. Inserção do ADMINISTRADOR (Garante existência)
-INSERT INTO public.users (
-    email, password, full_name, is_admin, status, rank, balance_usd, plan, avatar_url, additional_data
-) VALUES (
-    'admin@greennseven.com', 'admin123', 'Administrador Geral', true, 'Approved', 'Diamond', 1000000, 'Select', 'https://i.pravatar.cc/150?u=admin', '{}'::jsonb
-) ON CONFLICT (email) DO UPDATE SET 
-    is_admin = true,
-    status = 'Approved';
-
--- 6. CORREÇÃO DE PERMISSÕES (RLS) - CRUCIAL PARA O PAINEL FUNCIONAR
+-- 5. SEGURANÇA (RLS - Row Level Security)
+-- Habilita RLS nas tabelas
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
 
 -- Remove políticas antigas para evitar conflitos
-DROP POLICY IF EXISTS "Acesso total users" ON public.users;
-DROP POLICY IF EXISTS "Acesso total transactions" ON public.transactions;
-DROP POLICY IF EXISTS "Acesso total messages" ON public.messages;
-DROP POLICY IF EXISTS "Public Users Access" ON public.users;
-DROP POLICY IF EXISTS "Public Transactions Access" ON public.transactions;
+DROP POLICY IF EXISTS "Allow all operations for users" ON public.users;
+DROP POLICY IF EXISTS "Allow all operations for transactions" ON public.transactions;
+DROP POLICY IF EXISTS "Allow all operations for messages" ON public.messages;
 
--- Cria políticas permissivas para o MVP (Leitura/Escrita pública autenticada pela API Key)
-CREATE POLICY "Acesso total users" ON public.users FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Acesso total transactions" ON public.transactions FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Acesso total messages" ON public.messages FOR ALL USING (true) WITH CHECK (true);
+-- Cria políticas permissivas para o App (Leitura e Escrita pública/anon)
+CREATE POLICY "Allow all operations for users" 
+ON public.users 
+FOR ALL 
+USING (true) 
+WITH CHECK (true);
 
--- Recarrega o schema
-NOTIFY pgrst, 'reload schema';
+CREATE POLICY "Allow all operations for transactions" 
+ON public.transactions 
+FOR ALL 
+USING (true) 
+WITH CHECK (true);
+
+CREATE POLICY "Allow all operations for messages" 
+ON public.messages 
+FOR ALL 
+USING (true) 
+WITH CHECK (true);
+
+-- Garante permissões para a role anon e authenticated
+GRANT ALL ON TABLE public.users TO anon, authenticated, service_role;
+GRANT ALL ON TABLE public.transactions TO anon, authenticated, service_role;
+GRANT ALL ON TABLE public.messages TO anon, authenticated, service_role;
+
+-- 6. CRIAÇÃO DO ADMINISTRADOR PADRÃO (Se não existir)
+INSERT INTO public.users (
+    email, password, full_name, is_admin, status, rank, balance_usd, plan, additional_data
+) VALUES (
+    'admin@greennseven.com', 
+    'admin123', 
+    'Administrador Geral', 
+    true, 
+    'Approved', 
+    'Diamond', 
+    1000000, 
+    'Select', 
+    '{"cpf": "000.000.000-00"}'::jsonb
+) ON CONFLICT (email) DO UPDATE SET is_admin = true;
 `;
 
     useEffect(() => {
@@ -263,7 +278,7 @@ NOTIFY pgrst, 'reload schema';
             setSupabaseMessage(`Conectado! Tabela 'users' encontrada com ${result.count} registros.`);
         } else {
             setSupabaseStatus('error');
-            setSupabaseMessage(`Erro: ${result.message}. Execute o SQL abaixo.`);
+            setSupabaseMessage(`Erro: ${result.message}.`);
         }
     };
 
@@ -356,7 +371,7 @@ NOTIFY pgrst, 'reload schema';
                                 value={sqlCode}
                                 onClick={(e) => e.currentTarget.select()} 
                              />
-                             <p className="text-[10px] text-gray-500 mt-1">Este script corrige problemas de permissão e estruturas de tabela ausentes.</p>
+                             <p className="text-[10px] text-gray-500 mt-1">Este script cria as tabelas necessárias e libera o acesso para o App funcionar. Copie e execute no Supabase.</p>
                         </div>
 
                         <div className="mt-6 pt-4 border-t border-gray-700">

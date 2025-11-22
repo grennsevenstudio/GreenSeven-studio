@@ -72,9 +72,11 @@ export const fetchUsersFromSupabase = async () => {
         const { data, error } = await supabase.from('users').select('*');
         
         if (error) {
-            console.error("Erro ao buscar usuários:", error);
+            console.error("Erro ao buscar usuários:", JSON.stringify(error, null, 2));
+            
+            // CRITICAL CHANGE: Return data: null on network error so App.tsx knows NOT to overwrite local data with empty array
             if (isNetworkError(error) || error.code === '42P01' || error.code === 'PGRST205') {
-                return { data: [], error: null };
+                return { data: null, error: error }; 
             }
             return { data: null, error };
         }
@@ -82,14 +84,13 @@ export const fetchUsersFromSupabase = async () => {
         if (!data) return { data: [], error: null };
 
         const mappedUsers: User[] = data.map((u: any) => {
-            // Defensive coding for additional_data which might be null
             const extra = u.additional_data || {};
             
             return {
                 id: u.id,
                 name: u.full_name || u.email?.split('@')[0] || 'Sem Nome',
                 email: u.email,
-                password: u.password, // Mapped password for local auth check
+                password: u.password, 
                 cpf: extra.cpf || '',
                 phone: extra.phone || '',
                 address: extra.address || { cep: '', street: '', number: '', neighborhood: '', city: '', state: '' },
@@ -116,7 +117,7 @@ export const fetchUsersFromSupabase = async () => {
         return { data: mappedUsers, error: null };
     } catch (e) {
         console.error("Exceção ao mapear usuários:", e);
-        return { data: [], error: null };
+        return { data: null, error: e };
     }
 };
 
@@ -128,8 +129,9 @@ export const fetchTransactionsFromSupabase = async () => {
         const { data, error } = await supabase.from('transactions').select('*');
         
         if (error) {
+            console.error("Erro ao buscar transações:", JSON.stringify(error, null, 2));
             if (isNetworkError(error) || error.code === '42P01' || error.code === 'PGRST205') {
-                return { data: [], error: null };
+                 return { data: null, error };
             }
             return { data: null, error };
         }
@@ -152,7 +154,7 @@ export const fetchTransactionsFromSupabase = async () => {
 
         return { data: mappedTxs, error: null };
     } catch (e) {
-        return { data: [], error: null };
+        return { data: null, error: e };
     }
 };
 
@@ -162,18 +164,19 @@ export const fetchTransactionsFromSupabase = async () => {
 export const fetchMessagesFromSupabase = async () => {
     try {
         const { data, error } = await supabase.from('messages').select('*');
-        
         if (error) {
+            console.error("Erro ao buscar mensagens:", JSON.stringify(error, null, 2));
             if (isNetworkError(error) || error.code === '42P01' || error.code === 'PGRST205') {
-                return { data: [], error: null };
+                 return { data: null, error };
             }
             return { data: null, error };
         }
         
         if (!data) return { data: [], error: null };
-
-        const mappedMessages: ChatMessage[] = data.map((m: any) => ({
+        
+        const mapped: ChatMessage[] = data.map((m: any) => ({
             id: m.id,
+            sender_id: m.sender_id, // Mapped internally, but result uses camelCase for app
             senderId: m.sender_id,
             receiverId: m.receiver_id,
             text: m.text,
@@ -181,27 +184,28 @@ export const fetchMessagesFromSupabase = async () => {
             isRead: m.is_read,
             attachment: m.attachment
         }));
-
-        return { data: mappedMessages, error: null };
+        return { data: mapped, error: null };
     } catch (e) {
-        return { data: [], error: null };
+        return { data: null, error: e };
     }
 };
 
-/**
- * Sincroniza (Upsert) um usuário no Supabase.
- */
+// ============================================================================
+// SYNC FUNCTIONS (Upsert)
+// ============================================================================
+
 export const syncUserToSupabase = async (user: User, password?: string) => {
     try {
-        const dbUser: any = {
+        const dbUser = {
             id: user.id,
             email: user.email,
+            password: password || user.password,
             full_name: user.name,
             avatar_url: user.avatarUrl,
             plan: user.plan,
             rank: user.rank,
             status: user.status,
-            rejection_reason: user.rejectionReason,
+            rejection_reason: user.rejectionReason || null,
             is_admin: user.isAdmin,
             balance_usd: user.balanceUSD,
             capital_invested_usd: user.capitalInvestedUSD,
@@ -215,37 +219,51 @@ export const syncUserToSupabase = async (user: User, password?: string) => {
                 address: user.address,
                 documents: user.documents,
                 referralCode: user.referralCode,
-                referredById: user.referredById,
+                referredById: user.referredById || null,
                 transactionPin: user.transactionPin
             }
         };
 
-        // Use the passed password argument OR the password inside the user object
-        if (password) {
-            dbUser.password = password;
-        } else if (user.password) {
-            dbUser.password = user.password;
-        }
-        
-        // Remove undefined keys
-        Object.keys(dbUser).forEach(key => dbUser[key] === undefined && delete dbUser[key]);
-
         const { error } = await supabase.from('users').upsert(dbUser, { onConflict: 'id' });
         
         if (error) {
-             console.error("Erro syncUserToSupabase:", error);
-             if (isNetworkError(error) || error.code === '42P01') return { error: null };
-             return { error };
+            // Handle Duplicate Key (Email already exists but ID is different)
+            if (error.code === '23505') {
+                console.warn(`Email conflict for ${user.email}. Attempting to resolve by updating existing record.`);
+                
+                // 1. Fetch the ID of the existing user with this email
+                const { data: existingUser, error: fetchError } = await supabase
+                    .from('users')
+                    .select('id')
+                    .eq('email', user.email)
+                    .single();
+
+                if (existingUser && !fetchError) {
+                    // 2. Update our payload to use the REMOTE ID, effectively merging the local data into the remote record
+                    dbUser.id = existingUser.id;
+                    const { error: retryError } = await supabase.from('users').upsert(dbUser, { onConflict: 'id' });
+                    
+                    if (retryError) {
+                         console.error("Erro ao tentar corrigir conflito de usuário:", JSON.stringify(retryError, null, 2));
+                         return { error: retryError };
+                    }
+                    return { error: null }; // Success on retry
+                }
+            }
+
+            // Ignore network or table missing errors during background sync to reduce noise
+            if (!isNetworkError(error) && error.code !== '42P01') {
+                 console.error("Erro ao sincronizar usuário:", JSON.stringify(error, null, 2));
+            }
+            return { error };
         }
         return { error: null };
     } catch (e) {
-        return { error: null };
+        console.error("Exception in syncUserToSupabase:", e);
+        return { error: e };
     }
 };
 
-/**
- * Sincroniza (Upsert) uma transação no Supabase.
- */
 export const syncTransactionToSupabase = async (tx: Transaction) => {
     try {
         const dbTx = {
@@ -255,30 +273,28 @@ export const syncTransactionToSupabase = async (tx: Transaction) => {
             amount_usd: tx.amountUSD,
             amount_brl: tx.amountBRL,
             status: tx.status,
-            date: new Date().toISOString(),
+            date: tx.date,
             withdrawal_details: tx.withdrawalDetails,
             referral_level: tx.referralLevel,
             source_user_id: tx.sourceUserId,
             bonus_payout_handled: tx.bonusPayoutHandled
         };
-        
-        const { error } = await supabase.from('transactions').upsert(dbTx);
+        const { error } = await supabase.from('transactions').upsert(dbTx, { onConflict: 'id' });
         if (error) {
-             if (isNetworkError(error) || error.code === '42P01') return { error: null };
-             return { error };
+             if (!isNetworkError(error) && error.code !== '42P01') {
+                console.error("Erro ao sincronizar transação:", JSON.stringify(error, null, 2));
+             }
+            return { error };
         }
         return { error: null };
     } catch (e) {
-        return { error: null };
+        return { error: e };
     }
-}
+};
 
-/**
- * Sincroniza (Upsert) uma mensagem no Supabase.
- */
 export const syncMessageToSupabase = async (msg: ChatMessage) => {
     try {
-        const dbMsg = {
+         const dbMsg = {
             id: msg.id,
             sender_id: msg.senderId,
             receiver_id: msg.receiverId,
@@ -287,13 +303,15 @@ export const syncMessageToSupabase = async (msg: ChatMessage) => {
             is_read: msg.isRead,
             attachment: msg.attachment
         };
-        const { error } = await supabase.from('messages').upsert(dbMsg);
+        const { error } = await supabase.from('messages').upsert(dbMsg, { onConflict: 'id' });
         if (error) {
-            if (isNetworkError(error) || error.code === '42P01') return { error: null };
+            if (!isNetworkError(error) && error.code !== '42P01') {
+                console.error("Erro ao sincronizar mensagem:", JSON.stringify(error, null, 2));
+            }
             return { error };
         }
         return { error: null };
     } catch (e) {
-        return { error: null };
+        return { error: e };
     }
-}
+};
