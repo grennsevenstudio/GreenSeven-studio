@@ -1,12 +1,13 @@
 
 import React, { useState, useEffect } from 'react';
-import type { User, Transaction, Notification, ChatMessage } from '../../../../types';
+import type { User, Transaction, Notification, ChatMessage, Language } from '../../../../types';
 import Sidebar from '../../../layout/Sidebar';
 import Header from '../../../layout/Header';
 import BottomNavBar from '../../../layout/BottomNavBar';
 import { ICONS } from '../../../../constants';
 import Modal from '../../../layout/Modal';
 import Button from '../../../ui/Button';
+import { TRANSLATIONS } from '../../../../lib/translations';
 
 // Import pages
 import DashboardHome from './pages/DashboardHome';
@@ -32,23 +33,9 @@ interface UserDashboardProps {
   onUpdatePassword: (userId: string, newPassword: string) => void;
   isDarkMode: boolean;
   toggleTheme: () => void;
+  language: Language;
+  setLanguage: (lang: Language) => void;
 }
-
-const SIDEBAR_NAV_ITEMS = [
-  { label: 'Dashboard', icon: ICONS.dashboard, view: 'dashboard' },
-  { label: 'Planos', icon: ICONS.plans, view: 'plans' },
-  { label: 'Plano de Carreira', icon: ICONS.career, view: 'career' },
-  { label: 'Movimentações', icon: ICONS.transactions, view: 'transactions' },
-  { label: 'Meu Perfil', icon: ICONS.profile, view: 'profile' },
-  { label: 'Suporte', icon: ICONS.support, view: 'support' },
-];
-
-const BOTTOM_NAV_ITEMS = [
-    { label: 'Dashboard', icon: ICONS.dashboard, view: 'dashboard' },
-    { label: 'Planos', icon: ICONS.plans, view: 'plans' },
-    { label: 'Movimentações', icon: ICONS.transactions, view: 'transactions' },
-    { label: 'Perfil', icon: ICONS.profile, view: 'profile' },
-];
 
 const MOTIVATIONAL_QUOTES = [
   { text: "O melhor momento para plantar uma árvore foi há 20 anos. O segundo melhor momento é agora.", author: "Provérbio Chinês" },
@@ -89,7 +76,7 @@ const DashboardSkeleton = () => (
 );
 
 const UserDashboard: React.FC<UserDashboardProps> = (props) => {
-  const { user, adminUser, transactions, allUsers, allTransactions, notifications, chatMessages, onLogout, onAddTransaction, onMarkAllNotificationsAsRead, onSendMessage, onUpdateUser, onUpdatePassword, isDarkMode, toggleTheme } = props;
+  const { user, adminUser, transactions, allUsers, allTransactions, notifications, chatMessages, onLogout, onAddTransaction, onMarkAllNotificationsAsRead, onSendMessage, onUpdateUser, onUpdatePassword, isDarkMode, toggleTheme, language, setLanguage } = props;
   const [activeView, setActiveView] = useState('dashboard');
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -97,6 +84,24 @@ const UserDashboard: React.FC<UserDashboardProps> = (props) => {
   // Welcome Modal State
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
   const [dailyQuote, setDailyQuote] = useState({ text: "", author: "" });
+
+  const t = TRANSLATIONS[language];
+
+  const sidebarNavItems = [
+    { label: t.dashboard, icon: ICONS.dashboard, view: 'dashboard' },
+    { label: t.plans, icon: ICONS.plans, view: 'plans' },
+    { label: t.career, icon: ICONS.career, view: 'career' },
+    { label: t.transactions, icon: ICONS.transactions, view: 'transactions' },
+    { label: t.profile, icon: ICONS.profile, view: 'profile' },
+    { label: t.support, icon: ICONS.support, view: 'support' },
+  ];
+
+  const bottomNavItems = [
+      { label: t.dashboard, icon: ICONS.dashboard, view: 'dashboard' },
+      { label: t.plans, icon: ICONS.plans, view: 'plans' },
+      { label: t.transactions, icon: ICONS.transactions, view: 'transactions' },
+      { label: t.profile, icon: ICONS.profile, view: 'profile' },
+  ];
 
   useEffect(() => {
     // Simulate a subtle data fetching delay for better UX smoothness
@@ -130,6 +135,7 @@ const UserDashboard: React.FC<UserDashboardProps> = (props) => {
                     transactions={transactions} 
                     onAddTransaction={onAddTransaction}
                     setActiveView={setActiveView}
+                    language={language}
                 />;
       case 'plans':
         return <Plans user={user} onUpdateUser={onUpdateUser} />;
@@ -150,6 +156,7 @@ const UserDashboard: React.FC<UserDashboardProps> = (props) => {
                     transactions={transactions} 
                     onAddTransaction={onAddTransaction}
                     setActiveView={setActiveView}
+                    language={language}
                 />;
     }
   };
@@ -160,7 +167,7 @@ const UserDashboard: React.FC<UserDashboardProps> = (props) => {
       <Modal
         isOpen={showWelcomeModal}
         onClose={() => setShowWelcomeModal(false)}
-        title="Bem-vindo(a) de volta!"
+        title={t.welcome + "!"}
       >
         <div className="text-center space-y-6">
             <div className="flex justify-center">
@@ -172,7 +179,7 @@ const UserDashboard: React.FC<UserDashboardProps> = (props) => {
             </div>
             
             <h3 className="text-xl font-bold text-white">
-                Olá, {user.name.split(' ')[0]}!
+                {t.welcome}, {user.name.split(' ')[0]}!
             </h3>
             
             <div className="bg-brand-black/50 p-6 rounded-xl border border-gray-700 relative">
@@ -184,18 +191,18 @@ const UserDashboard: React.FC<UserDashboardProps> = (props) => {
             </div>
 
             <p className="text-gray-400 text-sm">
-                Seus investimentos estão trabalhando por você. Vamos conferir seus resultados de hoje?
+                {language === 'pt' ? 'Seus investimentos estão trabalhando por você. Vamos conferir seus resultados de hoje?' : 'Your investments are working for you. Let\'s check your results today?'}
             </p>
             
             <Button fullWidth onClick={() => setShowWelcomeModal(false)}>
-                Acessar Meu Dashboard
+                {language === 'pt' ? 'Acessar Meu Dashboard' : 'Access My Dashboard'}
             </Button>
         </div>
       </Modal>
 
       <Sidebar
         user={user}
-        navItems={SIDEBAR_NAV_ITEMS}
+        navItems={sidebarNavItems}
         activeView={activeView}
         setActiveView={setActiveView}
         isOpen={isSidebarOpen}
@@ -210,13 +217,15 @@ const UserDashboard: React.FC<UserDashboardProps> = (props) => {
             onMarkAllAsRead={onMarkAllNotificationsAsRead}
             isDarkMode={isDarkMode}
             toggleTheme={toggleTheme}
+            language={language}
+            setLanguage={setLanguage}
         />
         <main className="p-2 sm:p-6 lg:p-8">
           {isLoading ? <DashboardSkeleton /> : renderContent()}
         </main>
       </div>
        <BottomNavBar
-        navItems={BOTTOM_NAV_ITEMS}
+        navItems={bottomNavItems}
         activeView={activeView}
         setActiveView={setActiveView}
       />

@@ -1,8 +1,8 @@
 
-import React, { useState } from 'react';
-import type { User, Notification } from '../../types';
+import React, { useState, useRef, useEffect } from 'react';
+import type { User, Notification, Language } from '../../types';
 import { ICONS, RANK_COLORS } from '../../constants';
-import Button from '../ui/Button';
+import { TRANSLATIONS } from '../../lib/translations';
 
 // Helper function for relative time
 function timeAgo(date: Date): string {
@@ -38,44 +38,11 @@ function timeAgo(date: Date): string {
     return "agora mesmo";
 }
 
-const NotificationDropdown: React.FC<{ notifications: Notification[] }> = ({ notifications }) => {
-    const recentNotifications = notifications.slice(0, 5);
-
-    return (
-        <>
-        <div className="absolute right-0 mt-3 w-80 bg-white dark:bg-brand-gray border border-gray-200 dark:border-gray-700 rounded-lg shadow-2xl z-50 animate-fade-in-down">
-            <div className="p-3 border-b border-gray-200 dark:border-gray-700">
-                <h3 className="font-semibold text-gray-900 dark:text-white">Notificações</h3>
-            </div>
-            <div className="max-h-96 overflow-y-auto">
-                {recentNotifications.length > 0 ? (
-                    recentNotifications.map(n => (
-                        <div key={n.id} className={`p-3 border-b border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-brand-black/50 ${!n.isRead ? 'bg-brand-blue/10' : ''}`}>
-                            <p className="text-sm text-gray-800 dark:text-gray-200">{n.message}</p>
-                            <p className="text-xs text-gray-500 mt-1">{timeAgo(new Date(n.date))}</p>
-                        </div>
-                    ))
-                ) : (
-                    <p className="p-4 text-sm text-center text-gray-500">Nenhuma notificação nova.</p>
-                )}
-            </div>
-            {notifications.length > 5 && (
-                <div className="p-2 text-center border-t border-gray-200 dark:border-gray-700">
-                    <a href="#" className="text-sm text-brand-green hover:underline">Ver todas</a>
-                </div>
-            )}
-        </div>
-        <style>{`
-            @keyframes fade-in-down {
-                from { opacity: 0; transform: translateY(-10px); }
-                to { opacity: 1; transform: translateY(0); }
-            }
-            .animate-fade-in-down { animation: fade-in-down 0.2s ease-out forwards; }
-        `}</style>
-        </>
-    );
-};
-
+const LANGUAGES: { code: Language; label: string; flag: string }[] = [
+    { code: 'pt', label: 'PT', flag: '🇧🇷' },
+    { code: 'en', label: 'EN', flag: '🇺🇸' },
+    { code: 'es', label: 'ES', flag: '🇪🇸' },
+];
 
 interface HeaderProps {
   user: User;
@@ -85,61 +52,184 @@ interface HeaderProps {
   onMarkAllAsRead?: () => void;
   isDarkMode: boolean;
   toggleTheme: () => void;
+  language?: Language;
+  setLanguage?: (lang: Language) => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ user, onLogout, toggleSidebar, notifications = [], onMarkAllAsRead, isDarkMode, toggleTheme }) => {
-  const [isDropdownOpen, setDropdownOpen] = useState(false);
-  const unreadCount = notifications.filter(n => !n.isRead).length;
-
-  const handleToggleDropdown = () => {
-      if (!isDropdownOpen) {
-          onMarkAllAsRead?.();
-      }
-      setDropdownOpen(prev => !prev);
-  };
+const Header: React.FC<HeaderProps> = ({ 
+    user, 
+    onLogout, 
+    toggleSidebar, 
+    notifications = [], 
+    onMarkAllAsRead,
+    isDarkMode,
+    toggleTheme,
+    language = 'pt',
+    setLanguage
+}) => {
+  const [isNotificationsOpen, setNotificationsOpen] = useState(false);
+  const [isProfileOpen, setProfileOpen] = useState(false);
+  const [isLangOpen, setLangOpen] = useState(false);
   
+  const notifRef = useRef<HTMLDivElement>(null);
+  const profileRef = useRef<HTMLDivElement>(null);
+  const langRef = useRef<HTMLDivElement>(null);
+
+  const unreadCount = notifications.filter(n => !n.isRead).length;
+  const t = TRANSLATIONS[language];
+
+  // Click outside handler
+  useEffect(() => {
+      const handleClickOutside = (event: MouseEvent) => {
+          if (notifRef.current && !notifRef.current.contains(event.target as Node)) {
+              setNotificationsOpen(false);
+          }
+          if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
+              setProfileOpen(false);
+          }
+          if (langRef.current && !langRef.current.contains(event.target as Node)) {
+              setLangOpen(false);
+          }
+      };
+
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   return (
-    <header className="bg-white dark:bg-brand-gray/80 backdrop-blur-md sticky top-0 z-30 flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-800 transition-colors duration-300">
+    <header className="bg-white dark:bg-brand-gray border-b border-gray-200 dark:border-gray-800 h-16 flex items-center justify-between px-4 lg:px-8 transition-colors duration-300 sticky top-0 z-20">
       <div className="flex items-center gap-4">
-        <button onClick={toggleSidebar} className="lg:hidden text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
+        <button
+          onClick={toggleSidebar}
+          className="lg:hidden text-gray-500 dark:text-gray-400 hover:text-brand-green"
+        >
           {ICONS.menu}
         </button>
-        <div className="hidden md:block">
-            <h1 className="text-xl font-bold text-gray-900 dark:text-white">
-                Bem-vindo, {user.name.split(' ')[0]}!
-            </h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400">{user.isAdmin ? 'Administrador' : 'Investidor'}</p>
-        </div>
+        <h2 className="text-xl font-bold text-gray-800 dark:text-white hidden sm:block">
+           {t.welcome}, <span className="text-brand-green">{user.name.split(' ')[0]}</span>
+        </h2>
       </div>
-      <div className="flex items-center gap-4">
-        <button 
-            onClick={toggleTheme} 
-            className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 transition-colors"
-            title={isDarkMode ? "Ativar modo claro" : "Ativar modo escuro"}
+
+      <div className="flex items-center gap-3 sm:gap-6">
+        {/* Language Selector */}
+        {setLanguage && (
+            <div className="relative" ref={langRef}>
+                <button 
+                    onClick={() => setLangOpen(!isLangOpen)}
+                    className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                >
+                    <span className="text-xl">{LANGUAGES.find(l => l.code === language)?.flag}</span>
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300 hidden sm:block">
+                        {LANGUAGES.find(l => l.code === language)?.label}
+                    </span>
+                    <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+                </button>
+
+                {isLangOpen && (
+                    <div className="absolute right-0 mt-2 w-32 bg-white dark:bg-brand-gray border border-gray-200 dark:border-gray-700 rounded-xl shadow-2xl overflow-hidden z-50 animate-fade-in-up">
+                        {LANGUAGES.map((lang) => (
+                            <button
+                                key={lang.code}
+                                onClick={() => {
+                                    setLanguage(lang.code);
+                                    setLangOpen(false);
+                                }}
+                                className={`w-full flex items-center gap-3 px-4 py-3 text-sm transition-colors ${language === lang.code ? 'bg-brand-green/10 text-brand-green font-bold' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
+                            >
+                                <span className="text-lg">{lang.flag}</span>
+                                {lang.label}
+                            </button>
+                        ))}
+                    </div>
+                )}
+            </div>
+        )}
+
+        {/* Theme Toggle */}
+        <button
+            onClick={toggleTheme}
+            className="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            title={isDarkMode ? t.theme_light : t.theme_dark}
         >
             {isDarkMode ? ICONS.sun : ICONS.moon}
         </button>
 
-        {!user.isAdmin && (
-             <div className="relative">
-                <button onClick={handleToggleDropdown} className="text-gray-500 dark:text-gray-400 hover:text-brand-green transition-colors">
-                    {ICONS.bell}
-                    {unreadCount > 0 && (
-                        <span className="absolute top-0 right-0 block h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white dark:ring-brand-gray"></span>
-                    )}
-                </button>
-                {isDropdownOpen && <NotificationDropdown notifications={notifications} />}
+        {/* Notifications */}
+        <div className="relative" ref={notifRef}>
+          <button
+            onClick={() => setNotificationsOpen(!isNotificationsOpen)}
+            className="relative p-2 text-gray-500 dark:text-gray-400 hover:text-brand-green transition-colors"
+          >
+            {ICONS.bell}
+            {unreadCount > 0 && (
+              <span className="absolute top-1 right-1 h-2.5 w-2.5 bg-red-500 rounded-full border-2 border-white dark:border-brand-gray"></span>
+            )}
+          </button>
+
+          {isNotificationsOpen && (
+            <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-brand-gray border border-gray-200 dark:border-gray-700 rounded-xl shadow-2xl overflow-hidden z-50 animate-fade-in-up">
+              <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                <h3 className="font-bold text-gray-800 dark:text-white">Notificações</h3>
+                {unreadCount > 0 && onMarkAllAsRead && (
+                    <button onClick={onMarkAllAsRead} className="text-xs text-brand-green hover:underline">
+                        Marcar lidas
+                    </button>
+                )}
+              </div>
+              <div className="max-h-80 overflow-y-auto">
+                {notifications.length > 0 ? (
+                  notifications.map((notif) => (
+                    <div key={notif.id} className={`p-4 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors ${!notif.isRead ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''}`}>
+                      <p className="text-sm text-gray-700 dark:text-gray-300">{notif.message}</p>
+                      <p className="text-xs text-gray-400 mt-1">{timeAgo(new Date(notif.date))}</p>
+                    </div>
+                  ))
+                ) : (
+                  <div className="p-6 text-center text-gray-500 dark:text-gray-400 text-sm">
+                    Nenhuma notificação no momento.
+                  </div>
+                )}
+              </div>
             </div>
-        )}
-        <div className={`px-3 py-1 text-sm font-semibold rounded-full ${RANK_COLORS[user.rank]}`}>
-          {user.rank}
+          )}
         </div>
-        <div className="flex items-center gap-2">
-          <img src={user.avatarUrl} alt="User Avatar" className="w-10 h-10 rounded-full border-2 border-brand-green object-cover" />
+
+        {/* Profile Dropdown */}
+        <div className="relative" ref={profileRef}>
+          <button
+            onClick={() => setProfileOpen(!isProfileOpen)}
+            className="flex items-center gap-3 hover:opacity-80 transition-opacity"
+          >
+            <img
+              src={user.avatarUrl}
+              alt={user.name}
+              className={`h-9 w-9 rounded-full object-cover border-2 ${user.isAdmin ? 'border-brand-blue' : 'border-brand-green'}`}
+            />
+            <div className="hidden md:block text-left">
+                <p className="text-sm font-bold text-gray-800 dark:text-white leading-none">{user.name}</p>
+                <span className={`text-[10px] px-1.5 py-0.5 rounded-full mt-1 inline-block ${user.isAdmin ? 'bg-brand-blue/20 text-brand-blue' : RANK_COLORS[user.rank] || 'bg-gray-700 text-gray-300'}`}>
+                    {user.isAdmin ? t.admin : user.rank}
+                </span>
+            </div>
+            <svg className="w-4 h-4 text-gray-500 hidden md:block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+          </button>
+
+          {isProfileOpen && (
+            <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-brand-gray border border-gray-200 dark:border-gray-700 rounded-xl shadow-2xl overflow-hidden z-50 animate-fade-in-up">
+              <div className="p-4 border-b border-gray-200 dark:border-gray-700 md:hidden">
+                 <p className="text-sm font-bold text-gray-800 dark:text-white">{user.name}</p>
+                 <p className="text-xs text-gray-500 dark:text-gray-400">{user.email}</p>
+              </div>
+              <button
+                onClick={onLogout}
+                className="w-full text-left px-4 py-3 text-sm text-red-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex items-center gap-2"
+              >
+                {ICONS.logout}
+                {t.logout}
+              </button>
+            </div>
+          )}
         </div>
-        <button onClick={onLogout} className="text-gray-500 dark:text-gray-400 hover:text-brand-green transition-colors">
-          {ICONS.logout}
-        </button>
       </div>
     </header>
   );

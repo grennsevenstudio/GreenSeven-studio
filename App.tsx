@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import type { User, Transaction, Notification, ChatMessage, PlatformSettings, AdminActionLog } from './types';
+import type { User, Transaction, Notification, ChatMessage, PlatformSettings, AdminActionLog, Language } from './types';
 import { View, TransactionStatus, TransactionType, AdminActionType, UserStatus, InvestorRank } from './types';
 import { REFERRAL_BONUS_RATES, INVESTMENT_PLANS } from './constants';
 import { initializeDB, getAllData, saveAllData, type AppDB } from './lib/db';
@@ -35,6 +35,7 @@ const App: React.FC = () => {
   const [view, setView] = useState<View>(View.Home);
   const [loggedUser, setLoggedUser] = useState<User | null>(null);
   const [isDarkMode, setIsDarkMode] = useState(true);
+  const [language, setLanguage] = useState<Language>('pt');
   
   // Centralized state for the entire application, loaded from our DB service
   const [dbState, setDbState] = useState<AppDB>(() => {
@@ -70,6 +71,19 @@ const App: React.FC = () => {
         document.documentElement.classList.remove('dark');
     }
   }, [isDarkMode]);
+
+  // Load language from localStorage
+  useEffect(() => {
+      const savedLang = localStorage.getItem('app_language') as Language;
+      if (savedLang && ['pt', 'en', 'es'].includes(savedLang)) {
+          setLanguage(savedLang);
+      }
+  }, []);
+
+  const handleSetLanguage = (lang: Language) => {
+      setLanguage(lang);
+      localStorage.setItem('app_language', lang);
+  }
 
   // Automatically sync Admin user to Supabase on load to ensure connection
   useEffect(() => {
@@ -648,6 +662,8 @@ const App: React.FC = () => {
                     onUpdatePassword={handleUpdatePassword}
                     isDarkMode={isDarkMode}
                     toggleTheme={toggleTheme}
+                    language={language}
+                    setLanguage={handleSetLanguage}
                 />;
   } else if (view === View.AdminDashboard && loggedUser?.isAdmin) {
       content = <AdminDashboard 
@@ -667,6 +683,8 @@ const App: React.FC = () => {
                     onUpdateUser={handleUpdateUser}
                     isDarkMode={isDarkMode}
                     toggleTheme={toggleTheme}
+                    language={language}
+                    setLanguage={handleSetLanguage}
                 />;
   } else {
       content = <HomePage setView={setView} />;

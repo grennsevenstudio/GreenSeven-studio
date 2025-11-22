@@ -1,12 +1,13 @@
 
 import React, { useState, useEffect } from 'react';
-import type { User, Transaction, WithdrawalDetails, Stock } from '../../../../../types';
+import type { User, Transaction, WithdrawalDetails, Stock, Language } from '../../../../../types';
 import { TransactionType, TransactionStatus } from '../../../../../types';
 import Card from '../../../../ui/Card';
 import Button from '../../../../ui/Button';
 import Input from '../../../../ui/Input';
 import Modal from '../../../../layout/Modal';
 import { ICONS, DOLLAR_RATE, MOCK_STOCKS } from '../../../../../constants';
+import { TRANSLATIONS } from '../../../../../lib/translations';
 import { faker } from '@faker-js/faker';
 
 const WITHDRAWAL_FEE_PERCENT = 5;
@@ -17,6 +18,7 @@ interface DashboardHomeProps {
     // FIX: Aligned Omit type with parent component to include 'bonusPayoutHandled'
     onAddTransaction: (newTransaction: Omit<Transaction, 'id' | 'date' | 'bonusPayoutHandled'>) => void;
     setActiveView: (view: string) => void;
+    language: Language;
 }
 
 const StatCard: React.FC<{ title: string; value: React.ReactNode; icon: React.ReactNode; subValue?: React.ReactNode; highlight?: boolean }> = ({ title, value, icon, subValue, highlight = false }) => {
@@ -463,12 +465,14 @@ const AnimatedBalance: React.FC<{ value: string; isShown: boolean }> = ({ value,
     );
 };
 
-const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions, onAddTransaction, setActiveView }) => {
+const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions, onAddTransaction, setActiveView, language }) => {
     const [isDepositModalOpen, setDepositModalOpen] = useState(false);
     const [isWithdrawModalOpen, setWithdrawModalOpen] = useState(false);
     const [showBalance, setShowBalance] = useState(false);
     const [stocks, setStocks] = useState<Stock[]>(MOCK_STOCKS);
     const [dailyEarnings, setDailyEarnings] = useState(0);
+
+    const t = TRANSLATIONS[language];
 
     const balanceBRL = user.balanceUSD * DOLLAR_RATE;
     const maskedValue = '••••••••';
@@ -605,8 +609,8 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions, onAdd
         <div className="space-y-4 md:space-y-8">
             <div className="flex justify-between items-start">
                 <div>
-                    <h1 className="text-xl md:text-3xl font-bold">Dashboard Financeiro</h1>
-                    <p className="text-gray-400 text-sm md:text-base">Aqui está um resumo de sua conta.</p>
+                    <h1 className="text-xl md:text-3xl font-bold">{t.financial_dashboard}</h1>
+                    <p className="text-gray-400 text-sm md:text-base">{t.dashboard_subtitle}</p>
                 </div>
                 <button 
                     onClick={() => setShowBalance(!showBalance)}
@@ -619,7 +623,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions, onAdd
             {/* Stats */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-6">
                 <StatCard 
-                    title="Saldo Total (USD)" 
+                    title={`${t.total_balance} (USD)`} 
                     value={
                         <AnimatedBalance 
                             value={showBalance ? `$ ${user.balanceUSD.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : `$ ${maskedValue}`}
@@ -635,25 +639,25 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions, onAdd
                     icon={ICONS.dollar} 
                 />
                  <StatCard 
-                    title="Saldo Disponível para Saque" 
+                    title={t.available_withdraw} 
                     value={
                         <AnimatedBalance 
                             value={showBalance ? `$ ${dailyAvailable.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : `$ ${maskedValue}`}
                             isShown={showBalance}
                         />
                     }
-                    subValue={`Rendimentos diários acumulados`}
+                    subValue={t.daily_yields}
                     icon={ICONS.withdraw}
                     highlight={true}
                 />
                  <StatCard 
-                    title="Lucro Mensal Projetado" 
+                    title={t.projected_profit} 
                     value={`$ ${user.monthlyProfitUSD.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-                    subValue={`Projeção para 30 dias`}
+                    subValue={t.projection_30_days}
                     icon={ICONS.plans}
                 />
                  <StatCard 
-                    title="Rendimentos Hoje" 
+                    title={t.earnings_today} 
                     value={
                         <div className="flex items-center gap-3">
                             <span className="live-ticker">
@@ -667,8 +671,8 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions, onAdd
                     }
                     subValue={
                         <div className="flex items-center gap-1 text-brand-green font-semibold">
-                             <span className="text-xs">AO VIVO</span>
-                             <span className="text-gray-400 font-normal ml-1">| Acumulando em tempo real...</span>
+                             <span className="text-xs">{t.live}</span>
+                             <span className="text-gray-400 font-normal ml-1">| {t.accumulating}</span>
                         </div>
                     }
                     icon={ICONS.arrowUp}
@@ -678,17 +682,17 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions, onAdd
             {/* Actions */}
              <Card className="p-4 md:p-6">
                 <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                    <p className="font-semibold text-left text-sm md:text-base w-full">Movimente sua conta de forma rápida e segura.</p>
+                    <p className="font-semibold text-left text-sm md:text-base w-full">{t.quick_actions_title}</p>
                     <div className="flex gap-3 w-full md:w-auto">
-                        <Button onClick={() => setDepositModalOpen(true)} variant="primary" fullWidth className="py-2 md:py-3 text-sm md:text-base">{ICONS.deposit} Depositar</Button>
-                        <Button onClick={() => setWithdrawModalOpen(true)} variant="secondary" fullWidth className="py-2 md:py-3 text-sm md:text-base">{ICONS.withdraw} Sacar</Button>
+                        <Button onClick={() => setDepositModalOpen(true)} variant="primary" fullWidth className="py-2 md:py-3 text-sm md:text-base">{ICONS.deposit} {t.deposit}</Button>
+                        <Button onClick={() => setWithdrawModalOpen(true)} variant="secondary" fullWidth className="py-2 md:py-3 text-sm md:text-base">{ICONS.withdraw} {t.withdraw}</Button>
                     </div>
                 </div>
             </Card>
 
             {/* Market Overview */}
             <Card>
-                <h2 className="text-lg md:text-xl font-bold mb-4">Mercado Americano (Tempo Real)</h2>
+                <h2 className="text-lg md:text-xl font-bold mb-4">{t.market_title}</h2>
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
                     {stocks.map(stock => (
                         <StockTickerCard key={stock.symbol} stock={stock} />
@@ -697,7 +701,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions, onAdd
                 <div className="mt-6 text-center">
                     <a href="https://www.investing.com" target="_blank" rel="noopener noreferrer">
                             <Button variant="secondary">
-                            Acessar Mercado
+                            {t.access_market}
                             <span className="ml-2 flex items-center">{ICONS.externalLink}</span>
                             </Button>
                     </a>
@@ -707,7 +711,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions, onAdd
 
             {/* Recent Transactions */}
             <Card>
-                <h2 className="text-lg md:text-xl font-bold mb-4">Movimentações Recentes</h2>
+                <h2 className="text-lg md:text-xl font-bold mb-4">{t.recent_transactions}</h2>
                 <div className="space-y-2">
                     {transactions.slice(0, 5).map(tx => (
                         <TransactionRow key={tx.id} tx={tx} />

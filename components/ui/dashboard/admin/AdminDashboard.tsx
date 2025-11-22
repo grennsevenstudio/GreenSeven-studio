@@ -1,10 +1,11 @@
 
 import React, { useState } from 'react';
-import type { User, Transaction, ChatMessage, PlatformSettings, AdminActionLog } from '../../../../types';
+import type { User, Transaction, ChatMessage, PlatformSettings, AdminActionLog, Language } from '../../../../types';
 import { TransactionStatus, UserStatus } from '../../../../types';
 import Sidebar from '../../../layout/Sidebar';
 import Header from '../../../layout/Header';
 import { ICONS } from '../../../../constants';
+import { TRANSLATIONS } from '../../../../lib/translations';
 
 // Import admin pages
 import AdminDashboardHome from './pages/AdminDashboardHome';
@@ -29,25 +30,29 @@ interface AdminDashboardProps {
   onSendMessage: (senderId: string, receiverId: string, text: string, attachment?: File) => void;
   onUpdateSettings: (newSettings: PlatformSettings) => void;
   onAdminUpdateUserBalance: (userId: string, newBalance: number) => void;
-  onUpdateUser: (updatedUser: User) => void; // Add this
+  onUpdateUser: (updatedUser: User) => void;
   isDarkMode: boolean;
   toggleTheme: () => void;
+  language: Language;
+  setLanguage: (lang: Language) => void;
 }
 
-const NAV_ITEMS = [
-  { label: 'Dashboard', icon: ICONS.dashboard, view: 'dashboard' },
-  { label: 'Usuários', icon: ICONS.adminUsers, view: 'users' },
-  { label: 'Transações', icon: ICONS.transactions, view: 'transactions' },
-  { label: 'Logs de Ações', icon: ICONS.history, view: 'logs' },
-  { label: 'Suporte', icon: ICONS.support, view: 'support' },
-  { label: 'Planos', icon: ICONS.plans, view: 'plans' },
-  { label: 'Configurações', icon: ICONS.adminSettings, view: 'settings' },
-];
-
 const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
-  const { user, allUsers, allTransactions, chatMessages, platformSettings, adminActionLogs, onLogout, onUpdateTransaction, onUpdateUserStatus, onPayoutBonus, onSendMessage, onUpdateSettings, onAdminUpdateUserBalance, onUpdateUser, isDarkMode, toggleTheme } = props;
+  const { user, allUsers, allTransactions, chatMessages, platformSettings, adminActionLogs, onLogout, onUpdateTransaction, onUpdateUserStatus, onPayoutBonus, onSendMessage, onUpdateSettings, onAdminUpdateUserBalance, onUpdateUser, isDarkMode, toggleTheme, language, setLanguage } = props;
   const [activeView, setActiveView] = useState('dashboard');
   const [isSidebarOpen, setSidebarOpen] = useState(false);
+
+  const t = TRANSLATIONS[language];
+
+  const navItems = [
+    { label: t.dashboard, icon: ICONS.dashboard, view: 'dashboard' },
+    { label: t.users, icon: ICONS.adminUsers, view: 'users' },
+    { label: t.transactions, icon: ICONS.transactions, view: 'transactions' },
+    { label: t.logs, icon: ICONS.history, view: 'logs' },
+    { label: t.support, icon: ICONS.support, view: 'support' },
+    { label: t.plans, icon: ICONS.plans, view: 'plans' },
+    { label: t.settings, icon: ICONS.adminSettings, view: 'settings' },
+  ];
 
   const renderContent = () => {
     switch (activeView) {
@@ -74,7 +79,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
     <div className="flex min-h-screen bg-gray-100 dark:bg-brand-black text-gray-900 dark:text-white transition-colors duration-300">
       <Sidebar
         user={user}
-        navItems={NAV_ITEMS}
+        navItems={navItems}
         activeView={activeView}
         setActiveView={setActiveView}
         isOpen={isSidebarOpen}
@@ -88,6 +93,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
             toggleSidebar={() => setSidebarOpen(!isSidebarOpen)} 
             isDarkMode={isDarkMode}
             toggleTheme={toggleTheme}
+            language={language}
+            setLanguage={setLanguage}
         />
         <main className="p-4 sm:p-6 lg:p-8">
           {renderContent()}

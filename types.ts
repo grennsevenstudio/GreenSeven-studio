@@ -8,6 +8,8 @@ export enum View {
   AdminDashboard,
 }
 
+export type Language = 'pt' | 'en' | 'es';
+
 export enum InvestorRank {
   Bronze = 'Bronze',
   Silver = 'Silver',
