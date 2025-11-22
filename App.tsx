@@ -9,7 +9,7 @@ import { faker } from '@faker-js/faker';
 
 import HomePage from './components/views/HomePage';
 import LoginPage from './components/views/LoginPage';
-import RegisterPage from './components/views/RegisterPage';
+import RegisterPage, { type ExtendedRegisterData } from './components/views/RegisterPage';
 import ForgotPasswordPage from './components/views/ForgotPasswordPage';
 import UserDashboard from './components/ui/dashboard/user/UserDashboard';
 import AdminDashboard from './components/ui/dashboard/admin/AdminDashboard';
@@ -186,10 +186,10 @@ const App: React.FC = () => {
     setView(View.Home);
   };
 
-  const handleRegister = (simpleUserData: { name: string; email: string; password?: string; referralCode?: string }) => {
+  const handleRegister = (userData: ExtendedRegisterData) => {
     let referredById: string | undefined = undefined;
-    if (simpleUserData.referralCode && users) {
-        const referrer = users.find(u => u.referralCode === simpleUserData.referralCode);
+    if (userData.referralCode && users) {
+        const referrer = users.find(u => u.referralCode === userData.referralCode);
         if (referrer) {
             referredById = referrer.id;
         }
@@ -197,25 +197,14 @@ const App: React.FC = () => {
 
     const newUser: User = {
         id: faker.string.uuid(),
-        name: simpleUserData.name,
-        email: simpleUserData.email,
-        cpf: 'Não informado',
-        phone: 'Não informado',
-        address: {
-            cep: '00000-000',
-            street: 'Endereço não informado',
-            number: 'S/N',
-            neighborhood: 'Bairro não informado',
-            city: 'Cidade não informada',
-            state: 'UF'
-        },
-        documents: {
-            idFrontUrl: 'https://via.placeholder.com/150', 
-            idBackUrl: 'https://via.placeholder.com/150',
-            selfieUrl: 'https://via.placeholder.com/150'
-        },
+        name: userData.name,
+        email: userData.email,
+        cpf: userData.cpf,
+        phone: userData.phone,
+        address: userData.address,
+        documents: userData.documents,
         // Changed to use initials instead of random face
-        avatarUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(simpleUserData.name)}&background=00FF9C&color=000`,
+        avatarUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(userData.name)}&background=00FF9C&color=000`,
         rank: InvestorRank.Bronze,
         balanceUSD: 0,
         capitalInvestedUSD: 0,
@@ -223,7 +212,7 @@ const App: React.FC = () => {
         dailyWithdrawableUSD: 0,
         isAdmin: false,
         joinedDate: new Date().toISOString().split('T')[0],
-        referralCode: `${simpleUserData.name.split(' ')[0].toUpperCase()}${faker.string.numeric(4)}`,
+        referralCode: `${userData.name.split(' ')[0].toUpperCase()}${faker.string.numeric(4)}`,
         referredById: referredById,
         status: UserStatus.Pending,
         plan: 'Conservador', 
@@ -231,7 +220,7 @@ const App: React.FC = () => {
     
     setDbState(prev => ({...prev, users: [...prev.users, newUser]}));
 
-    syncUserToSupabase(newUser, simpleUserData.password).then((result) => {
+    syncUserToSupabase(newUser, userData.password).then((result) => {
         if (result.error) {
             console.error("Erro ao registrar usuário no Supabase:", JSON.stringify(result.error, null, 2));
         } else {
