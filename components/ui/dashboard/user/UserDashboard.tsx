@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { User, Transaction, Notification, ChatMessage } from '../../../../types';
 import Sidebar from '../../../layout/Sidebar';
 import Header from '../../../layout/Header';
@@ -48,11 +48,44 @@ const BOTTOM_NAV_ITEMS = [
     { label: 'Perfil', icon: ICONS.profile, view: 'profile' },
 ];
 
+const DashboardSkeleton = () => (
+  <div className="space-y-8 animate-pulse max-w-7xl mx-auto">
+    <div className="space-y-3">
+        <div className="h-8 w-1/3 bg-gray-300 dark:bg-gray-700 rounded-lg"></div>
+        <div className="h-4 w-1/4 bg-gray-200 dark:bg-gray-800 rounded-lg"></div>
+    </div>
+    
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+         {[1, 2, 3, 4].map(i => (
+             <div key={i} className="h-40 bg-gray-200 dark:bg-gray-800 rounded-2xl border border-gray-300 dark:border-gray-700"></div>
+         ))}
+    </div>
+
+    <div className="h-24 bg-gray-200 dark:bg-gray-800 rounded-2xl border border-gray-300 dark:border-gray-700"></div>
+    
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+         {[1, 2, 3, 4].map(i => (
+             <div key={i} className="h-20 bg-gray-200 dark:bg-gray-800 rounded-xl border border-gray-300 dark:border-gray-700"></div>
+         ))}
+    </div>
+
+    <div className="h-64 bg-gray-200 dark:bg-gray-800 rounded-2xl border border-gray-300 dark:border-gray-700"></div>
+  </div>
+);
 
 const UserDashboard: React.FC<UserDashboardProps> = (props) => {
   const { user, adminUser, transactions, allUsers, allTransactions, notifications, chatMessages, onLogout, onAddTransaction, onMarkAllNotificationsAsRead, onSendMessage, onUpdateUser, onUpdatePassword, isDarkMode, toggleTheme } = props;
   const [activeView, setActiveView] = useState('dashboard');
   const [isSidebarOpen, setSidebarOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    // Simulate a subtle data fetching delay for better UX smoothness
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, []);
 
   const renderContent = () => {
     switch (activeView) {
@@ -107,7 +140,7 @@ const UserDashboard: React.FC<UserDashboardProps> = (props) => {
             toggleTheme={toggleTheme}
         />
         <main className="p-4 sm:p-6 lg:p-8">
-          {renderContent()}
+          {isLoading ? <DashboardSkeleton /> : renderContent()}
         </main>
       </div>
        <BottomNavBar

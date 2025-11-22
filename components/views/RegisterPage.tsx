@@ -123,6 +123,34 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ setView, onRegister }) => {
 
     const passwordStrength = useMemo(() => calculatePasswordStrength(formData.password), [formData.password]);
 
+    const fetchAddress = async (cleanCep: string) => {
+        try {
+            const response = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
+            const data = await response.json();
+
+            if (!data.erro) {
+                setFormData(prev => ({
+                    ...prev,
+                    street: data.logradouro || prev.street,
+                    neighborhood: data.bairro || prev.neighborhood,
+                    city: data.localidade || prev.city,
+                    state: data.uf || prev.state
+                }));
+                
+                // Clear errors for filled fields
+                setErrors(prev => ({
+                    ...prev,
+                    street: false,
+                    neighborhood: false,
+                    city: false,
+                    state: false
+                }));
+            }
+        } catch (error) {
+            console.error("Erro ao buscar CEP:", error);
+        }
+    };
+
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { id, value } = e.target;
         let formattedValue = value;
@@ -132,9 +160,14 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ setView, onRegister }) => {
         if (id === 'phone') {
              formattedValue = value.replace(/\D/g, '').replace(/^(\d{2})(\d)/g, '($1) $2').replace(/(\d)(\d{4})$/, '$1-$2').slice(0, 15);
         }
-        // Simple CEP mask
+        // Simple CEP mask & Auto Fetch
         if (id === 'cep') {
              formattedValue = value.replace(/\D/g, '').replace(/^(\d{5})(\d)/, '$1-$2').slice(0, 9);
+             
+             const cleanCep = formattedValue.replace(/\D/g, '');
+             if (cleanCep.length === 8) {
+                 fetchAddress(cleanCep);
+             }
         }
 
         setFormData(prev => ({ ...prev, [id]: formattedValue }));
@@ -151,11 +184,20 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ setView, onRegister }) => {
 
     const validateStep1 = (): boolean => {
         const newErrors: {[key: string]: boolean | string} = {};
+        
         if (!formData.name.trim()) newErrors.name = 'Nome obrigatório';
         if (!formData.email.trim()) newErrors.email = 'Email obrigatório';
         else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) newErrors.email = 'Email inválido';
-        if (formData.password.length < 6) newErrors.password = 'Mínimo 6 caracteres';
-        if (formData.password !== formData.confirmPassword) newErrors.confirmPassword = 'Senhas não coincidem';
+        
+        // Strong Password Validation
+        const pass = formData.password;
+        if (!pass) newErrors.password = 'Senha obrigatória';
+        else if (pass.length < 8) newErrors.password = 'Mínimo 8 caracteres';
+        else if (!/[A-Z]/.test(pass)) newErrors.password = 'Requer letra maiúscula';
+        else if (!/[0-9]/.test(pass)) newErrors.password = 'Requer número';
+        else if (!/[^a-zA-Z0-9]/.test(pass)) newErrors.password = 'Requer caractere especial (!@#)';
+
+        if (pass !== formData.confirmPassword) newErrors.confirmPassword = 'Senhas não coincidem';
         
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
@@ -332,8 +374,9 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ setView, onRegister }) => {
                         <Input label="Nome Completo" id="name" value={formData.name} onChange={handleInputChange} error={errors.name} required />
                         <Input label="Email" id="email" type="email" value={formData.email} onChange={handleInputChange} error={errors.email} required />
                         <div>
-                            <Input label="Senha (mín. 6 caracteres)" id="password" type="password" value={formData.password} onChange={handleInputChange} error={errors.password} required />
+                            <Input label="Senha" id="password" type="password" value={formData.password} onChange={handleInputChange} error={errors.password} required />
                             <PasswordStrengthIndicator strength={passwordStrength} />
+                            <p className="text-[10px] text-gray-500 mt-1">Mín. 8 caracteres, maiúscula, número e símbolo.</p>
                         </div>
                         <Input label="Confirmar Senha" id="confirmPassword" type="password" value={formData.confirmPassword} onChange={handleInputChange} error={errors.confirmPassword} required />
                         {formData.referralCode && (

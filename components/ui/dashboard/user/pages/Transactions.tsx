@@ -4,9 +4,8 @@ import Card from '../../../../ui/Card';
 import type { Transaction } from '../../../../../types';
 import { TransactionStatus, TransactionType } from '../../../../../types';
 import Button from '../../../../ui/Button';
+import Input from '../../../../ui/Input';
 import { ICONS } from '../../../../../constants';
-
-const ITEMS_PER_PAGE = 10;
 
 const TransactionRow: React.FC<{ tx: Transaction }> = ({ tx }) => {
     const isPositive = tx.amountUSD > 0;
@@ -38,26 +37,44 @@ interface TransactionsProps {
 
 const Transactions: React.FC<TransactionsProps> = ({ transactions }) => {
     const [filter, setFilter] = useState<TransactionType | 'All'>('All');
+    const [searchTerm, setSearchTerm] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage, setItemsPerPage] = useState(10);
 
-    // Filtra as transações baseadas no tipo selecionado
+    // Filtra as transações baseadas no tipo selecionado e termo de busca
     const filteredTransactions = useMemo(() => {
-        if (filter === 'All') return transactions;
-        return transactions.filter(tx => tx.type === filter);
-    }, [filter, transactions]);
+        let result = transactions;
+        
+        if (filter !== 'All') {
+            result = result.filter(tx => tx.type === filter);
+        }
 
-    // Reseta para a página 1 sempre que o filtro mudar
+        if (searchTerm) {
+            const lowerTerm = searchTerm.toLowerCase();
+            result = result.filter(tx => 
+                tx.type.toLowerCase().includes(lowerTerm) ||
+                tx.status.toLowerCase().includes(lowerTerm) ||
+                tx.amountUSD.toString().includes(lowerTerm) ||
+                (tx.amountBRL && tx.amountBRL.toString().includes(lowerTerm)) ||
+                tx.date.toLowerCase().includes(lowerTerm)
+            );
+        }
+
+        return result;
+    }, [filter, transactions, searchTerm]);
+
+    // Reseta para a página 1 sempre que o filtro ou busca mudar
     useEffect(() => {
         setCurrentPage(1);
-    }, [filter]);
+    }, [filter, searchTerm, itemsPerPage]);
 
     // Lógica de Paginação
-    const totalPages = Math.ceil(filteredTransactions.length / ITEMS_PER_PAGE);
+    const totalPages = Math.ceil(filteredTransactions.length / itemsPerPage);
     
     const paginatedTransactions = useMemo(() => {
-        const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-        return filteredTransactions.slice(startIndex, startIndex + ITEMS_PER_PAGE);
-    }, [filteredTransactions, currentPage]);
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        return filteredTransactions.slice(startIndex, startIndex + itemsPerPage);
+    }, [filteredTransactions, currentPage, itemsPerPage]);
 
     const filterButtons: {label: string, value: TransactionType | 'All'}[] = [
         { label: 'Todas', value: 'All'},
@@ -83,16 +100,32 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions }) => {
             </div>
             
             <Card>
-                <div className="flex flex-wrap gap-2 mb-6">
-                    {filterButtons.map(btn => (
-                        <button 
-                            key={btn.value} 
-                            onClick={() => setFilter(btn.value)}
-                            className={`px-4 py-2 text-sm font-semibold rounded-lg transition-colors ${filter === btn.value ? 'bg-brand-green text-brand-black' : 'bg-brand-black text-gray-300 hover:bg-gray-800'}`}
-                        >
-                            {btn.label}
-                        </button>
-                    ))}
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+                    <div className="flex flex-wrap gap-2">
+                        {filterButtons.map(btn => (
+                            <button 
+                                key={btn.value} 
+                                onClick={() => setFilter(btn.value)}
+                                className={`px-4 py-2 text-sm font-semibold rounded-lg transition-colors ${filter === btn.value ? 'bg-brand-green text-brand-black' : 'bg-brand-black text-gray-300 hover:bg-gray-800'}`}
+                            >
+                                {btn.label}
+                            </button>
+                        ))}
+                    </div>
+                    <div className="w-full md:w-72">
+                        <Input 
+                            label="" 
+                            id="search-transactions" 
+                            placeholder="Buscar por tipo, valor ou status..." 
+                            value={searchTerm} 
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            icon={
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                </svg>
+                            }
+                        />
+                    </div>
                 </div>
                 
                 <div className="overflow-x-auto min-h-[400px]">
@@ -114,7 +147,10 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions }) => {
                             ) : (
                                 <tr>
                                     <td colSpan={5} className="p-8 text-center text-gray-500">
-                                        Nenhuma transação encontrada para este filtro.
+                                        {searchTerm 
+                                            ? "Nenhuma transação encontrada para sua busca." 
+                                            : "Nenhuma transação encontrada para este filtro."
+                                        }
                                     </td>
                                 </tr>
                             )}
@@ -123,31 +159,44 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions }) => {
                 </div>
 
                 {/* Controles de Paginação */}
-                {totalPages > 1 && (
-                    <div className="flex items-center justify-between mt-6 border-t border-gray-800 pt-4">
-                        <div className="text-sm text-gray-400">
-                            Mostrando <span className="font-medium text-white">{(currentPage - 1) * ITEMS_PER_PAGE + 1}</span> até <span className="font-medium text-white">{Math.min(currentPage * ITEMS_PER_PAGE, filteredTransactions.length)}</span> de <span className="font-medium text-white">{filteredTransactions.length}</span> resultados
+                {filteredTransactions.length > 0 && (
+                    <div className="flex flex-col sm:flex-row items-center justify-between mt-6 border-t border-gray-800 pt-4 gap-4">
+                        <div className="flex items-center gap-3">
+                            <span className="text-sm text-gray-400">Linhas por página:</span>
+                            <select 
+                                value={itemsPerPage} 
+                                onChange={(e) => setItemsPerPage(Number(e.target.value))}
+                                className="bg-brand-black border border-gray-700 text-white text-sm rounded p-1 focus:outline-none focus:border-brand-green"
+                            >
+                                <option value={5}>5</option>
+                                <option value={10}>10</option>
+                                <option value={20}>20</option>
+                                <option value={50}>50</option>
+                            </select>
                         </div>
-                        <div className="flex items-center gap-2">
-                            <Button 
-                                variant="secondary" 
-                                onClick={handlePreviousPage} 
-                                disabled={currentPage === 1}
-                                className={`px-3 py-1 text-sm ${currentPage === 1 ? 'opacity-50 cursor-not-allowed' : ''}`}
-                            >
-                                Anterior
-                            </Button>
-                            <div className="px-4 py-1 bg-brand-black rounded text-sm font-medium">
-                                {currentPage} / {totalPages}
+                        
+                        <div className="flex items-center gap-4">
+                             <div className="text-sm text-gray-400">
+                                <span className="font-medium text-white">{(currentPage - 1) * itemsPerPage + 1}</span> - <span className="font-medium text-white">{Math.min(currentPage * itemsPerPage, filteredTransactions.length)}</span> de <span className="font-medium text-white">{filteredTransactions.length}</span>
                             </div>
-                            <Button 
-                                variant="secondary" 
-                                onClick={handleNextPage} 
-                                disabled={currentPage === totalPages}
-                                className={`px-3 py-1 text-sm ${currentPage === totalPages ? 'opacity-50 cursor-not-allowed' : ''}`}
-                            >
-                                Próximo
-                            </Button>
+                            <div className="flex items-center gap-2">
+                                <Button 
+                                    variant="secondary" 
+                                    onClick={handlePreviousPage} 
+                                    disabled={currentPage === 1}
+                                    className={`px-3 py-1 text-sm ${currentPage === 1 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                >
+                                    Anterior
+                                </Button>
+                                <Button 
+                                    variant="secondary" 
+                                    onClick={handleNextPage} 
+                                    disabled={currentPage === totalPages}
+                                    className={`px-3 py-1 text-sm ${currentPage === totalPages ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                >
+                                    Próximo
+                                </Button>
+                            </div>
                         </div>
                     </div>
                 )}

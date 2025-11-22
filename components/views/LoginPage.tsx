@@ -20,6 +20,12 @@ const LoginPage: React.FC<LoginPageProps> = ({ setView, onLogin }) => {
   const [rememberMe, setRememberMe] = useState(false);
   const [modalContent, setModalContent] = useState<{ title: string; content: React.ReactNode } | null>(null);
 
+  // Forgot Password State
+  const [isForgotModalOpen, setIsForgotModalOpen] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [isForgotLoading, setIsForgotLoading] = useState(false);
+  const [forgotSuccess, setForgotSuccess] = useState(false);
+
   useEffect(() => {
     const rememberedEmail = localStorage.getItem('rememberedEmail');
     if (rememberedEmail) {
@@ -30,6 +36,12 @@ const LoginPage: React.FC<LoginPageProps> = ({ setView, onLogin }) => {
 
   const validateEmail = (email: string) => {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  };
+
+  const handleEmailBlur = () => {
+    if (email && !validateEmail(email)) {
+      setErrors(prev => ({ ...prev, email: 'Formato de email inválido' }));
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -62,6 +74,29 @@ const LoginPage: React.FC<LoginPageProps> = ({ setView, onLogin }) => {
     }
   };
 
+  const handleForgotPassword = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!forgotEmail || !validateEmail(forgotEmail)) {
+        alert("Por favor, insira um email válido.");
+        return;
+    }
+    
+    setIsForgotLoading(true);
+    // Simulating API call
+    setTimeout(() => {
+        setIsForgotLoading(false);
+        setForgotSuccess(true);
+    }, 2000);
+  };
+
+  const closeForgotModal = () => {
+      setIsForgotModalOpen(false);
+      setTimeout(() => {
+          setForgotSuccess(false);
+          setForgotEmail('');
+      }, 300);
+  };
+
   const openModal = (type: 'terms' | 'privacy') => {
     if (type === 'terms') {
       setModalContent({ title: 'Termos de Uso', content: TERMS_OF_USE_CONTENT });
@@ -72,6 +107,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ setView, onLogin }) => {
 
   return (
     <>
+      {/* Terms Modal */}
       <Modal 
         isOpen={!!modalContent}
         onClose={() => setModalContent(null)}
@@ -80,6 +116,52 @@ const LoginPage: React.FC<LoginPageProps> = ({ setView, onLogin }) => {
         <div className="prose prose-invert prose-sm max-h-[60vh] overflow-y-auto pr-4 text-gray-300">
            {modalContent?.content}
         </div>
+      </Modal>
+
+      {/* Forgot Password Modal */}
+      <Modal
+        isOpen={isForgotModalOpen}
+        onClose={closeForgotModal}
+        title="Recuperar Senha"
+      >
+          {forgotSuccess ? (
+              <div className="text-center py-4 animate-fade-in">
+                  <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100 dark:bg-green-900/30 mb-4">
+                      <svg className="h-8 w-8 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                      </svg>
+                  </div>
+                  <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-white">Email Enviado!</h3>
+                  <div className="mt-2">
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                          Enviamos um link de redefinição de senha para <strong>{forgotEmail}</strong>. Verifique sua caixa de entrada e spam.
+                      </p>
+                  </div>
+                  <div className="mt-6">
+                      <Button onClick={closeForgotModal} fullWidth>Voltar para o Login</Button>
+                  </div>
+              </div>
+          ) : (
+              <form onSubmit={handleForgotPassword} className="space-y-4">
+                  <p className="text-sm text-gray-400 mb-4">
+                      Insira o endereço de email associado à sua conta e enviaremos um link para redefinir sua senha.
+                  </p>
+                  <Input 
+                      label="Email de Cadastro" 
+                      id="forgotEmail" 
+                      type="email" 
+                      placeholder="seu@email.com"
+                      value={forgotEmail}
+                      onChange={(e) => setForgotEmail(e.target.value)}
+                      required 
+                  />
+                  <div className="pt-2">
+                      <Button type="submit" fullWidth isLoading={isForgotLoading}>
+                          Enviar Link de Recuperação
+                      </Button>
+                  </div>
+              </form>
+          )}
       </Modal>
 
       <div className="min-h-screen flex items-center justify-center bg-brand-black p-4">
@@ -105,6 +187,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ setView, onLogin }) => {
                     setEmail(e.target.value);
                     if (errors.email) setErrors(prev => ({ ...prev, email: false }));
                   }}
+                  onBlur={handleEmailBlur}
                   error={errors.email}
                   required 
               />
@@ -123,7 +206,15 @@ const LoginPage: React.FC<LoginPageProps> = ({ setView, onLogin }) => {
                     required 
                 />
                 <div className="flex justify-end mt-1">
-                  <a href="#" onClick={(e) => {e.preventDefault(); setView(View.ForgotPassword)}} className="text-xs text-brand-green hover:underline">
+                  <a 
+                    href="#" 
+                    onClick={(e) => {
+                        e.preventDefault(); 
+                        setIsForgotModalOpen(true);
+                        setForgotEmail(email); // Pre-fill if user typed something
+                    }} 
+                    className="text-xs text-brand-green hover:underline"
+                  >
                     Esqueceu a senha?
                   </a>
                 </div>

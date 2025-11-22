@@ -466,7 +466,7 @@ const AnimatedBalance: React.FC<{ value: string; isShown: boolean }> = ({ value,
 const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions, onAddTransaction, setActiveView }) => {
     const [isDepositModalOpen, setDepositModalOpen] = useState(false);
     const [isWithdrawModalOpen, setWithdrawModalOpen] = useState(false);
-    const [showBalance, setShowBalance] = useState(true);
+    const [showBalance, setShowBalance] = useState(false);
     const [stocks, setStocks] = useState<Stock[]>(MOCK_STOCKS);
     const [dailyEarnings, setDailyEarnings] = useState(0);
 
