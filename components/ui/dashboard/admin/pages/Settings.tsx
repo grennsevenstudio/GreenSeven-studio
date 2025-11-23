@@ -63,9 +63,9 @@ const Settings: React.FC<SettingsProps> = ({ platformSettings, onUpdateSettings,
         setTimeout(() => setToast(null), 3000);
     };
 
-    // SQL Code Definition
+    // SQL Code Definition - ATUALIZADO
     const sqlCode = `-- SCRIPT SQL ATUALIZADO (GreennSeven Invest)
--- Execute este script no Editor SQL do Supabase para configurar o banco.
+-- Copie e execute este script no Editor SQL do Supabase.
 
 -- 1. HABILITAR UUID
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
@@ -87,6 +87,9 @@ CREATE TABLE IF NOT EXISTS public.users (
   monthly_profit_usd NUMERIC DEFAULT 0,
   daily_withdrawable_usd NUMERIC DEFAULT 0,
   last_plan_change_date TEXT,
+  referral_code TEXT,
+  referred_by_id UUID,
+  transaction_pin TEXT,
   support_status TEXT DEFAULT 'open',
   additional_data JSONB DEFAULT '{}'::jsonb,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
@@ -96,7 +99,7 @@ CREATE TABLE IF NOT EXISTS public.users (
 CREATE TABLE IF NOT EXISTS public.transactions (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
-  type TEXT NOT NULL, -- 'Deposit', 'Withdrawal', 'Bonus', 'Yield'
+  type TEXT NOT NULL, 
   amount_usd NUMERIC NOT NULL,
   amount_brl NUMERIC,
   status TEXT DEFAULT 'Pending', 
@@ -124,7 +127,7 @@ CREATE TABLE IF NOT EXISTS public.messages (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
 
--- 5. POLÍTICAS DE SEGURANÇA (RLS)
+-- 5. POLÍTICAS DE SEGURANÇA (RLS) - PERMISSÃO TOTAL PARA APP
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
@@ -133,6 +136,7 @@ DROP POLICY IF EXISTS "Public Access Users" ON public.users;
 DROP POLICY IF EXISTS "Public Access Transactions" ON public.transactions;
 DROP POLICY IF EXISTS "Public Access Messages" ON public.messages;
 
+-- Cria políticas públicas (Cuidado: Ideal apenas para modo desenvolvimento/demo onde a auth é gerida pelo app)
 CREATE POLICY "Public Access Users" ON public.users FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Public Access Transactions" ON public.transactions FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Public Access Messages" ON public.messages FOR ALL USING (true) WITH CHECK (true);
@@ -142,9 +146,8 @@ GRANT ALL ON TABLE public.transactions TO anon, authenticated, service_role;
 GRANT ALL ON TABLE public.messages TO anon, authenticated, service_role;
 
 -- 6. USUÁRIO ADMIN PADRÃO
--- Garante a existência do admin@greennseven.com
 INSERT INTO public.users (
-    email, password, full_name, is_admin, status, rank, balance_usd, plan, additional_data
+    email, password, full_name, is_admin, status, rank, balance_usd, plan, referral_code, additional_data
 ) VALUES (
     'admin@greennseven.com', 
     'admin123', 
@@ -154,6 +157,7 @@ INSERT INTO public.users (
     'Diamond', 
     1000000, 
     'Select', 
+    'ADMINPRO',
     '{"cpf": "000.000.000-00"}'::jsonb
 ) ON CONFLICT (email) DO UPDATE SET is_admin = true;
 `;
@@ -320,7 +324,7 @@ INSERT INTO public.users (
             <form className="space-y-8" onSubmit={handleSubmit}>
                 <Card>
                     <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-                        <span className="w-3 h-3 rounded-full bg-green-500 animate-pulse"></span>
+                        <span className={`w-3 h-3 rounded-full ${supabaseStatus === 'connected' ? 'bg-green-500' : 'bg-red-500'} animate-pulse`}></span>
                         Integração Supabase (Banco de Dados)
                     </h2>
                     <div className="bg-brand-black p-4 rounded-lg border border-gray-700">
@@ -343,24 +347,27 @@ INSERT INTO public.users (
                             <div>
                                 <p className="text-red-500 text-sm font-bold">{supabaseMessage}</p>
                                 <p className="text-gray-400 text-xs mt-2">
-                                    Copie o código abaixo e execute no painel do Supabase para corrigir as tabelas.
+                                    1. Copie o script SQL abaixo.<br/>
+                                    2. Vá ao Painel do Supabase {'>'} SQL Editor.<br/>
+                                    3. Cole e execute o script para criar as tabelas necessárias.
                                 </p>
                             </div>
                         )}
                         
                         <div className="mt-4">
-                             <label className="text-xs text-gray-500 uppercase font-bold">Script SQL:</label>
+                             <label className="text-xs text-gray-500 uppercase font-bold">Script SQL de Configuração:</label>
                              <textarea 
                                 readOnly 
                                 className="w-full h-48 bg-gray-900 text-gray-300 text-[10px] p-2 rounded border border-gray-700 font-mono mt-1 focus:outline-none focus:border-brand-green leading-relaxed"
                                 value={sqlCode}
                                 onClick={(e) => e.currentTarget.select()} 
                              />
-                             <p className="text-[10px] text-gray-500 mt-1">Copie e execute no Editor SQL do Supabase.</p>
+                             <p className="text-[10px] text-gray-500 mt-1">Este script cria as tabelas 'users', 'transactions' e 'messages' necessárias.</p>
                         </div>
 
                         <div className="mt-6 pt-4 border-t border-gray-700">
                             <h4 className="text-white font-semibold text-sm mb-2">Forçar Sincronização de Dados</h4>
+                            <p className="text-xs text-gray-500 mb-2">Envia todos os dados locais atuais para o Supabase.</p>
                             <Button 
                                 type="button" 
                                 onClick={handleSyncData} 

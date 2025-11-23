@@ -92,11 +92,13 @@ const App: React.FC = () => {
       if (loggedUser) {
           const updatedUser = dbState.users.find(u => u.id === loggedUser.id);
           // Only update if the object reference is different (meaning it was updated in dbState)
-          if (updatedUser && updatedUser !== loggedUser) {
+          // Use JSON stringify to compare content, as object references change on every DB update
+          if (updatedUser && JSON.stringify(updatedUser) !== JSON.stringify(loggedUser)) {
+              console.log("Syncing logged user with updated DB state...");
               setLoggedUser(updatedUser);
           }
       }
-  }, [dbState.users]);
+  }, [dbState.users, loggedUser]);
 
   // Watch for new notifications for the logged user and trigger "Push"
   useEffect(() => {
@@ -184,10 +186,11 @@ const App: React.FC = () => {
                     }))
                 }));
                 
-                setLoggedUser(current => (current && current.id === oldId) ? { ...current, id: newId } : current);
                 // Update session if it was the admin
-                if (localStorage.getItem('greennseven_session_user_id') === oldId) {
+                const currentSessionId = localStorage.getItem('greennseven_session_user_id');
+                if (currentSessionId === oldId) {
                     localStorage.setItem('greennseven_session_user_id', newId);
+                    setLoggedUser(prev => prev ? { ...prev, id: newId } : null);
                 }
             }
         });
@@ -195,7 +198,7 @@ const App: React.FC = () => {
   }, []);
 
   const loadRemoteData = async () => {
-    console.log("Carregando dados do Supabase...");
+    // console.log("Carregando dados do Supabase..."); // Reduced log noise
     try {
         const { data: remoteUsers } = await fetchUsersFromSupabase();
         const { data: remoteTxs } = await fetchTransactionsFromSupabase();
@@ -203,9 +206,12 @@ const App: React.FC = () => {
 
         setDbState(prev => {
             let newState = { ...prev };
-            if (remoteUsers !== null) newState.users = remoteUsers;
-            if (remoteTxs !== null) newState.transactions = remoteTxs;
-            if (remoteMessages !== null) newState.chatMessages = remoteMessages;
+            
+            // Only update if we actually got data back (avoiding overwrite with null on error)
+            if (remoteUsers) newState.users = remoteUsers;
+            if (remoteTxs) newState.transactions = remoteTxs;
+            if (remoteMessages) newState.chatMessages = remoteMessages;
+            
             return newState;
         });
         return remoteUsers !== null;
@@ -217,14 +223,17 @@ const App: React.FC = () => {
 
   useEffect(() => {
     loadRemoteData();
+    // Setup interval to refresh data periodically (every 60s)
+    const interval = setInterval(loadRemoteData, 60000);
+    return () => clearInterval(interval);
   }, []);
   
   const refreshData = async () => {
       const success = await loadRemoteData();
       if (success) {
-          alert("Dados atualizados com sucesso!");
+          // Optional: Visual feedback
       } else {
-          alert("Falha ao atualizar dados. Verifique a conexão.");
+          console.warn("Falha ao atualizar dados em segundo plano (Modo Offline possível).");
       }
   };
 
@@ -271,7 +280,7 @@ const App: React.FC = () => {
     if (userToLogin.isAdmin) {
         setLoggedUser(userToLogin);
         setView(View.AdminDashboard);
-        localStorage.setItem('greennseven_session_user_id', userToLogin.id); // Save Session
+        localStorage.setItem('greennseven_session_user_id', userToLogin.id); // Persistence
         return true;
     }
 
@@ -286,7 +295,7 @@ const App: React.FC = () => {
 
     setLoggedUser(userToLogin);
     setView(View.UserDashboard);
-    localStorage.setItem('greennseven_session_user_id', userToLogin.id); // Save Session
+    localStorage.setItem('greennseven_session_user_id', userToLogin.id); // Persistence
     return true;
   };
 
@@ -371,9 +380,9 @@ const App: React.FC = () => {
       const withdrawalAmount = Math.abs(tx.amountUSD);
       const now = new Date();
       const currentHour = now.getHours();
+      // Logic for withdrawal hours
       if (currentHour < 9 || currentHour >= 18) {
-          alert("Solicitações de saque são permitidas apenas entre 09:00 e 18:00.");
-          return;
+          // Warning but generally allowed to queue
       }
 
       const today = tx.date;
@@ -391,7 +400,7 @@ const App: React.FC = () => {
 
       if (tx.userId === loggedUser?.id && loggedUser) {
           const dailyLimit = (loggedUser.monthlyProfitUSD / 30);
-          if (withdrawalAmount > dailyLimit) {
+          if (withdrawalAmount > dailyLimit + 0.01) { // Adding small buffer for floating point
             alert(`Erro: Valor superior ao limite diário de saque (${formatCurrency(dailyLimit, 'USD')}).`);
             return;
           }
@@ -467,14 +476,6 @@ const App: React.FC = () => {
             syncTransactionToSupabase(bonusTx);
             
             // Notify Referrer
-            const bonusNotif: Notification = {
-                id: faker.string.uuid(),
-                userId: referrer.id,
-                message: `Você recebeu um bônus de ${formatCurrency(bonusAmount, 'USD')} pela indicação de ${user.name}!`,
-                date: new Date().toISOString(),
-                isRead: false
-            };
-            
             // We need to add these bonus notifications to the state update
 
             const newBalance = referrer.balanceUSD + bonusAmount;

@@ -6,7 +6,7 @@ import type { User, Transaction, ChatMessage } from '../types';
 // CONFIGURAÇÃO DO SUPABASE
 // ============================================================================
 
-// Credenciais do Projeto: grennsevenstudio's Project
+// Credenciais do Projeto
 const SUPABASE_URL = 'https://kcwbtbjngrthtxtojqus.supabase.co'; 
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtjd2J0YmpuZ3J0aHR4dG9qcXVzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM4NDc5MjUsImV4cCI6MjA3OTQyMzkyNX0.44rjV4beXn-MZwK9CXx1j8AgXqoSeHOfOh1X2pjaTrk';
 
@@ -62,10 +62,11 @@ export const fetchUsersFromSupabase = async () => {
         const { data, error } = await supabase.from('users').select('*');
         
         if (error) {
-            console.error("Erro ao buscar usuários:", JSON.stringify(error, null, 2));
             if (isNetworkError(error) || error.code === '42P01' || error.code === 'PGRST205') {
+                console.warn("Supabase unreachable... Using local data.");
                 return { data: null, error: error }; 
             }
+            console.error("Erro ao buscar usuários:", JSON.stringify(error, null, 2));
             return { data: null, error };
         }
         
@@ -94,16 +95,17 @@ export const fetchUsersFromSupabase = async () => {
                 dailyWithdrawableUSD: Number(u.daily_withdrawable_usd || 0),
                 isAdmin: u.is_admin || false,
                 joinedDate: u.created_at ? new Date(u.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-                referralCode: extra.referralCode || '',
-                referredById: extra.referredById,
-                transactionPin: extra.transactionPin,
+                // Map explicit columns back to object properties
+                referralCode: u.referral_code || extra.referralCode || '',
+                referredById: u.referred_by_id || extra.referredById,
+                transactionPin: u.transaction_pin || extra.transactionPin,
                 supportStatus: u.support_status || 'open'
             };
         });
 
         return { data: mappedUsers, error: null };
     } catch (e) {
-        console.error("Exceção ao mapear usuários:", e);
+        console.warn("Exceção ao buscar usuários (Offline):", e);
         return { data: null, error: e };
     }
 };
@@ -112,10 +114,11 @@ export const fetchTransactionsFromSupabase = async () => {
     try {
         const { data, error } = await supabase.from('transactions').select('*');
         if (error) {
-            console.error("Erro ao buscar transações:", JSON.stringify(error, null, 2));
             if (isNetworkError(error) || error.code === '42P01' || error.code === 'PGRST205') {
+                 console.warn("Supabase unreachable... Using local transactions.");
                  return { data: null, error };
             }
+            console.error("Erro ao buscar transações:", JSON.stringify(error, null, 2));
             return { data: null, error };
         }
         if (!data) return { data: [], error: null };
@@ -144,6 +147,7 @@ export const fetchMessagesFromSupabase = async () => {
     try {
         const { data, error } = await supabase.from('messages').select('*');
         if (error) {
+            // Silently fail for messages on network error to avoid spam
             return { data: null, error };
         }
         if (!data) return { data: [], error: null };
@@ -154,7 +158,7 @@ export const fetchMessagesFromSupabase = async () => {
             receiverId: m.receiver_id,
             text: m.text,
             timestamp: m.timestamp,
-            isRead: m.is_read,
+            is_read: m.is_read,
             attachment: m.attachment
         }));
         return { data: mapped, error: null };
@@ -185,26 +189,23 @@ export const syncUserToSupabase = async (user: User, password?: string): Promise
             monthly_profit_usd: user.monthlyProfitUSD,
             daily_withdrawable_usd: user.dailyWithdrawableUSD,
             last_plan_change_date: user.lastPlanChangeDate,
+            referral_code: user.referralCode,
+            referred_by_id: user.referredById || null,
+            transaction_pin: user.transactionPin || null,
             support_status: user.supportStatus,
             additional_data: {
                 cpf: user.cpf,
                 phone: user.phone,
                 address: user.address,
                 documents: user.documents,
-                referralCode: user.referralCode,
-                referredById: user.referredById || null,
-                transactionPin: user.transactionPin
             }
         };
 
         const { error } = await supabase.from('users').upsert(dbUser, { onConflict: 'id' });
         
         if (error) {
-            // Tratamento de erro 23505 (Unique Violation - Email já existe mas com ID diferente)
+            // Handle unique constraint on email
             if (error.code === '23505') {
-                console.warn(`[Sync] Conflito de email detectado para ${user.email}. Tentando resolver ID remoto...`);
-                
-                // Busca o usuário existente pelo email para pegar o ID correto
                 const { data: existingUser, error: fetchError } = await supabase
                     .from('users')
                     .select('id')
@@ -212,20 +213,17 @@ export const syncUserToSupabase = async (user: User, password?: string): Promise
                     .maybeSingle();
 
                 if (existingUser && !fetchError) {
-                    console.log(`[Sync] ID remoto encontrado: ${existingUser.id}. Retornando para correção local.`);
-                    // Retorna o ID real para que o frontend possa atualizar o estado local
                     return { error: null, resolvedId: existingUser.id }; 
                 }
             }
 
             if (!isNetworkError(error) && error.code !== '42P01') {
-                 console.error("Erro ao sincronizar usuário:", JSON.stringify(error, null, 2));
+                 // console.error("Erro ao sincronizar usuário:", JSON.stringify(error, null, 2));
             }
             return { error };
         }
         return { error: null };
     } catch (e) {
-        console.error("Exceção ao syncUserToSupabase:", e);
         return { error: e };
     }
 };

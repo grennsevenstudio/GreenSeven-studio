@@ -6,8 +6,15 @@ import { TransactionStatus, TransactionType } from '../../../../../types';
 import Button from '../../../../ui/Button';
 import Input from '../../../../ui/Input';
 import { ICONS } from '../../../../../constants';
+import { formatCurrency } from '../../../../../lib/utils';
 
-const TransactionRow: React.FC<{ tx: Transaction }> = ({ tx }) => {
+interface TransactionRowProps {
+    tx: Transaction;
+    isExpanded: boolean;
+    onToggle: () => void;
+}
+
+const TransactionRow: React.FC<TransactionRowProps> = ({ tx, isExpanded, onToggle }) => {
     const isPositive = tx.amountUSD > 0;
     const amountColor = isPositive ? 'text-brand-green' : 'text-red-500';
     const statusColors: {[key in TransactionStatus]: string} = {
@@ -17,17 +24,110 @@ const TransactionRow: React.FC<{ tx: Transaction }> = ({ tx }) => {
     };
 
     return (
-        <tr className="border-b border-gray-800 hover:bg-brand-gray/50 transition-colors">
-            <td className="p-4 text-gray-300">{tx.date}</td>
-            <td className="p-4 font-medium text-white">{tx.type}</td>
-            <td className={`p-4 font-bold ${amountColor}`}>
-                {tx.status === TransactionStatus.Pending && tx.type === TransactionType.Deposit ? `(~ US$ ${tx.amountUSD.toFixed(2)})` : `US$ ${tx.amountUSD.toFixed(2)}`}
-            </td>
-            <td className="p-4 text-gray-300">{tx.amountBRL ? `R$ ${tx.amountBRL.toFixed(2)}` : 'N/A'}</td>
-            <td className="p-4">
-                <span className={`px-2 py-1 text-xs font-semibold rounded-full ${statusColors[tx.status]}`}>{tx.status}</span>
-            </td>
-        </tr>
+        <>
+            <tr 
+                onClick={onToggle}
+                className={`border-b border-gray-800 transition-colors cursor-pointer group ${isExpanded ? 'bg-brand-gray/80 border-l-2 border-l-brand-green' : 'hover:bg-brand-gray/30 border-l-2 border-l-transparent'}`}
+            >
+                <td className="p-4 text-gray-300 flex items-center gap-3">
+                    <div className={`text-brand-green transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}>
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </div>
+                    {tx.date}
+                </td>
+                <td className="p-4 font-medium text-white">{tx.type}</td>
+                <td className={`p-4 font-bold ${amountColor}`}>
+                    {tx.status === TransactionStatus.Pending && tx.type === TransactionType.Deposit ? `(~ ${formatCurrency(tx.amountUSD, 'USD')})` : formatCurrency(tx.amountUSD, 'USD')}
+                </td>
+                <td className="p-4 text-gray-300">{tx.amountBRL ? formatCurrency(tx.amountBRL, 'BRL') : '-'}</td>
+                <td className="p-4">
+                    <span className={`px-2 py-1 text-xs font-semibold rounded-full ${statusColors[tx.status]}`}>{tx.status}</span>
+                </td>
+            </tr>
+            {isExpanded && (
+                <tr className="bg-brand-black/40 border-b border-gray-800 animate-fade-in">
+                    <td colSpan={5} className="p-0">
+                        <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6 text-sm relative overflow-hidden">
+                            {/* Decorative background element */}
+                            <div className="absolute top-0 left-0 w-1 h-full bg-brand-green/50"></div>
+                            
+                            <div className="space-y-3">
+                                <h4 className="text-brand-green font-bold uppercase text-xs tracking-wider mb-2 border-b border-gray-700 pb-2">Detalhes da Transação</h4>
+                                <div className="flex justify-between">
+                                    <span className="text-gray-400">ID da Transação:</span>
+                                    <span className="text-white font-mono text-xs">{tx.id}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-gray-400">Data Completa:</span>
+                                    <span className="text-white">{new Date(tx.date).toLocaleDateString('pt-BR')}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-gray-400">Tipo de Operação:</span>
+                                    <span className="text-white">{tx.type}</span>
+                                </div>
+                                 <div className="flex justify-between">
+                                    <span className="text-gray-400">Status Atual:</span>
+                                    <span className={`font-bold ${statusColors[tx.status].split(' ')[1]}`}>{tx.status}</span>
+                                </div>
+                            </div>
+
+                            <div className="space-y-3">
+                                <h4 className="text-brand-blue font-bold uppercase text-xs tracking-wider mb-2 border-b border-gray-700 pb-2">Informações Adicionais</h4>
+                                
+                                {tx.type === TransactionType.Withdrawal && tx.withdrawalDetails ? (
+                                    <>
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-400">Banco:</span>
+                                            <span className="text-white">{tx.withdrawalDetails.bank}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-400">Chave PIX:</span>
+                                            <span className="text-white">{tx.withdrawalDetails.pixKey}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-400">Beneficiário:</span>
+                                            <span className="text-white">{tx.withdrawalDetails.fullName}</span>
+                                        </div>
+                                        {tx.amountBRL && (
+                                            <div className="flex justify-between mt-2 pt-2 border-t border-gray-700/50">
+                                                <span className="text-gray-400">Valor a Receber:</span>
+                                                <span className="text-brand-green font-bold">{formatCurrency(tx.amountBRL, 'BRL')}</span>
+                                            </div>
+                                        )}
+                                    </>
+                                ) : tx.type === TransactionType.Deposit && tx.amountBRL ? (
+                                     <>
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-400">Valor Original:</span>
+                                            <span className="text-white">{formatCurrency(tx.amountBRL, 'BRL')}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-400">Conversão Estimada:</span>
+                                            <span className="text-white">R$ 1,00 ≈ USD {formatCurrency(tx.amountUSD / tx.amountBRL, 'USD')}</span>
+                                        </div>
+                                     </>
+                                ) : tx.type === TransactionType.Bonus ? (
+                                    <>
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-400">Origem do Bônus:</span>
+                                            <span className="text-white font-mono text-xs">{tx.sourceUserId ? `Ref: ${tx.sourceUserId.slice(0,8)}...` : 'Sistema'}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-400">Nível de Referência:</span>
+                                            <span className="text-white">{tx.referralLevel ? `${tx.referralLevel}º Nível` : 'Direto'}</span>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <p className="text-gray-500 text-sm italic">Nenhuma informação adicional disponível para esta transação.</p>
+                                )}
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+            )}
+        </>
     )
 }
 
@@ -40,6 +140,11 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(10);
+    const [expandedTxId, setExpandedTxId] = useState<string | null>(null);
+
+    const handleRowToggle = (id: string) => {
+        setExpandedTxId(prev => prev === id ? null : id);
+    };
 
     // Filtra as transações baseadas no tipo selecionado e termo de busca
     const filteredTransactions = useMemo(() => {
@@ -60,12 +165,14 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions }) => {
             );
         }
 
-        return result;
+        // Sort by Date Descending
+        return result.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     }, [filter, transactions, searchTerm]);
 
     // Reseta para a página 1 sempre que o filtro ou busca mudar
     useEffect(() => {
         setCurrentPage(1);
+        setExpandedTxId(null); // Collapse all on filter change
     }, [filter, searchTerm, itemsPerPage]);
 
     // Lógica de Paginação
@@ -86,17 +193,26 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions }) => {
 
     const handlePreviousPage = () => {
         setCurrentPage(prev => Math.max(prev - 1, 1));
+        setExpandedTxId(null);
     };
 
     const handleNextPage = () => {
         setCurrentPage(prev => Math.min(prev + 1, totalPages));
+        setExpandedTxId(null);
     };
 
     return (
-        <div className="space-y-8">
+        <div className="space-y-8 animate-fade-in">
+             <style>{`
+                @keyframes fade-in {
+                    from { opacity: 0; }
+                    to { opacity: 1; }
+                }
+                .animate-fade-in { animation: fade-in 0.3s ease-out forwards; }
+            `}</style>
             <div>
                 <h1 className="text-3xl font-bold">Histórico de Movimentações</h1>
-                <p className="text-gray-400">Acompanhe todos os seus depósitos, saques e rendimentos.</p>
+                <p className="text-gray-400">Acompanhe todos os seus depósitos, saques e rendimentos. Clique em uma linha para ver detalhes.</p>
             </div>
             
             <Card>
@@ -142,7 +258,12 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions }) => {
                         <tbody>
                             {paginatedTransactions.length > 0 ? (
                                 paginatedTransactions.map(tx => (
-                                    <TransactionRow key={tx.id} tx={tx} />
+                                    <TransactionRow 
+                                        key={tx.id} 
+                                        tx={tx} 
+                                        isExpanded={expandedTxId === tx.id}
+                                        onToggle={() => handleRowToggle(tx.id)}
+                                    />
                                 ))
                             ) : (
                                 <tr>
