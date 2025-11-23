@@ -7,7 +7,6 @@ import type { User, Transaction, ChatMessage } from '../types';
 // ============================================================================
 
 // Credenciais do Projeto: grennsevenstudio's Project
-// Project ID: kcwbtbjngrthtxtojqus
 const SUPABASE_URL = 'https://kcwbtbjngrthtxtojqus.supabase.co'; 
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtjd2J0YmpuZ3J0aHR4dG9qcXVzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM4NDc5MjUsImV4cCI6MjA3OTQyMzkyNX0.44rjV4beXn-MZwK9CXx1j8AgXqoSeHOfOh1X2pjaTrk';
 
@@ -20,11 +19,9 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
 
 /**
  * Helper function to detect network/fetch errors.
- * Returns true if the error is related to connectivity or the fetch API.
  */
 const isNetworkError = (err: any) => {
     if (!err) return false;
-    
     const msg = (err.message || '').toString();
     const details = (err.details || '').toString();
     
@@ -39,13 +36,9 @@ const isNetworkError = (err: any) => {
     ) {
         return true;
     }
-    
     return false;
 };
 
-/**
- * Verifica a conexão com o Supabase tentando fazer um select simples.
- */
 export const checkSupabaseConnection = async () => {
     try {
         const { count, error } = await supabase.from('users').select('*', { count: 'exact', head: true });
@@ -64,17 +57,12 @@ export const checkSupabaseConnection = async () => {
     }
 }
 
-/**
- * Busca todos os usuários do Supabase e mapeia para o tipo User.
- */
 export const fetchUsersFromSupabase = async () => {
     try {
         const { data, error } = await supabase.from('users').select('*');
         
         if (error) {
             console.error("Erro ao buscar usuários:", JSON.stringify(error, null, 2));
-            
-            // CRITICAL CHANGE: Return data: null on network error so App.tsx knows NOT to overwrite local data with empty array
             if (isNetworkError(error) || error.code === '42P01' || error.code === 'PGRST205') {
                 return { data: null, error: error }; 
             }
@@ -85,7 +73,6 @@ export const fetchUsersFromSupabase = async () => {
 
         const mappedUsers: User[] = data.map((u: any) => {
             const extra = u.additional_data || {};
-            
             return {
                 id: u.id,
                 name: u.full_name || u.email?.split('@')[0] || 'Sem Nome',
@@ -121,13 +108,9 @@ export const fetchUsersFromSupabase = async () => {
     }
 };
 
-/**
- * Busca todas as transações.
- */
 export const fetchTransactionsFromSupabase = async () => {
     try {
         const { data, error } = await supabase.from('transactions').select('*');
-        
         if (error) {
             console.error("Erro ao buscar transações:", JSON.stringify(error, null, 2));
             if (isNetworkError(error) || error.code === '42P01' || error.code === 'PGRST205') {
@@ -135,13 +118,11 @@ export const fetchTransactionsFromSupabase = async () => {
             }
             return { data: null, error };
         }
-
         if (!data) return { data: [], error: null };
 
         const mappedTxs: Transaction[] = data.map((t: any) => ({
             id: t.id,
-            user_id: t.user_id,
-            userId: t.user_id, // Mapped for frontend
+            userId: t.user_id,
             type: t.type,
             amountUSD: Number(t.amount_usd),
             amountBRL: Number(t.amount_brl),
@@ -159,25 +140,16 @@ export const fetchTransactionsFromSupabase = async () => {
     }
 };
 
-/**
- * Busca todas as mensagens de chat.
- */
 export const fetchMessagesFromSupabase = async () => {
     try {
         const { data, error } = await supabase.from('messages').select('*');
         if (error) {
-            console.error("Erro ao buscar mensagens:", JSON.stringify(error, null, 2));
-            if (isNetworkError(error) || error.code === '42P01' || error.code === 'PGRST205') {
-                 return { data: null, error };
-            }
             return { data: null, error };
         }
-        
         if (!data) return { data: [], error: null };
         
         const mapped: ChatMessage[] = data.map((m: any) => ({
             id: m.id,
-            sender_id: m.sender_id, // Mapped internally, but result uses camelCase for app
             senderId: m.sender_id,
             receiverId: m.receiver_id,
             text: m.text,
@@ -228,32 +200,24 @@ export const syncUserToSupabase = async (user: User, password?: string): Promise
         const { error } = await supabase.from('users').upsert(dbUser, { onConflict: 'id' });
         
         if (error) {
-            // Handle Duplicate Key (Email already exists but ID is different)
+            // Tratamento de erro 23505 (Unique Violation - Email já existe mas com ID diferente)
             if (error.code === '23505') {
-                console.warn(`Email conflict for ${user.email}. Attempting to resolve by updating existing record.`);
+                console.warn(`[Sync] Conflito de email detectado para ${user.email}. Tentando resolver ID remoto...`);
                 
-                // 1. Fetch the ID of the existing user with this email
+                // Busca o usuário existente pelo email para pegar o ID correto
                 const { data: existingUser, error: fetchError } = await supabase
                     .from('users')
                     .select('id')
                     .eq('email', user.email)
-                    .single();
+                    .maybeSingle();
 
                 if (existingUser && !fetchError) {
-                    // 2. Update our payload to use the REMOTE ID, effectively merging the local data into the remote record
-                    dbUser.id = existingUser.id;
-                    const { error: retryError } = await supabase.from('users').upsert(dbUser, { onConflict: 'id' });
-                    
-                    if (retryError) {
-                         console.error("Erro ao tentar corrigir conflito de usuário:", JSON.stringify(retryError, null, 2));
-                         return { error: retryError };
-                    }
-                    // Return the remote ID so the frontend can update local state
+                    console.log(`[Sync] ID remoto encontrado: ${existingUser.id}. Retornando para correção local.`);
+                    // Retorna o ID real para que o frontend possa atualizar o estado local
                     return { error: null, resolvedId: existingUser.id }; 
                 }
             }
 
-            // Ignore network or table missing errors during background sync to reduce noise
             if (!isNetworkError(error) && error.code !== '42P01') {
                  console.error("Erro ao sincronizar usuário:", JSON.stringify(error, null, 2));
             }
@@ -261,7 +225,7 @@ export const syncUserToSupabase = async (user: User, password?: string): Promise
         }
         return { error: null };
     } catch (e) {
-        console.error("Exception in syncUserToSupabase:", e);
+        console.error("Exceção ao syncUserToSupabase:", e);
         return { error: e };
     }
 };
@@ -282,12 +246,7 @@ export const syncTransactionToSupabase = async (tx: Transaction) => {
             bonus_payout_handled: tx.bonusPayoutHandled
         };
         const { error } = await supabase.from('transactions').upsert(dbTx, { onConflict: 'id' });
-        if (error) {
-             if (!isNetworkError(error) && error.code !== '42P01') {
-                console.error("Erro ao sincronizar transação:", JSON.stringify(error, null, 2));
-             }
-            return { error };
-        }
+        if (error) return { error };
         return { error: null };
     } catch (e) {
         return { error: e };
@@ -306,12 +265,7 @@ export const syncMessageToSupabase = async (msg: ChatMessage) => {
             attachment: msg.attachment
         };
         const { error } = await supabase.from('messages').upsert(dbMsg, { onConflict: 'id' });
-        if (error) {
-            if (!isNetworkError(error) && error.code !== '42P01') {
-                console.error("Erro ao sincronizar mensagem:", JSON.stringify(error, null, 2));
-            }
-            return { error };
-        }
+        if (error) return { error };
         return { error: null };
     } catch (e) {
         return { error: e };

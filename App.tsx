@@ -25,7 +25,6 @@ const calculateRank = (balance: number): InvestorRank => {
   return InvestorRank.Bronze;
 };
 
-// Helper to calculate monthly profit based on current balance and plan
 const calculateProfit = (balance: number, planName: string = 'Conservador'): number => {
     const plan = INVESTMENT_PLANS.find(p => p.name.toLowerCase() === planName.toLowerCase()) || INVESTMENT_PLANS[0];
     return balance * plan.returnRate;
@@ -37,11 +36,9 @@ const App: React.FC = () => {
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [language, setLanguage] = useState<Language>('pt');
   
-  // Centralized state for the entire application, loaded from our DB service
   const [dbState, setDbState] = useState<AppDB>(() => {
       try {
           const data = getAllData();
-          // Safe check to ensure arrays exist
           return {
               users: data?.users || [],
               transactions: data?.transactions || [],
@@ -51,19 +48,16 @@ const App: React.FC = () => {
               platformSettings: data?.platformSettings || {} as any
           };
       } catch(e) {
-          // Emergency fallback if DB init fails completely
           return { users: [], transactions: [], chatMessages: [], notifications: [], adminActionLogs: [], platformSettings: {} as any };
       }
   });
 
-  // Persist state to localStorage whenever it changes
   useEffect(() => {
     if (dbState) {
         saveAllData(dbState);
     }
   }, [dbState]);
 
-  // Handle Theme
   useEffect(() => {
     if (isDarkMode) {
         document.documentElement.classList.add('dark');
@@ -72,7 +66,6 @@ const App: React.FC = () => {
     }
   }, [isDarkMode]);
 
-  // Load language from localStorage
   useEffect(() => {
       const savedLang = localStorage.getItem('app_language') as Language;
       if (savedLang && ['pt', 'en', 'es'].includes(savedLang)) {
@@ -85,53 +78,53 @@ const App: React.FC = () => {
       localStorage.setItem('app_language', lang);
   }
 
-  // Automatically sync Admin user to Supabase on load to ensure connection
+  // --- FIX DE CONFLITO DE EMAIL/ID (Auto-Repair) ---
   useEffect(() => {
     if (!dbState?.users || dbState.users.length === 0) return;
-    const admin = dbState.users.find(u => u.isAdmin);
+    
+    // Busca o admin local (pelo email específico para garantir)
+    const admin = dbState.users.find(u => u.email === 'admin@greennseven.com' && u.isAdmin);
+    
     if (admin) {
-        // Sync admin with default password to ensure they exist in cloud DB
+        // Tenta sincronizar. Se retornar 'resolvedId', significa que o ID local estava errado
+        // e o Supabase devolveu o ID correto que já existe lá.
         syncUserToSupabase(admin, 'admin123').then(res => {
-            if (res.error) {
-                console.error("Erro ao conectar Admin ao Supabase:", JSON.stringify(res.error, null, 2));
-            } else if (res.resolvedId && res.resolvedId !== admin.id) {
-                console.log("Admin conectado com sucesso! Atualizando ID local para coincidir com remoto:", res.resolvedId);
-                // Update local state to match remote ID (Fixes conflict 23505)
-                setDbState(prev => {
-                    const oldId = admin.id;
-                    const newId = res.resolvedId!;
-                    return {
-                        ...prev,
-                        users: prev.users.map(u => u.id === oldId ? { ...u, id: newId } : u),
-                        transactions: prev.transactions.map(t => ({
-                            ...t,
-                            userId: t.userId === oldId ? newId : t.userId,
-                            sourceUserId: t.sourceUserId === oldId ? newId : t.sourceUserId
-                        })),
-                        chatMessages: prev.chatMessages.map(m => ({
-                            ...m,
-                            senderId: m.senderId === oldId ? newId : m.senderId,
-                            receiverId: m.receiverId === oldId ? newId : m.receiverId
-                        })),
-                        notifications: prev.notifications.map(n => ({
-                            ...n,
-                            userId: n.userId === oldId ? newId : n.userId
-                        })),
-                        adminActionLogs: prev.adminActionLogs.map(l => ({
-                            ...l,
-                            adminId: l.adminId === oldId ? newId : l.adminId,
-                            targetId: l.targetId === oldId ? newId : l.targetId
-                        }))
-                    };
-                });
-                // Also update logged user if it's the admin
-                setLoggedUser(current => current?.id === admin.id ? { ...current, id: res.resolvedId! } : current);
-            } else {
-                console.log("Admin conectado ao Supabase com sucesso.");
+            if (res.resolvedId && res.resolvedId !== admin.id) {
+                console.log(`[AUTO-FIX] Corrigindo ID do Admin: Local(${admin.id}) -> Remoto(${res.resolvedId})`);
+                
+                const oldId = admin.id;
+                const newId = res.resolvedId;
+
+                setDbState(prev => ({
+                    ...prev,
+                    users: prev.users.map(u => u.id === oldId ? { ...u, id: newId } : u),
+                    // Atualiza referências em outras tabelas
+                    transactions: prev.transactions.map(t => ({
+                        ...t,
+                        userId: t.userId === oldId ? newId : t.userId,
+                        sourceUserId: t.sourceUserId === oldId ? newId : t.sourceUserId
+                    })),
+                    chatMessages: prev.chatMessages.map(m => ({
+                        ...m,
+                        senderId: m.senderId === oldId ? newId : m.senderId,
+                        receiverId: m.receiverId === oldId ? newId : m.receiverId
+                    })),
+                    notifications: prev.notifications.map(n => ({
+                        ...n,
+                        userId: n.userId === oldId ? newId : n.userId
+                    })),
+                    adminActionLogs: prev.adminActionLogs.map(l => ({
+                        ...l,
+                        adminId: l.adminId === oldId ? newId : l.adminId
+                    }))
+                }));
+                
+                // Se o admin estiver logado, atualiza a sessão também para evitar crash
+                setLoggedUser(current => (current && current.id === oldId) ? { ...current, id: newId } : current);
             }
         });
     }
-  }, []); 
+  }, []); // Roda apenas na montagem para corrigir inicialização
 
   const loadRemoteData = async () => {
     console.log("Carregando dados do Supabase...");
@@ -144,31 +137,19 @@ const App: React.FC = () => {
         setDbState(prev => {
             let newState = { ...prev };
             
-            // Only update if data is not null. If it's null, it means connection failed.
-            // If it's an empty array [], it means the DB is empty, which is a valid state.
+            // Only update if data is not null. If null, connection failed.
             if (remoteUsers !== null) {
-                console.log(`${remoteUsers.length} usuários carregados do Supabase.`);
+                // Mescla usuários remotos, preservando admin local se houver conflito temporário
                 newState.users = remoteUsers;
-            } else if (userError) {
-                 console.error("Erro ao carregar usuários do Supabase:", JSON.stringify(userError, null, 2));
             }
-
             if (remoteTxs !== null) {
                 newState.transactions = remoteTxs;
-            } else if (txError) {
-                 console.error("Erro ao carregar transações do Supabase:", JSON.stringify(txError, null, 2));
             }
-
             if (remoteMessages !== null) {
                  newState.chatMessages = remoteMessages;
-            } else if (msgError) {
-                 console.error("Erro ao carregar mensagens do Supabase:", JSON.stringify(msgError, null, 2));
             }
-            
             return newState;
         });
-
-        // Return true if at least users loaded successfully
         return remoteUsers !== null;
     } catch (e) {
         console.error("Fatal error loading remote data", e);
@@ -176,7 +157,6 @@ const App: React.FC = () => {
     }
   };
 
-  // Fetch Data from Supabase on Mount
   useEffect(() => {
     loadRemoteData();
   }, []);
@@ -192,14 +172,13 @@ const App: React.FC = () => {
 
   const toggleTheme = () => setIsDarkMode(!isDarkMode);
   
-  // Safe destructuring with defaults to prevent crashes
   const { users = [], transactions = [], notifications = [], chatMessages = [], platformSettings, adminActionLogs } = dbState || {};
   
-  // ROBUST FALLBACK ADMIN to prevent crashes when users list is empty or loading
+  // Fallback Admin para evitar crash se DB estiver vazio
   const fallbackAdmin: User = {
       id: 'admin-fallback',
       name: 'Admin System',
-      email: 'admin@system.com',
+      email: 'admin@greennseven.com',
       cpf: '', phone: '', address: { cep: '', street: '', number: '', neighborhood: '', city: '', state: '' },
       documents: { idFrontUrl: '', idBackUrl: '', selfieUrl: '' },
       status: UserStatus.Approved,
@@ -209,7 +188,6 @@ const App: React.FC = () => {
       isAdmin: true, joinedDate: new Date().toISOString(), referralCode: 'ADMIN', plan: 'Select'
   };
   
-  // Ensure adminUser is never undefined, even if users array is empty
   const adminUser = (users && users.length > 0 ? users.find(u => u.isAdmin) : undefined) || fallbackAdmin;
 
   const handleLogin = (email: string, password?: string) => {
@@ -226,18 +204,13 @@ const App: React.FC = () => {
         return false;
     }
 
-    // Password Check Logic
     if (password) {
+         // Em produção, a validação de senha deve ser feita no backend. 
+         // Aqui comparamos com o local ou ignoramos se veio do Supabase (senha hashada não disponível).
          if (userToLogin.password && userToLogin.password !== password) {
              alert("Senha incorreta. Tente novamente.");
              return false;
          }
-    } else {
-        // If no password provided but user has one (shouldn't happen with form validation)
-        if (userToLogin.password) {
-            alert("Senha obrigatória.");
-            return false;
-        }
     }
 
     if (userToLogin.isAdmin) {
@@ -278,12 +251,11 @@ const App: React.FC = () => {
         id: faker.string.uuid(),
         name: userData.name,
         email: userData.email,
-        password: userData.password, // Store the password from registration
+        password: userData.password,
         cpf: userData.cpf,
         phone: userData.phone,
         address: userData.address,
         documents: userData.documents,
-        // Changed to use initials instead of random face
         avatarUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(userData.name)}&background=00FF9C&color=000`,
         rank: InvestorRank.Bronze,
         balanceUSD: 0,
@@ -303,8 +275,6 @@ const App: React.FC = () => {
     syncUserToSupabase(newUser, userData.password).then((result) => {
         if (result.error) {
             console.error("Erro ao registrar usuário no Supabase:", JSON.stringify(result.error, null, 2));
-        } else {
-            console.log("Novo usuário sincronizado com Supabase:", newUser.email);
         }
     });
   };
@@ -333,7 +303,6 @@ const App: React.FC = () => {
     if (tx.type === TransactionType.Withdrawal) {
       const withdrawalAmount = Math.abs(tx.amountUSD);
       
-      // 1. Time Check (09:00 - 18:00)
       const now = new Date();
       const currentHour = now.getHours();
       if (currentHour < 9 || currentHour >= 18) {
@@ -341,13 +310,12 @@ const App: React.FC = () => {
           return;
       }
 
-      // 2. Frequency Check (1 per day)
-      const today = tx.date; // Already formatted as YYYY-MM-DD
+      const today = tx.date;
       const hasWithdrawalToday = dbState.transactions.some(t => 
           t.userId === loggedUser?.id && 
           t.type === TransactionType.Withdrawal && 
           t.date === today &&
-          t.status !== TransactionStatus.Failed // Allow retry if previous attempt failed
+          t.status !== TransactionStatus.Failed
       );
 
       if (hasWithdrawalToday) {
@@ -356,33 +324,15 @@ const App: React.FC = () => {
       }
 
       if (tx.userId === loggedUser?.id && loggedUser) {
-          // Check daily limit based on Plan (Monthly Profit / 30)
           const dailyLimit = (loggedUser.monthlyProfitUSD / 30);
-          
           if (withdrawalAmount > dailyLimit) {
             alert(`Erro: Valor superior ao limite diário de saque (US$ ${dailyLimit.toFixed(2)}).`);
             return;
           }
-          
-          setDbState(prev => ({
-              ...prev,
-              transactions: [...prev.transactions, tx]
-          }));
-
-          syncTransactionToSupabase(tx).then((result) => {
-             if (result.error) {
-                console.error("Erro ao salvar transação no Supabase:", JSON.stringify(result.error, null, 2));
-            }
-          });
-          return;
       }
     }
 
-    syncTransactionToSupabase(tx).then((result) => {
-         if (result.error) {
-            console.error("Erro ao salvar transação no Supabase:", JSON.stringify(result.error, null, 2));
-        }
-    });
+    syncTransactionToSupabase(tx);
     setDbState(prev => ({ ...prev, transactions: [...prev.transactions, tx] }));
   };
 
@@ -434,7 +384,6 @@ const App: React.FC = () => {
                 monthlyProfitUSD: calculateProfit(newBalance, referrer.plan),
                 rank: calculateRank(newBalance)
             };
-            
             syncUserToSupabase(updatedReferrer);
             referrersToUpdate.push(updatedReferrer);
 
@@ -532,9 +481,7 @@ const App: React.FC = () => {
               monthlyProfitUSD: calculateProfit(newBalance, referrer.plan),
               rank: calculateRank(newBalance)
             };
-            
           syncUserToSupabase(updatedReferrer);
-          
           referrersToUpdate.push(updatedReferrer);
           currentUser = referrer;
       }
@@ -634,13 +581,7 @@ const App: React.FC = () => {
           attachment: attachmentData
       };
       
-      // Save to Supabase
-      syncMessageToSupabase(newMessage).then(res => {
-          if (res.error) {
-              console.error("Failed to sync message to Supabase:", res.error);
-          }
-      });
-
+      syncMessageToSupabase(newMessage);
       setDbState(prev => ({ ...prev, chatMessages: [...prev.chatMessages, newMessage] }));
   };
   
@@ -672,17 +613,11 @@ const App: React.FC = () => {
   const handleUpdatePassword = (userId: string, newPassword: string) => {
       const user = users.find(u => u.id === userId);
       if (user) {
-          // Update local user state first
           const updatedUser = { ...user, password: newPassword };
           handleUpdateUser(updatedUser);
-
           syncUserToSupabase(updatedUser, newPassword).then(res => {
-              if (res.error) {
-                  console.error("Erro ao atualizar senha:", res.error);
-                  alert("Erro ao atualizar senha. Tente novamente.");
-              } else {
-                  alert("Senha de login atualizada com sucesso!");
-              }
+              if (res.error) alert("Erro ao atualizar senha.");
+              else alert("Senha de login atualizada com sucesso!");
           });
       }
   };

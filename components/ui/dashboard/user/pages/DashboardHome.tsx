@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import type { User, Transaction, WithdrawalDetails, Stock, Language } from '../../../../../types';
 import { TransactionType, TransactionStatus } from '../../../../../types';
 import Card from '../../../../ui/Card';
@@ -8,14 +8,12 @@ import Input from '../../../../ui/Input';
 import Modal from '../../../../layout/Modal';
 import { ICONS, DOLLAR_RATE, MOCK_STOCKS } from '../../../../../constants';
 import { TRANSLATIONS } from '../../../../../lib/translations';
-import { faker } from '@faker-js/faker';
 
 const WITHDRAWAL_FEE_PERCENT = 5;
 
 interface DashboardHomeProps {
     user: User;
     transactions: Transaction[];
-    // FIX: Aligned Omit type with parent component to include 'bonusPayoutHandled'
     onAddTransaction: (newTransaction: Omit<Transaction, 'id' | 'date' | 'bonusPayoutHandled'>) => void;
     setActiveView: (view: string) => void;
     language: Language;
@@ -24,12 +22,11 @@ interface DashboardHomeProps {
 const StatCard: React.FC<{ title: string; value: React.ReactNode; icon: React.ReactNode; subValue?: React.ReactNode; highlight?: boolean }> = ({ title, value, icon, subValue, highlight = false }) => {
     const borderGradient = highlight 
         ? 'from-brand-green via-brand-green/50 to-brand-gray' 
-        : 'from-brand-blue/30 via-brand-gray to-brand-gray/30'; // Fixed gradient to be visible at end
+        : 'from-brand-blue/30 via-brand-gray to-brand-gray/30';
 
     return (
         <div className={`relative p-[2px] rounded-2xl bg-gradient-to-br ${borderGradient} transition-all duration-300 hover:shadow-lg hover:shadow-brand-green/10 transform hover:-translate-y-1`}>
             <div className="bg-brand-gray rounded-[14px] p-3 sm:p-6 h-full flex flex-col justify-between overflow-hidden group">
-                {/* Decorative Glow on highlight cards */}
                 {highlight && <div className="absolute -top-1/4 -right-1/4 w-1/2 h-1/2 bg-brand-green/10 rounded-full blur-3xl opacity-50 group-hover:opacity-80 transition-opacity duration-500"></div>}
 
                 <div className="flex justify-between items-start">
@@ -98,7 +95,6 @@ const SuccessDisplay: React.FC<{ title: string; children: React.ReactNode; onClo
     );
 };
 
-
 const DepositModalContent: React.FC<{
     user: User;
     onClose: () => void;
@@ -109,7 +105,6 @@ const DepositModalContent: React.FC<{
     const [pixKey, setPixKey] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     
-    // Updated Beneficiary Data based on User Request
     const beneficiaryName = "D. S. LEAL";
     const staticPixKey = "8d0c0ba9-df70-4910-a993-9ac514fc853d";
 
@@ -236,8 +231,6 @@ const WithdrawModalContent: React.FC<{
     const fee = (parseFloat(amountUSD) || 0) * (WITHDRAWAL_FEE_PERCENT / 100);
     const amountToReceiveUSD = (parseFloat(amountUSD) || 0) - fee;
     const amountToReceiveBRL = amountToReceiveUSD * DOLLAR_RATE;
-    
-    // Calculates the daily limit based on the plan (Monthly Profit / 30 days)
     const dailyLimit = user.monthlyProfitUSD / 30;
 
     const handleAmountSubmit = (e: React.FormEvent) => {
@@ -279,7 +272,6 @@ const WithdrawModalContent: React.FC<{
             setPixKeyError('Formato de chave PIX inválido. Verifique CPF, CNPJ, email, telefone ou chave aleatória.');
             return;
         }
-        
         setIsLoading(true);
         setTimeout(() => {
             onAddTransaction({
@@ -437,7 +429,6 @@ const StockTickerCard: React.FC<{ stock: Stock }> = ({ stock }) => {
         }
     }, [stock.price]);
 
-
     return (
         <Card className="p-3 bg-brand-black/50">
             <div className="flex justify-between items-center">
@@ -470,54 +461,57 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions, onAdd
     const [isWithdrawModalOpen, setWithdrawModalOpen] = useState(false);
     const [showBalance, setShowBalance] = useState(false);
     const [stocks, setStocks] = useState<Stock[]>(MOCK_STOCKS);
-    const [dailyEarnings, setDailyEarnings] = useState(0);
+    
+    // GPU OPTIMIZATION: Use Ref for direct DOM manipulation instead of State
+    const earningsRef = useRef<HTMLSpanElement>(null);
+    const requestRef = useRef<number>();
+    const profitRef = useRef(0);
 
     const t = TRANSLATIONS[language];
-
     const balanceBRL = user.balanceUSD * DOLLAR_RATE;
     const maskedValue = '••••••••';
-    
-    // Calculate daily available balance (Monthly Profit / 30)
     const dailyAvailable = user.monthlyProfitUSD / 30;
 
     useEffect(() => {
         const totalDailyProfit = user.monthlyProfitUSD / 30;
         const msInDay = 24 * 60 * 60 * 1000;
         const profitPerMs = totalDailyProfit / msInDay;
-
-        const updateEarnings = () => {
+        
+        // Animation Loop using requestAnimationFrame
+        const animate = () => {
             const now = new Date();
             const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
             const msElapsed = now.getTime() - startOfDay.getTime();
-            
-            // Calculate exact profit for this moment in time based on elapsed milliseconds
-            // This makes the decimal places roll smoothly like a financial ticker
             const currentEarnings = Math.min(msElapsed * profitPerMs, totalDailyProfit);
-            setDailyEarnings(currentEarnings);
+            
+            // DIRECT DOM MANIPULATION:
+            // Updates only the text content of the specific span element.
+            // Does NOT trigger a React component re-render.
+            // This fixes the "Black Screen" / GPU overload issue on low-end devices.
+            if (earningsRef.current) {
+                 earningsRef.current.textContent = `$ ${currentEarnings.toLocaleString('en-US', { minimumFractionDigits: 6, maximumFractionDigits: 6 })}`;
+            }
+            
+            requestRef.current = requestAnimationFrame(animate);
         };
 
-        // Initial update
-        updateEarnings();
+        requestRef.current = requestAnimationFrame(animate);
 
-        // Update frequently (every 80ms) to create a smooth counting effect for the decimals
-        const earningsInterval = setInterval(updateEarnings, 80);
-
-        return () => clearInterval(earningsInterval);
+        return () => {
+            if (requestRef.current) cancelAnimationFrame(requestRef.current);
+        };
     }, [user.monthlyProfitUSD]);
     
     useEffect(() => {
         const initialPrices = MOCK_STOCKS.map(s => s.price);
-
         const stockInterval = setInterval(() => {
             setStocks(currentStocks => 
                 currentStocks.map((stock, index) => {
                     const fluctuation = (Math.random() - 0.49) * (stock.price * 0.005);
                     const newPrice = stock.price + fluctuation;
-                    
                     const initialPrice = initialPrices[index];
                     const newChange = newPrice - initialPrice;
                     const newChangePercent = (newChange / initialPrice) * 100;
-
                     return {
                         ...stock,
                         price: newPrice,
@@ -526,7 +520,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions, onAdd
                     };
                 })
             );
-        }, 2500);
+        }, 3000); // 3 seconds interval is safe for React state updates
 
         return () => clearInterval(stockInterval);
     }, []);
@@ -536,7 +530,6 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions, onAdd
         <style>{`
           .flash-green { color: #00FF99 !important; }
           .flash-red { color: #EF4444 !important; }
-          
           @keyframes scale-in {
             from { transform: scale(0.8); opacity: 0; }
             to { transform: scale(1); opacity: 1; }
@@ -544,7 +537,6 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions, onAdd
           .animate-scale-in {
             animation: scale-in 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
           }
-
           @keyframes draw {
             to { stroke-dashoffset: 0; }
           }
@@ -559,31 +551,17 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions, onAdd
             animation: draw 0.6s 0.3s ease-out forwards;
           }
           @keyframes balance-fade {
-            from {
-              opacity: 0;
-              transform: translateY(8px);
-            }
-            to {
-              opacity: 1;
-              transform: translateY(0);
-            }
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
           }
-          .balance-value-anim {
-            animation: balance-fade 0.4s ease-out;
-          }
-          
-          .live-ticker {
-            font-variant-numeric: tabular-nums;
-          }
-          
+          .balance-value-anim { animation: balance-fade 0.4s ease-out; }
+          .live-ticker { font-variant-numeric: tabular-nums; }
           @keyframes pulse-green {
             0% { box-shadow: 0 0 0 0 rgba(0, 255, 156, 0.4); }
             70% { box-shadow: 0 0 0 6px rgba(0, 255, 156, 0); }
             100% { box-shadow: 0 0 0 0 rgba(0, 255, 156, 0); }
           }
-          .live-indicator {
-            animation: pulse-green 2s infinite;
-          }
+          .live-indicator { animation: pulse-green 2s infinite; }
         `}</style>
         <Modal 
             isOpen={isDepositModalOpen} 
@@ -620,7 +598,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions, onAdd
                     {showBalance ? ICONS.eye : ICONS.eyeSlash}
                 </button>
             </div>
-            {/* Stats */}
+            
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-6">
                 <StatCard 
                     title={`${t.total_balance} (USD)`} 
@@ -660,8 +638,9 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions, onAdd
                     title={t.earnings_today} 
                     value={
                         <div className="flex items-center gap-3">
-                            <span className="live-ticker">
-                                {`$ ${dailyEarnings.toLocaleString('en-US', { minimumFractionDigits: 6, maximumFractionDigits: 6 })}`}
+                            <span className="live-ticker" ref={earningsRef}>
+                                {/* Initial Value, updated via Ref later */}
+                                $ 0.000000
                             </span>
                             <span className="flex h-3 w-3 relative">
                                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
@@ -679,7 +658,6 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions, onAdd
                 />
             </div>
 
-            {/* Actions */}
              <Card className="p-4 md:p-6">
                 <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                     <p className="font-semibold text-left text-sm md:text-base w-full">{t.quick_actions_title}</p>
@@ -690,7 +668,6 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions, onAdd
                 </div>
             </Card>
 
-            {/* Market Overview */}
             <Card>
                 <h2 className="text-lg md:text-xl font-bold mb-4">{t.market_title}</h2>
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
@@ -708,8 +685,6 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions, onAdd
                 </div>
             </Card>
 
-
-            {/* Recent Transactions */}
             <Card>
                 <h2 className="text-lg md:text-xl font-bold mb-4">{t.recent_transactions}</h2>
                 <div className="space-y-2">

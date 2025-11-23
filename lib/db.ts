@@ -24,12 +24,6 @@ export interface AppDB {
 
 const DB_KEY = 'greennseven_db';
 
-// Helper to check if string is a valid UUID
-const isUUID = (str: string) => {
-    const regex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    return regex.test(str);
-};
-
 // Function to seed the database if it doesn't exist
 export const initializeDB = () => {
   const existingData = localStorage.getItem(DB_KEY);
@@ -39,15 +33,23 @@ export const initializeDB = () => {
   if (existingData) {
       try {
           const parsed = JSON.parse(existingData);
-          const firstUser = parsed.users?.[0];
-          // Check if we have legacy data (non-UUID IDs or fake users when we want only admin)
-          if (firstUser && (!isUUID(firstUser.id) || parsed.users.length > 1 && parsed.users.some((u: User) => u.name.includes('Carlos') || u.name.includes('Ana')))) {
-              console.warn("Legacy or demo data detected. Resetting database to clean state.");
+          
+          // Check if database is corrupted or using old format
+          if (!Array.isArray(parsed.users) || parsed.users.length === 0) {
+              console.warn("Database corrupted. Resetting.");
               shouldSeed = true;
-              localStorage.removeItem(DB_KEY);
+          } else {
+              // Check if Admin email matches the required one
+              const admin = parsed.users.find((u: User) => u.email === 'admin@greennseven.com');
+              if (!admin || !admin.isAdmin) {
+                   console.warn("Admin configuration invalid. Resetting to ensure correct email.");
+                   shouldSeed = true;
+                   localStorage.removeItem(DB_KEY);
+              }
           }
       } catch (e) {
           shouldSeed = true;
+          localStorage.removeItem(DB_KEY);
       }
   }
 
@@ -62,7 +64,7 @@ export const initializeDB = () => {
   const MOCK_ADMIN: User = {
     id: ADMIN_ID,
     name: 'Admin GreennSeven',
-    email: 'admin@greennseven.com',
+    email: 'admin@greennseven.com', // STRICT EMAIL
     password: 'admin123', // Password for local auth
     cpf: '000.000.000-00',
     phone: '(00) 00000-0000',
@@ -80,8 +82,8 @@ export const initializeDB = () => {
         selfieUrl: 'https://via.placeholder.com/150'
     },
     status: UserStatus.Approved,
-    avatarUrl: `https://i.pravatar.cc/150?u=${ADMIN_ID}`,
-    rank: InvestorRank.Platinum,
+    avatarUrl: `https://ui-avatars.com/api/?name=Admin+GreennSeven&background=00FF9C&color=000`,
+    rank: InvestorRank.Diamond,
     balanceUSD: 25420.50,
     capitalInvestedUSD: 20000,
     monthlyProfitUSD: 1200,
@@ -89,14 +91,9 @@ export const initializeDB = () => {
     isAdmin: true,
     joinedDate: '2023-01-01',
     referralCode: 'ADMINPRO',
-    transactionPin: '1234' // Added for easy testing of withdrawals
+    transactionPin: '1234'
   };
 
-  const MOCK_ALL_USERS: User[] = [MOCK_ADMIN]; // Strictly only Admin
-  const MOCK_ALL_TRANSACTIONS: Transaction[] = [];
-  const MOCK_CHAT_MESSAGES: ChatMessage[] = [];
-  const MOCK_NOTIFICATIONS: Notification[] = [];
-  
   const MOCK_PLATFORM_SETTINGS: PlatformSettings = {
     dollarRate: DOLLAR_RATE,
     withdrawalFeePercent: 5,
@@ -108,16 +105,16 @@ export const initializeDB = () => {
   };
 
   const initialDB: AppDB = {
-    users: MOCK_ALL_USERS,
-    transactions: MOCK_ALL_TRANSACTIONS,
-    chatMessages: MOCK_CHAT_MESSAGES,
-    notifications: MOCK_NOTIFICATIONS,
+    users: [MOCK_ADMIN],
+    transactions: [],
+    chatMessages: [],
+    notifications: [],
     platformSettings: MOCK_PLATFORM_SETTINGS,
     adminActionLogs: []
   };
 
-  localStorage.setItem(DB_KEY, JSON.stringify(initialDB));
-  console.log('Database initialized. Demo users removed. Only Admin exists.');
+  saveAllData(initialDB);
+  console.log('Database initialized with correct Admin email.');
 };
 
 // Function to read all data from the database
@@ -125,18 +122,59 @@ export const getAllData = (): AppDB => {
   try {
     const data = localStorage.getItem(DB_KEY);
     if (!data) {
-      throw new Error('No data found');
+      initializeDB();
+      return JSON.parse(localStorage.getItem(DB_KEY)!) as AppDB;
     }
     return JSON.parse(data) as AppDB;
   } catch (error) {
     console.warn("Failed to parse DB from localStorage, re-initializing.", error);
+    localStorage.removeItem(DB_KEY);
     initializeDB();
     const data = localStorage.getItem(DB_KEY);
-    return JSON.parse(data!) as AppDB;
+    return data ? JSON.parse(data) as AppDB : { users: [], transactions: [], chatMessages: [], notifications: [], adminActionLogs: [], platformSettings: {} as any };
   }
 };
 
 // Function to save all data to the database
 export const saveAllData = (db: AppDB) => {
-  localStorage.setItem(DB_KEY, JSON.stringify(db));
+  try {
+      localStorage.setItem(DB_KEY, JSON.stringify(db));
+  } catch (e: any) {
+      // Handle Quota Exceeded
+      if (
+        e.name === 'QuotaExceededError' || 
+        e.name === 'NS_ERROR_DOM_QUOTA_REACHED' || 
+        e.code === 22 || 
+        e.code === 1014
+      ) {
+          console.warn("LocalStorage quota exceeded. Attempting to save without heavy assets.");
+          
+          // Create a lightweight version of DB by removing large Base64 strings
+          // We rely on Supabase for data persistence, LocalStorage is just a cache/fallback
+          const lightweightDB = {
+              ...db,
+              users: db.users.map(u => ({
+                  ...u,
+                  documents: { 
+                    idFrontUrl: '', 
+                    idBackUrl: '', 
+                    selfieUrl: '' 
+                  } 
+              })),
+              chatMessages: db.chatMessages.map(m => ({
+                  ...m,
+                  attachment: m.attachment ? { ...m.attachment, fileUrl: '' } : undefined
+              }))
+          };
+          
+          try {
+              localStorage.setItem(DB_KEY, JSON.stringify(lightweightDB));
+              console.log("Database saved in lightweight mode.");
+          } catch (retryError) {
+              console.error("Failed to save even lightweight DB. LocalStorage is completely full.", retryError);
+          }
+      } else {
+          console.error("Failed to save DB", e);
+      }
+  }
 };

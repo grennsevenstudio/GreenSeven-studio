@@ -63,11 +63,11 @@ const Settings: React.FC<SettingsProps> = ({ platformSettings, onUpdateSettings,
         setTimeout(() => setToast(null), 3000);
     };
 
-    // SQL Code Definition - REFINED FOR ROBUSTNESS
-    const sqlCode = `-- SCRIPT SQL DE CONFIGURAÇÃO (GreennSeven Invest)
--- Projeto: grennsevenstudio's Project (kcwbtbjngrthtxtojqus)
+    // SQL Code Definition
+    const sqlCode = `-- SCRIPT SQL ATUALIZADO (GreennSeven Invest)
+-- Execute este script no Editor SQL do Supabase para configurar o banco.
 
--- 1. Habilita extensão para gerar IDs únicos (UUID)
+-- 1. HABILITAR UUID
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- 2. TABELA DE USUÁRIOS
@@ -96,10 +96,10 @@ CREATE TABLE IF NOT EXISTS public.users (
 CREATE TABLE IF NOT EXISTS public.transactions (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
-  type TEXT,
-  amount_usd NUMERIC,
+  type TEXT NOT NULL, -- 'Deposit', 'Withdrawal', 'Bonus', 'Yield'
+  amount_usd NUMERIC NOT NULL,
   amount_brl NUMERIC,
-  status TEXT,
+  status TEXT DEFAULT 'Pending', 
   date TEXT,
   withdrawal_details JSONB,
   referral_level NUMERIC,
@@ -108,7 +108,11 @@ CREATE TABLE IF NOT EXISTS public.transactions (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
 
--- 4. TABELA DE MENSAGENS (CHAT)
+-- Índices
+CREATE INDEX IF NOT EXISTS idx_transactions_user_id ON public.transactions(user_id);
+CREATE INDEX IF NOT EXISTS idx_transactions_status ON public.transactions(status);
+
+-- 4. TABELA DE MENSAGENS
 CREATE TABLE IF NOT EXISTS public.messages (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   sender_id UUID REFERENCES public.users(id) ON DELETE SET NULL,
@@ -120,27 +124,25 @@ CREATE TABLE IF NOT EXISTS public.messages (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
 
--- 5. SEGURANÇA (RLS - Row Level Security)
+-- 5. POLÍTICAS DE SEGURANÇA (RLS)
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
 
--- Limpa políticas antigas se existirem
 DROP POLICY IF EXISTS "Public Access Users" ON public.users;
 DROP POLICY IF EXISTS "Public Access Transactions" ON public.transactions;
 DROP POLICY IF EXISTS "Public Access Messages" ON public.messages;
 
--- Cria políticas permissivas para o App
 CREATE POLICY "Public Access Users" ON public.users FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Public Access Transactions" ON public.transactions FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Public Access Messages" ON public.messages FOR ALL USING (true) WITH CHECK (true);
 
--- Garante permissões
 GRANT ALL ON TABLE public.users TO anon, authenticated, service_role;
 GRANT ALL ON TABLE public.transactions TO anon, authenticated, service_role;
 GRANT ALL ON TABLE public.messages TO anon, authenticated, service_role;
 
--- 6. CRIAÇÃO DO ADMINISTRADOR PADRÃO
+-- 6. USUÁRIO ADMIN PADRÃO
+-- Garante a existência do admin@greennseven.com
 INSERT INTO public.users (
     email, password, full_name, is_admin, status, rank, balance_usd, plan, additional_data
 ) VALUES (
@@ -276,11 +278,10 @@ INSERT INTO public.users (
 
         // Sync Users
         for (const user of allUsers) {
-            // Se for o admin padrão, usa a senha padrão para sync
+            // Sync using default admin password if it's the admin user
             const pwd = user.email === 'admin@greennseven.com' ? 'admin123' : undefined;
             const result = await syncUserToSupabase(user, pwd);
             if (result.error) {
-                console.error(`Falha no usuário ${user.email}:`, result.error);
                 userFail++;
             } else {
                 userSuccess++;
@@ -292,7 +293,6 @@ INSERT INTO public.users (
         for (const tx of transactionsToSync) {
             const result = await syncTransactionToSupabase(tx);
             if (result.error) {
-                console.error(`Falha na transação ${tx.id}:`, result.error);
                 txFail++;
             } else {
                 txSuccess++;
@@ -300,7 +300,7 @@ INSERT INTO public.users (
         }
         
         setIsSyncing(false);
-        showToast(`Sincronização: ${userSuccess} users OK, ${txSuccess} txs OK.`, 'success');
+        showToast(`Sincronização: ${userSuccess} usuários, ${txSuccess} transações.`, 'success');
         handleCheckSupabase(); 
     };
     
@@ -331,7 +331,7 @@ INSERT INTO public.users (
                                     Testar Conexão
                                 </Button>
                                 <Button type="button" onClick={copySQLToClipboard} variant="ghost" className="text-xs py-2">
-                                    {ICONS.copy} Copiar SQL de Correção
+                                    {ICONS.copy} Copiar SQL
                                 </Button>
                             </div>
                         </div>
@@ -349,21 +349,18 @@ INSERT INTO public.users (
                         )}
                         
                         <div className="mt-4">
-                             <label className="text-xs text-gray-500 uppercase font-bold">Script SQL (Correção de Tabelas e Permissões):</label>
+                             <label className="text-xs text-gray-500 uppercase font-bold">Script SQL:</label>
                              <textarea 
                                 readOnly 
                                 className="w-full h-48 bg-gray-900 text-gray-300 text-[10px] p-2 rounded border border-gray-700 font-mono mt-1 focus:outline-none focus:border-brand-green leading-relaxed"
                                 value={sqlCode}
                                 onClick={(e) => e.currentTarget.select()} 
                              />
-                             <p className="text-[10px] text-gray-500 mt-1">Este script cria as tabelas necessárias e libera o acesso para o App funcionar. Copie e execute no Supabase.</p>
+                             <p className="text-[10px] text-gray-500 mt-1">Copie e execute no Editor SQL do Supabase.</p>
                         </div>
 
                         <div className="mt-6 pt-4 border-t border-gray-700">
                             <h4 className="text-white font-semibold text-sm mb-2">Forçar Sincronização de Dados</h4>
-                            <p className="text-gray-500 text-xs mb-3">
-                                Envia todos os dados locais para o Supabase. Use isso se os usuários não aparecerem.
-                            </p>
                             <Button 
                                 type="button" 
                                 onClick={handleSyncData} 
@@ -419,7 +416,7 @@ INSERT INTO public.users (
                 <Card>
                     <h2 className="text-xl font-bold mb-4">Financeiro</h2>
                     <div className="grid md:grid-cols-2 gap-6">
-                        <Input label="Cotação do Dólar (para saques BRL)" id="dollarRate" type="number" step="0.01" value={settings.dollarRate} onChange={handleChange} />
+                        <Input label="Cotação do Dólar" id="dollarRate" type="number" step="0.01" value={settings.dollarRate} onChange={handleChange} />
                         <Input label="Taxa de Saque (%)" id="withdrawalFeePercent" type="number" value={settings.withdrawalFeePercent} onChange={handleChange} />
                         <Input label="Bônus de Cadastro (USD)" id="signupBonusUSD" type="number" value={settings.signupBonusUSD} onChange={handleChange} />
                     </div>
@@ -471,7 +468,6 @@ INSERT INTO public.users (
                         </Button>
                      </div>
                 </Card>
-
 
                  <div className="flex justify-end">
                     <Button type="submit" variant="primary" className="px-8 py-3" disabled={isSaving}>
