@@ -9,7 +9,7 @@ export enum View {
   AdminDashboard,
 }
 
-export type Language = 'pt' | 'en' | 'es';
+export type Language = 'pt' | 'en' | 'es' | 'fr' | 'de';
 
 export enum InvestorRank {
   Bronze = 'Bronze',

@@ -829,7 +829,7 @@ const App: React.FC = () => {
 
   let content;
   if (view === View.Home) {
-      content = <HomePage setView={setView} />;
+      content = <HomePage setView={setView} language={language} setLanguage={handleSetLanguage} />;
   } else if (view === View.Login) {
       content = <LoginPage setView={setView} onLogin={handleLogin} />;
   } else if (view === View.Register) {
@@ -882,7 +882,7 @@ const App: React.FC = () => {
                     referralRates={referralRates}
                 />;
   } else {
-      content = <HomePage setView={setView} />;
+      content = <HomePage setView={setView} language={language} setLanguage={handleSetLanguage} />;
   }
 
   return (

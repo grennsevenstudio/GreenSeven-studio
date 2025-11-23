@@ -1,4 +1,5 @@
 
+
 import React, { useState, useRef, useEffect } from 'react';
 import type { User, Notification, Language } from '../../types';
 import { ICONS, RANK_COLORS } from '../../constants';
@@ -40,6 +41,8 @@ const LANGUAGE_OPTIONS: { code: Language; flag: string; label: string }[] = [
   { code: 'pt', flag: '🇧🇷', label: 'Português' },
   { code: 'en', flag: '🇺🇸', label: 'English' },
   { code: 'es', flag: '🇪🇸', label: 'Español' },
+  { code: 'fr', flag: '🇫🇷', label: 'Français' },
+  { code: 'de', flag: '🇩🇪', label: 'Deutsch' },
 ];
 
 interface HeaderProps {

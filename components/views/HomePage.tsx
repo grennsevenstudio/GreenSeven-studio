@@ -1,6 +1,7 @@
 
-import React, { useState, useEffect } from 'react';
-import { View, type Stock, type InvestmentPlan } from '../../types';
+
+import React, { useState, useEffect, useRef } from 'react';
+import { View, type Stock, type InvestmentPlan, type Language } from '../../types';
 import Button from '../ui/Button';
 import Modal from '../layout/Modal';
 import { ICONS, INVESTMENT_PLANS } from '../../constants';
@@ -12,6 +13,15 @@ import {
     CONTACT_CONTENT,
     CAREERS_CONTENT
 } from '../legal/TermsAndPrivacy';
+import { TRANSLATIONS } from '../../lib/translations';
+
+const LANGUAGE_OPTIONS: { code: Language; flag: string; label: string }[] = [
+  { code: 'pt', flag: '🇧🇷', label: 'Português' },
+  { code: 'en', flag: '🇺🇸', label: 'English' },
+  { code: 'es', flag: '🇪🇸', label: 'Español' },
+  { code: 'fr', flag: '🇫🇷', label: 'Français' },
+  { code: 'de', flag: '🇩🇪', label: 'Deutsch' },
+];
 
 const MOCK_TICKER_STOCKS: Stock[] = [
     { symbol: 'AMZN', name: 'Amazon.com, Inc.', price: 145.64, change: 0.06, changePercent: 0.04 },
@@ -23,48 +33,25 @@ const MOCK_TICKER_STOCKS: Stock[] = [
     { symbol: 'MSFT', name: 'Microsoft Corp.', price: 442.57, change: 2.11, changePercent: 0.48 },
 ];
 
-const FAQ_CONTENT = [
-    {
-        question: "POR QUE INVESTIR NA GREENNSEVEN?",
-        answer: "A GreennSeven oferece uma oportunidade única de dolarizar seu patrimônio. Enquanto moedas locais sofrem com a inflação, investir em Dólar Americano (a moeda mais forte do mundo) protege seu poder de compra. Além disso, nossos planos oferecem rentabilidades diárias competitivas que superam investimentos tradicionais."
-    },
-    {
-        question: "O QUE É A DOLARIZAÇÃO DE CAPITAL?",
-        answer: "Dolarizar significa converter seu saldo em Reais para Dólares no momento do depósito. Isso blinda seu dinheiro contra a desvalorização do Real. Na GreennSeven, você deposita via PIX, nós convertemos para USD, e seus rendimentos são calculados sobre esse saldo em dólar."
-    },
-    {
-        question: "COMO FUNCIONAM OS DEPÓSITOS E SAQUES?",
-        answer: "Depósitos são feitos instantaneamente via PIX. Para sacar, você solicita o valor desejado na plataforma, nós convertemos seus dólares de volta para Reais e enviamos para sua chave PIX. Saques solicitados até as 18h em dias úteis são processados no mesmo dia."
-    },
-    {
-        question: "A PLATAFORMA É SEGURA?",
-        answer: "Sim. Utilizamos criptografia de ponta (AES-256) para proteger seus dados e transações. Além disso, operamos com 'Cold Wallets' para custódia segura dos ativos e exigimos autenticação em etapas para saques."
-    },
-    {
-        question: "QUAL O VALOR MÍNIMO PARA COMEÇAR?",
-        answer: "Você pode começar a investir com o plano Conservador a partir de apenas US$ 10,00. Isso torna o investimento internacional acessível a todos."
-    }
-];
-
-const FAQList = () => {
+const FAQList = ({ content }: { content: { q: string, a: string }[] }) => {
     const [openIndex, setOpenIndex] = useState<number | null>(null);
 
     return (
         <div className="space-y-2">
-            {FAQ_CONTENT.map((item, index) => (
+            {content.map((item, index) => (
                 <div key={index} className="border border-gray-700 rounded-lg bg-brand-black/50 overflow-hidden">
                     <button
                         onClick={() => setOpenIndex(openIndex === index ? null : index)}
                         className="w-full flex justify-between items-center p-4 text-left hover:bg-gray-800 transition-colors"
                     >
-                        <span className="font-bold text-white">{item.question}</span>
+                        <span className="font-bold text-white">{item.q}</span>
                         <span className={`transform transition-transform duration-200 text-brand-green ${openIndex === index ? 'rotate-180' : ''}`}>
                             {ICONS.arrowDown}
                         </span>
                     </button>
                     {openIndex === index && (
                         <div className="p-4 pt-0 text-gray-400 text-sm leading-relaxed border-t border-gray-700/50 mt-2">
-                            {item.answer}
+                            {item.a}
                         </div>
                     )}
                 </div>
@@ -120,19 +107,42 @@ const HowItWorksStep: React.FC<{ number: string; title: string; children: React.
     </div>
 );
 
-const PlanPreviewCard: React.FC<{ plan: InvestmentPlan }> = ({ plan }) => (
+const PlanPreviewCard: React.FC<{ plan: InvestmentPlan, returnLabel: string, depositLabel: string }> = ({ plan, returnLabel, depositLabel }) => (
      <div className="bg-brand-gray p-8 rounded-2xl border-2 border-gray-800 flex flex-col text-center items-center transition-all duration-300 hover:border-brand-green hover:-translate-y-2 hover:shadow-2xl hover:shadow-brand-green/10">
         <h3 className={`text-2xl font-bold ${plan.color}`}>{plan.name}</h3>
-        <p className="text-gray-400 mt-2">Rentabilidade mensal</p>
+        <p className="text-gray-400 mt-2">{returnLabel}</p>
         <p className="text-4xl font-black text-white my-4">{plan.monthlyReturn}</p>
-        <p className="text-gray-400">Depósito mínimo</p>
+        <p className="text-gray-400">{depositLabel}</p>
         <p className="text-xl font-bold text-white">US$ {plan.minDepositUSD}</p>
     </div>
 );
 
-const HomePage: React.FC<{ setView: (view: View) => void; }> = ({ setView }) => {
+interface HomePageProps {
+    setView: (view: View) => void;
+    language: Language;
+    setLanguage: (lang: Language) => void;
+}
+
+const HomePage: React.FC<HomePageProps> = ({ setView, language, setLanguage }) => {
     const [isLearnMoreOpen, setIsLearnMoreOpen] = useState(false);
     const [infoModalContent, setInfoModalContent] = useState<{ title: string; content: React.ReactNode } | null>(null);
+    const [isLangMenuOpen, setIsLangMenuOpen] = useState(false);
+    const langMenuRef = useRef<HTMLDivElement>(null);
+    
+    const t = TRANSLATIONS[language];
+
+    // Close dropdowns when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (langMenuRef.current && !langMenuRef.current.contains(event.target as Node)) {
+                setIsLangMenuOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, []);
 
     const openInfoModal = (type: string) => {
         let title = '';
@@ -140,32 +150,32 @@ const HomePage: React.FC<{ setView: (view: View) => void; }> = ({ setView }) => 
 
         switch (type) {
             case 'security':
-                title = 'Segurança e Proteção';
+                title = t.landing.footer_security;
                 content = SECURITY_CONTENT;
                 break;
             case 'about':
-                title = 'Sobre a GreennSeven';
+                title = t.landing.footer_about;
                 content = ABOUT_CONTENT;
                 break;
             case 'contact':
-                title = 'Central de Atendimento';
+                title = t.landing.footer_contact;
                 content = CONTACT_CONTENT;
                 break;
             case 'careers':
-                title = 'Carreiras e Oportunidades';
+                title = t.landing.footer_careers;
                 content = CAREERS_CONTENT;
                 break;
             case 'terms':
-                title = 'Termos de Uso';
+                title = t.landing.footer_terms;
                 content = TERMS_OF_USE_CONTENT;
                 break;
             case 'privacy':
-                title = 'Política de Privacidade';
+                title = t.landing.footer_privacy;
                 content = PRIVACY_POLICY_CONTENT;
                 break;
             case 'faq':
-                title = 'Perguntas Frequentes';
-                content = <FAQList />;
+                title = 'FAQ';
+                content = <FAQList content={t.faq} />;
                 break;
             default:
                 return;
@@ -174,11 +184,11 @@ const HomePage: React.FC<{ setView: (view: View) => void; }> = ({ setView }) => 
     };
 
     const navItems = [
-        { name: 'INÍCIO', href: '#home' },
-        { name: 'VANTAGENS', href: '#features' },
-        { name: 'COMO FUNCIONA', href: '#how-it-works' },
-        { name: 'PLANOS', href: '#plans' },
-        { name: 'FAQ', href: '#faq', action: () => openInfoModal('faq') },
+        { name: t.landing.nav_home, href: '#home' },
+        { name: t.landing.nav_features, href: '#features' },
+        { name: t.landing.nav_how, href: '#how-it-works' },
+        { name: t.landing.nav_plans, href: '#plans' },
+        { name: t.landing.nav_faq, href: '#faq', action: () => openInfoModal('faq') },
     ];
 
     useEffect(() => {
@@ -231,8 +241,8 @@ const HomePage: React.FC<{ setView: (view: View) => void; }> = ({ setView }) => 
                         {React.cloneElement(ICONS.userPlus as React.ReactElement<any>, { className: "w-8 h-8" })}
                     </div>
                     <div>
-                        <h4 className="font-bold text-lg text-white">Crie sua Conta</h4>
-                        <p className="text-sm text-gray-400">Rápido, fácil e seguro.</p>
+                        <h4 className="font-bold text-lg text-white">{t.landing.diagram_create}</h4>
+                        <p className="text-sm text-gray-400">{t.landing.diagram_create_sub}</p>
                     </div>
                 </div>
                 <div className="flex items-center gap-4 relative z-10">
@@ -240,8 +250,8 @@ const HomePage: React.FC<{ setView: (view: View) => void; }> = ({ setView }) => 
                         {React.cloneElement(ICONS.deposit as React.ReactElement<any>, { className: "w-8 h-8" })}
                     </div>
                     <div>
-                        <h4 className="font-bold text-lg text-white">Deposite via PIX</h4>
-                        <p className="text-sm text-gray-400">Seu saldo é dolarizado na hora.</p>
+                        <h4 className="font-bold text-lg text-white">{t.landing.diagram_dep}</h4>
+                        <p className="text-sm text-gray-400">{t.landing.diagram_dep_sub}</p>
                     </div>
                 </div>
                 <div className="flex items-center gap-4 relative z-10">
@@ -249,8 +259,8 @@ const HomePage: React.FC<{ setView: (view: View) => void; }> = ({ setView }) => 
                         {React.cloneElement(ICONS.plans as React.ReactElement<any>, { className: "w-8 h-8" })}
                     </div>
                     <div>
-                        <h4 className="font-bold text-lg text-white">Comece a Lucrar</h4>
-                        <p className="text-sm text-gray-400">Escolha seu plano e veja render.</p>
+                        <h4 className="font-bold text-lg text-white">{t.landing.diagram_profit}</h4>
+                        <p className="text-sm text-gray-400">{t.landing.diagram_profit_sub}</p>
                     </div>
                 </div>
             </div>
@@ -264,28 +274,28 @@ const HomePage: React.FC<{ setView: (view: View) => void; }> = ({ setView }) => 
              <Modal 
                 isOpen={isLearnMoreOpen} 
                 onClose={() => setIsLearnMoreOpen(false)} 
-                title="Dolarização de Capital"
+                title={t.landing.modal_learn_title}
             >
                 <div className="space-y-6">
                     <div className="bg-brand-gray p-4 rounded-xl border border-gray-700">
                         <h3 className="text-lg font-bold text-white mb-2 flex items-center gap-2">
-                            {React.cloneElement(ICONS.shield as React.ReactElement<any>, { className: "h-5 w-5 text-brand-green" })} Por que Dolarizar?
+                            {React.cloneElement(ICONS.shield as React.ReactElement<any>, { className: "h-5 w-5 text-brand-green" })} {t.landing.modal_why_title}
                         </h3>
                         <p className="text-gray-400 text-sm leading-relaxed">
-                            A dolarização é a estratégia definitiva de proteção patrimonial. Enquanto moedas locais sofrem com inflação e volatilidade, o Dólar Americano se mantém como a principal reserva de valor do mundo, garantindo que seu esforço de trabalho não perca valor com o tempo.
+                            {t.landing.modal_why_desc}
                         </p>
                     </div>
 
                     <div>
-                        <h3 className="text-lg font-bold text-white mb-4">Vantagens de Investir em Dólar:</h3>
+                        <h3 className="text-lg font-bold text-white mb-4">{t.landing.modal_advantages_title}</h3>
                         <div className="grid gap-4">
                             <div className="flex gap-4 items-start">
                                 <div className="mt-1 bg-brand-green/20 p-2 rounded-lg h-fit text-brand-green">
                                     {React.cloneElement(ICONS.arrowUp as React.ReactElement<any>, { className: "h-5 w-5" })}
                                 </div>
                                 <div>
-                                    <h4 className="font-bold text-white">Proteção contra Inflação</h4>
-                                    <p className="text-sm text-gray-400">Blinde seu patrimônio contra a desvalorização cambial e mantenha seu poder de compra internacional.</p>
+                                    <h4 className="font-bold text-white">{t.landing.modal_adv_1_title}</h4>
+                                    <p className="text-sm text-gray-400">{t.landing.modal_adv_1_desc}</p>
                                 </div>
                             </div>
                             <div className="flex gap-4 items-start">
@@ -293,8 +303,8 @@ const HomePage: React.FC<{ setView: (view: View) => void; }> = ({ setView }) => 
                                     {React.cloneElement(ICONS.dollar as React.ReactElement<any>, { className: "h-5 w-5" })}
                                 </div>
                                 <div>
-                                    <h4 className="font-bold text-white">Moeda Forte</h4>
-                                    <p className="text-sm text-gray-400">Tenha ativos na moeda mais utilizada e confiável do comércio global.</p>
+                                    <h4 className="font-bold text-white">{t.landing.modal_adv_2_title}</h4>
+                                    <p className="text-sm text-gray-400">{t.landing.modal_adv_2_desc}</p>
                                 </div>
                             </div>
                             <div className="flex gap-4 items-start">
@@ -302,17 +312,17 @@ const HomePage: React.FC<{ setView: (view: View) => void; }> = ({ setView }) => 
                                     {React.cloneElement(ICONS.transactions as React.ReactElement<any>, { className: "h-5 w-5" })}
                                 </div>
                                 <div>
-                                    <h4 className="font-bold text-white">Diversificação Inteligente</h4>
-                                    <p className="text-sm text-gray-400">Não dependa apenas da economia do seu país. A GreennSeven conecta você ao mercado global.</p>
+                                    <h4 className="font-bold text-white">{t.landing.modal_adv_3_title}</h4>
+                                    <p className="text-sm text-gray-400">{t.landing.modal_adv_3_desc}</p>
                                 </div>
                             </div>
                         </div>
                     </div>
 
                     <div className="pt-4 border-t border-gray-800">
-                        <p className="text-center text-gray-400 text-sm mb-4">Comece com apenas US$ 10,00 e veja seu dinheiro render em moeda forte.</p>
+                        <p className="text-center text-gray-400 text-sm mb-4">{t.landing.modal_start_text}</p>
                         <Button fullWidth onClick={() => { setIsLearnMoreOpen(false); setView(View.Register); }}>
-                            Começar a Investir Agora
+                            {t.landing.modal_cta}
                         </Button>
                     </div>
                 </div>
@@ -334,6 +344,7 @@ const HomePage: React.FC<{ setView: (view: View) => void; }> = ({ setView }) => 
                         {React.cloneElement(ICONS.career as React.ReactElement<any>, {className: "h-7 w-7 text-brand-green"})}
                         <span className="text-2xl font-bold tracking-wider">GREENNSEVEN</span>
                     </div>
+                    
                     <nav className="hidden md:flex items-center gap-8">
                         {navItems.map(item => (
                             <a 
@@ -345,18 +356,50 @@ const HomePage: React.FC<{ setView: (view: View) => void; }> = ({ setView }) => 
                                         item.action();
                                     }
                                 }}
-                                className="font-semibold text-gray-300 hover:text-brand-green transition-colors"
+                                className="font-semibold text-gray-300 hover:text-brand-green transition-colors uppercase text-sm tracking-wide"
                             >
                                 {item.name}
                             </a>
                         ))}
                     </nav>
+
                     <div className="flex items-center gap-3">
+                        {/* Language Selector in Navbar */}
+                        <div className="relative mr-2" ref={langMenuRef}>
+                            <button 
+                                onClick={() => setIsLangMenuOpen(!isLangMenuOpen)}
+                                className="flex items-center gap-1.5 focus:outline-none hover:opacity-80 transition-opacity p-2 rounded-md hover:bg-gray-800"
+                            >
+                                <span className="text-2xl leading-none">{LANGUAGE_OPTIONS.find(l => l.code === language)?.flag}</span>
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </button>
+                            
+                            {isLangMenuOpen && (
+                                <div className="absolute right-0 mt-2 w-36 bg-brand-gray border border-gray-700 rounded-lg shadow-xl py-1 animate-fade-in-up z-50">
+                                    {LANGUAGE_OPTIONS.map((option) => (
+                                        <button
+                                            key={option.code}
+                                            onClick={() => {
+                                                setLanguage(option.code);
+                                                setIsLangMenuOpen(false);
+                                            }}
+                                            className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-800 flex items-center gap-3 transition-colors ${language === option.code ? 'bg-gray-800/50 text-brand-green' : 'text-gray-300'}`}
+                                        >
+                                            <span className="text-lg">{option.flag}</span>
+                                            <span className="font-medium">{option.code.toUpperCase()}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
                          <Button onClick={() => setView(View.Login)} variant="secondary" className="px-5 py-2 !rounded-md">
-                           LOGIN
+                           {t.landing.login}
                          </Button>
-                         <Button onClick={() => setView(View.Register)} variant="primary" className="px-5 py-2 !rounded-md">
-                           ABRIR CONTA
+                         <Button onClick={() => setView(View.Register)} variant="primary" className="px-5 py-2 !rounded-md hidden sm:block">
+                           {t.landing.signup}
                          </Button>
                     </div>
                 </div>
@@ -365,23 +408,23 @@ const HomePage: React.FC<{ setView: (view: View) => void; }> = ({ setView }) => 
             <main id="home" className="h-[calc(100vh-76px)] min-h-[600px] flex items-center justify-center text-center relative px-4 z-10">
                 <div className="relative z-10 flex flex-col items-center">
                     <h1 className="text-6xl md:text-8xl font-black leading-tight max-w-4xl">
-                        Seu Futuro Financeiro
+                        {t.landing.hero_title_1}
                         <span className="block bg-gradient-to-r from-brand-blue to-brand-green text-transparent bg-clip-text mt-2 animate-gradient-x">
-                            Dolarizado.
+                            {t.landing.hero_title_2}
                         </span>
                     </h1>
                     <p className="mt-6 text-lg text-gray-400 max-w-2xl mx-auto">
-                        Proteja seu patrimônio da inflação e potencialize seus ganhos com a força da moeda mais sólida do mundo.
+                        {t.landing.hero_subtitle}
                     </p>
                     <div className="mt-10 flex flex-col sm:flex-row justify-center items-center gap-4">
                         <Button onClick={() => setView(View.Register)} variant="primary" className="px-8 py-4 text-lg">
                             <div className="flex items-center gap-2">
-                                Começar Agora
+                                {t.landing.hero_cta}
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
                             </div>
                         </Button>
                         <Button variant="secondary" className="px-8 py-4 text-lg" onClick={() => setIsLearnMoreOpen(true)}>
-                            Saiba Mais
+                            {t.landing.hero_learn}
                         </Button>
                     </div>
                 </div>
@@ -389,20 +432,20 @@ const HomePage: React.FC<{ setView: (view: View) => void; }> = ({ setView }) => 
             
             <section id="features" className="py-24 px-4 sm:px-6 lg:px-12 bg-brand-gray/50 relative z-10">
                 <div className="max-w-6xl mx-auto text-center">
-                    <h2 className="text-4xl font-black text-white">A Vantagem GreennSeven</h2>
-                    <p className="mt-4 text-lg text-gray-400 max-w-3xl mx-auto">Potencialize seus investimentos com uma plataforma robusta, segura e projetada para o seu sucesso.</p>
+                    <h2 className="text-4xl font-black text-white">{t.landing.features_title}</h2>
+                    <p className="mt-4 text-lg text-gray-400 max-w-3xl mx-auto">{t.landing.features_subtitle}</p>
                     <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 mt-12 text-left">
-                        <FeatureCard icon={ICONS.featureProfit} title="Rentabilidade Dolarizada">
-                            Proteja seu capital da inflação e invista em uma moeda forte, maximizando seu poder de compra e seus ganhos.
+                        <FeatureCard icon={ICONS.featureProfit} title={t.landing.feature_profit_title}>
+                            {t.landing.feature_profit_desc}
                         </FeatureCard>
-                        <FeatureCard icon={ICONS.featureSecurity} title="Segurança de Ponta">
-                            Operamos com criptografia de nível bancário e as melhores práticas de segurança para proteger seus dados e seus investimentos.
+                        <FeatureCard icon={ICONS.featureSecurity} title={t.landing.feature_security_title}>
+                            {t.landing.feature_security_desc}
                         </FeatureCard>
-                         <FeatureCard icon={ICONS.featureLayout} title="Interface Intuitiva">
-                            Gerencie seus investimentos de forma simples e eficiente através de uma plataforma moderna e fácil de usar.
+                         <FeatureCard icon={ICONS.featureLayout} title={t.landing.feature_interface_title}>
+                            {t.landing.feature_interface_desc}
                         </FeatureCard>
-                        <FeatureCard icon={ICONS.featureSupport} title="Suporte Exclusivo">
-                            Nossa equipe de especialistas está sempre disponível para tirar suas dúvidas e te auxiliar em cada passo da sua jornada.
+                        <FeatureCard icon={ICONS.featureSupport} title={t.landing.feature_support_title}>
+                            {t.landing.feature_support_desc}
                         </FeatureCard>
                     </div>
                 </div>
@@ -410,18 +453,18 @@ const HomePage: React.FC<{ setView: (view: View) => void; }> = ({ setView }) => 
             
             <section id="how-it-works" className="py-24 px-4 sm:px-6 lg:px-12 relative z-10">
                 <div className="max-w-6xl mx-auto text-center">
-                    <h2 className="text-4xl font-black text-white">Comece a Investir em 3 Passos Simples</h2>
-                    <p className="mt-4 text-lg text-gray-400">Junte-se à GreennSeven e comece a construir seu futuro financeiro hoje mesmo.</p>
+                    <h2 className="text-4xl font-black text-white">{t.landing.how_title}</h2>
+                    <p className="mt-4 text-lg text-gray-400">{t.landing.how_subtitle}</p>
                     <div className="mt-16 flex flex-col-reverse md:flex-row justify-between items-center text-left gap-12">
                         <div className="w-full md:w-1/2 space-y-12">
-                            <HowItWorksStep number="1" title="Abra sua Conta Global">
-                                O processo de cadastro é rápido e seguro. Em poucos minutos sua conta estará pronta para operar.
+                            <HowItWorksStep number="1" title={t.landing.step_1_title}>
+                                {t.landing.step_1_desc}
                             </HowItWorksStep>
-                            <HowItWorksStep number="2" title="Deposite em Reais, Invista em Dólares">
-                                Adicione fundos à sua conta de forma prática utilizando o PIX. Seu saldo é convertido para dólar automaticamente.
+                            <HowItWorksStep number="2" title={t.landing.step_2_title}>
+                                {t.landing.step_2_desc}
                             </HowItWorksStep>
-                            <HowItWorksStep number="3" title="Acompanhe seus Lucros">
-                                Selecione um dos nossos planos de investimento, criados para diferentes perfis, e comece a ver seu capital render.
+                            <HowItWorksStep number="3" title={t.landing.step_3_title}>
+                                {t.landing.step_3_desc}
                             </HowItWorksStep>
                         </div>
                          <HowItWorksDiagram />
@@ -431,11 +474,16 @@ const HomePage: React.FC<{ setView: (view: View) => void; }> = ({ setView }) => 
 
             <section id="plans" className="py-24 px-4 sm:px-6 lg:px-12 bg-brand-gray/50 relative z-10">
                 <div className="max-w-6xl mx-auto text-center">
-                    <h2 className="text-4xl font-black text-white">Planos Feitos Para Você</h2>
-                    <p className="mt-4 text-lg text-gray-400 max-w-3xl mx-auto">Encontre a estratégia de investimento perfeita para o seu perfil, do conservador ao agressivo.</p>
+                    <h2 className="text-4xl font-black text-white">{t.landing.plans_title}</h2>
+                    <p className="mt-4 text-lg text-gray-400 max-w-3xl mx-auto">{t.landing.plans_subtitle}</p>
                     <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 mt-12">
                         {INVESTMENT_PLANS.map(plan => (
-                            <PlanPreviewCard key={plan.id} plan={plan} />
+                            <PlanPreviewCard 
+                                key={plan.id} 
+                                plan={plan} 
+                                returnLabel={t.landing.plan_return_label}
+                                depositLabel={t.landing.plan_deposit_label}
+                            />
                         ))}
                     </div>
                 </div>
@@ -443,10 +491,10 @@ const HomePage: React.FC<{ setView: (view: View) => void; }> = ({ setView }) => 
 
             <section id="cta" className="py-20 px-4 sm:px-6 lg:px-12 relative z-10">
                 <div className="max-w-4xl mx-auto text-center bg-gradient-to-r from-brand-blue/80 to-brand-green/80 p-12 rounded-2xl">
-                    <h2 className="text-4xl font-black text-brand-black">Pronto para Dolarizar seu Futuro Financeiro?</h2>
-                    <p className="mt-4 text-lg text-brand-black/80 max-w-2xl mx-auto">Junte-se a milhares de investidores que já estão potencializando seus lucros com a GreennSeven.</p>
+                    <h2 className="text-4xl font-black text-brand-black">{t.landing.cta_title}</h2>
+                    <p className="mt-4 text-lg text-brand-black/80 max-w-2xl mx-auto">{t.landing.cta_subtitle}</p>
                     <Button onClick={() => setView(View.Register)} variant="primary" className="px-8 py-4 text-lg mt-8">
-                        Começar a Investir em Dólar
+                        {t.landing.cta_button}
                     </Button>
                 </div>
             </section>
@@ -462,27 +510,27 @@ const HomePage: React.FC<{ setView: (view: View) => void; }> = ({ setView }) => 
                             {React.cloneElement(ICONS.career as React.ReactElement<any>, {className: "h-7 w-7 text-brand-green"})}
                             <span className="text-2xl font-bold tracking-wider">GREENNSEVEN</span>
                         </div>
-                        <p className="mt-4 text-gray-400">Sua plataforma de investimentos dolarizada, projetada para performance e segurança.</p>
+                        <p className="mt-4 text-gray-400">{t.landing.footer_desc}</p>
                     </div>
                      <div>
-                        <h4 className="font-bold text-white tracking-wider">Empresa</h4>
+                        <h4 className="font-bold text-white tracking-wider">{t.landing.footer_company}</h4>
                         <ul className="mt-4 space-y-2">
-                            <li><a href="#" onClick={(e) => {e.preventDefault(); openInfoModal('about')}} className="text-gray-400 hover:text-white">Sobre Nós</a></li>
-                            <li><a href="#" onClick={(e) => {e.preventDefault(); openInfoModal('contact')}} className="text-gray-400 hover:text-white">Contato</a></li>
-                            <li><a href="#" onClick={(e) => {e.preventDefault(); openInfoModal('careers')}} className="text-gray-400 hover:text-white">Carreiras</a></li>
+                            <li><a href="#" onClick={(e) => {e.preventDefault(); openInfoModal('about')}} className="text-gray-400 hover:text-white">{t.landing.footer_about}</a></li>
+                            <li><a href="#" onClick={(e) => {e.preventDefault(); openInfoModal('contact')}} className="text-gray-400 hover:text-white">{t.landing.footer_contact}</a></li>
+                            <li><a href="#" onClick={(e) => {e.preventDefault(); openInfoModal('careers')}} className="text-gray-400 hover:text-white">{t.landing.footer_careers}</a></li>
                         </ul>
                     </div>
                      <div>
-                        <h4 className="font-bold text-white tracking-wider">Legal</h4>
+                        <h4 className="font-bold text-white tracking-wider">{t.landing.footer_legal}</h4>
                         <ul className="mt-4 space-y-2">
-                            <li><a href="#" onClick={(e) => {e.preventDefault(); openInfoModal('terms')}} className="text-gray-400 hover:text-white">Termos de Serviço</a></li>
-                            <li><a href="#" onClick={(e) => {e.preventDefault(); openInfoModal('privacy')}} className="text-gray-400 hover:text-white">Política de Privacidade</a></li>
-                            <li><a href="#" onClick={(e) => {e.preventDefault(); openInfoModal('security')}} className="text-gray-400 hover:text-white">Segurança</a></li>
+                            <li><a href="#" onClick={(e) => {e.preventDefault(); openInfoModal('terms')}} className="text-gray-400 hover:text-white">{t.landing.footer_terms}</a></li>
+                            <li><a href="#" onClick={(e) => {e.preventDefault(); openInfoModal('privacy')}} className="text-gray-400 hover:text-white">{t.landing.footer_privacy}</a></li>
+                            <li><a href="#" onClick={(e) => {e.preventDefault(); openInfoModal('security')}} className="text-gray-400 hover:text-white">{t.landing.footer_security}</a></li>
                         </ul>
                     </div>
                 </div>
                 <div className="max-w-7xl mx-auto mt-12 pt-8 border-t border-gray-800 flex flex-col sm:flex-row justify-between items-center">
-                    <p className="text-gray-500">&copy; 2025 GreennSeven. Todos os direitos reservados.</p>
+                    <p className="text-gray-500">&copy; 2025 GreennSeven. {t.landing.footer_rights}</p>
                     <div className="flex gap-4 mt-4 sm:mt-0">
                         <a href="#" className="text-gray-400 hover:text-white">{ICONS.twitter}</a>
                         <a href="https://www.instagram.com/greennseven?igsh=amhsM2N6MWw1MzIx" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white">{ICONS.instagram}</a>
