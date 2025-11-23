@@ -46,6 +46,18 @@ export const validateCPF = (value: string): boolean => {
 };
 
 /**
+ * Formats a number as currency (BRL/USD) using pt-BR locale (Comma for decimals).
+ */
+export const formatCurrency = (value: number, currency: 'USD' | 'BRL' = 'USD'): string => {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: currency,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(value);
+};
+
+/**
  * Requests permission for browser notifications.
  */
 export const requestNotificationPermission = async () => {
@@ -68,8 +80,9 @@ export const showSystemNotification = (title: string, body: string) => {
         body,
         icon: 'https://cdn-icons-png.flaticon.com/512/2953/2953363.png', // Generic investment icon
         tag: 'greennseven-notification',
+        // @ts-ignore
         renotify: true
-      } as any);
+      });
     } catch (e) {
       console.error("Error showing notification:", e);
     }

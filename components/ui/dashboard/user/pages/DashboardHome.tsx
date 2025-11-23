@@ -8,6 +8,7 @@ import Input from '../../../../ui/Input';
 import Modal from '../../../../layout/Modal';
 import { ICONS, DOLLAR_RATE, MOCK_STOCKS } from '../../../../../constants';
 import { TRANSLATIONS } from '../../../../../lib/translations';
+import { formatCurrency } from '../../../../../lib/utils';
 
 const WITHDRAWAL_FEE_PERCENT = 5;
 
@@ -66,7 +67,7 @@ const TransactionRow: React.FC<{ tx: Transaction }> = ({ tx }) => {
                 </div>
             </div>
             <div className="text-right">
-                <p className={`font-bold ${amountColor}`}>{isPositive ? '+' : ''} US$ {tx.amountUSD.toFixed(2)}</p>
+                <p className={`font-bold ${amountColor}`}>{isPositive ? '+' : ''} {formatCurrency(tx.amountUSD, 'USD')}</p>
                 <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${statusColors[tx.status]}`}>{tx.status}</span>
             </div>
         </div>
@@ -145,7 +146,7 @@ const DepositModalContent: React.FC<{
         return (
             <SuccessDisplay title="Pagamento Recebido!" onClose={onClose}>
                 <p>
-                    Recebemos a confirmação do seu pagamento de R$ {amountBRL}. A transação está agora pendente de aprovação final pelo nosso time.
+                    Recebemos a confirmação do seu pagamento de {formatCurrency(parseFloat(amountBRL), 'BRL')}. A transação está agora pendente de aprovação final pelo nosso time.
                     Assim que aprovado, o saldo em dólar será creditado na sua conta.
                 </p>
             </SuccessDisplay>
@@ -163,7 +164,7 @@ const DepositModalContent: React.FC<{
                         className="bg-white p-2 rounded-lg" 
                     />
                 </div>
-                <p className="text-center text-lg font-bold mt-4">R$ {parseFloat(amountBRL).toFixed(2)}</p>
+                <p className="text-center text-lg font-bold mt-4">{formatCurrency(parseFloat(amountBRL), 'BRL')}</p>
                 
                 <div className="bg-brand-black p-4 rounded-lg mt-4 border border-gray-800">
                     <p className="text-xs text-gray-500 uppercase font-bold mb-2">Dados do Recebedor</p>
@@ -204,8 +205,8 @@ const DepositModalContent: React.FC<{
                 step="0.01"
             />
             <p className="text-sm text-gray-400">
-                Valor estimado em dólar (cotação R$ {DOLLAR_RATE}): 
-                <span className="font-bold text-white"> US$ {amountBRL ? (parseFloat(amountBRL) / DOLLAR_RATE).toFixed(2) : '0.00'}</span>
+                Valor estimado em dólar (cotação {formatCurrency(DOLLAR_RATE, 'BRL')}): 
+                <span className="font-bold text-white"> {amountBRL ? formatCurrency(parseFloat(amountBRL) / DOLLAR_RATE, 'USD') : formatCurrency(0, 'USD')}</span>
             </p>
             <div className="pt-2">
                 <Button type="submit" fullWidth isLoading={isLoading}>Gerar QR Code PIX</Button>
@@ -241,7 +242,7 @@ const WithdrawModalContent: React.FC<{
             return;
         }
         if (amount > dailyLimit) {
-            alert(`Saldo insuficiente para realizar este saque. Você pode sacar até US$ ${dailyLimit.toFixed(2)} por dia, referente aos seus lucros.`);
+            alert(`Saldo insuficiente para realizar este saque. Você pode sacar até ${formatCurrency(dailyLimit, 'USD')} por dia, referente aos seus lucros.`);
             return;
         }
         setStep(2);
@@ -290,8 +291,8 @@ const WithdrawModalContent: React.FC<{
         return (
             <SuccessDisplay title="Solicitação Enviada!" onClose={onClose}>
                 <p>
-                    Sua solicitação de saque de <span className="font-bold text-white">US$ {amountUSD}</span> foi enviada para análise.
-                    Assim que aprovada, o valor de <span className="font-bold text-white">R$ {amountToReceiveBRL.toFixed(2)}</span> será enviado para a chave PIX informada.
+                    Sua solicitação de saque de <span className="font-bold text-white">{formatCurrency(parseFloat(amountUSD), 'USD')}</span> foi enviada para análise.
+                    Assim que aprovada, o valor de <span className="font-bold text-white">{formatCurrency(amountToReceiveBRL, 'BRL')}</span> será enviado para a chave PIX informada.
                 </p>
             </SuccessDisplay>
         );
@@ -372,7 +373,7 @@ const WithdrawModalContent: React.FC<{
                     <p className="text-xs text-gray-500">Baseado no seu plano</p>
                 </div>
                 <p className="text-2xl font-bold text-brand-green">
-                    US$ {dailyLimit.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    {formatCurrency(dailyLimit, 'USD')}
                 </p>
             </div>
             
@@ -392,20 +393,20 @@ const WithdrawModalContent: React.FC<{
             <div className="p-4 bg-brand-black rounded-lg space-y-2 text-sm">
                 <div className="flex justify-between items-center text-gray-400">
                     <span>Valor bruto do saque:</span>
-                    <span>US$ {(parseFloat(amountUSD) || 0).toFixed(2)}</span>
+                    <span>{formatCurrency((parseFloat(amountUSD) || 0), 'USD')}</span>
                 </div>
                 <div className="flex justify-between items-center text-gray-400">
                     <span>Taxa ({WITHDRAWAL_FEE_PERCENT}%):</span>
-                    <span className="text-red-500">- US$ {fee.toFixed(2)}</span>
+                    <span className="text-red-500">- {formatCurrency(fee, 'USD')}</span>
                 </div>
                 <div className="border-t border-gray-700 my-2"></div>
                 <div className="flex justify-between items-center font-semibold">
                     <span>Líquido a sacar (USD):</span>
-                    <span>US$ {amountToReceiveUSD.toFixed(2)}</span>
+                    <span>{formatCurrency(amountToReceiveUSD, 'USD')}</span>
                 </div>
                 <div className="flex justify-between items-center font-bold text-brand-green text-base mt-1">
                     <span>Total a receber (BRL):</span>
-                    <span>R$ {amountToReceiveBRL.toFixed(2)}</span>
+                    <span>{formatCurrency(amountToReceiveBRL, 'BRL')}</span>
                 </div>
             </div>
             <div className="pt-2">
@@ -485,11 +486,14 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions, onAdd
             const currentEarnings = Math.min(msElapsed * profitPerMs, totalDailyProfit);
             
             // DIRECT DOM MANIPULATION:
-            // Updates only the text content of the specific span element.
-            // Does NOT trigger a React component re-render.
-            // This fixes the "Black Screen" / GPU overload issue on low-end devices.
             if (earningsRef.current) {
-                 earningsRef.current.textContent = `$ ${currentEarnings.toLocaleString('en-US', { minimumFractionDigits: 6, maximumFractionDigits: 6 })}`;
+                 // Use PT-BR formatting (commas for decimals)
+                 earningsRef.current.textContent = new Intl.NumberFormat('pt-BR', {
+                    style: 'currency',
+                    currency: 'USD',
+                    minimumFractionDigits: 6,
+                    maximumFractionDigits: 6
+                 }).format(currentEarnings);
             }
             
             requestRef.current = requestAnimationFrame(animate);
@@ -604,13 +608,13 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions, onAdd
                     title={`${t.total_balance} (USD)`} 
                     value={
                         <AnimatedBalance 
-                            value={showBalance ? `$ ${user.balanceUSD.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : `$ ${maskedValue}`}
+                            value={showBalance ? formatCurrency(user.balanceUSD, 'USD') : `$ ${maskedValue}`}
                             isShown={showBalance}
                         />
                     }
                     subValue={
                          <AnimatedBalance 
-                            value={showBalance ? `~ R$ ${balanceBRL.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : `~ R$ ${maskedValue}`}
+                            value={showBalance ? `~ ${formatCurrency(balanceBRL, 'BRL')}` : `~ R$ ${maskedValue}`}
                             isShown={showBalance}
                         />
                     }
@@ -620,7 +624,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions, onAdd
                     title={t.available_withdraw} 
                     value={
                         <AnimatedBalance 
-                            value={showBalance ? `$ ${dailyAvailable.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : `$ ${maskedValue}`}
+                            value={showBalance ? formatCurrency(dailyAvailable, 'USD') : `$ ${maskedValue}`}
                             isShown={showBalance}
                         />
                     }
@@ -630,7 +634,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions, onAdd
                 />
                  <StatCard 
                     title={t.projected_profit} 
-                    value={`$ ${user.monthlyProfitUSD.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                    value={formatCurrency(user.monthlyProfitUSD, 'USD')}
                     subValue={t.projection_30_days}
                     icon={ICONS.plans}
                 />
@@ -640,7 +644,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions, onAdd
                         <div className="flex items-center gap-3">
                             <span className="live-ticker" ref={earningsRef}>
                                 {/* Initial Value, updated via Ref later */}
-                                $ 0.000000
+                                $ 0,000000
                             </span>
                             <span className="flex h-3 w-3 relative">
                                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>

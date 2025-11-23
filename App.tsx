@@ -5,7 +5,7 @@ import { View, TransactionStatus, TransactionType, AdminActionType, UserStatus, 
 import { REFERRAL_BONUS_RATES, INVESTMENT_PLANS } from './constants';
 import { initializeDB, getAllData, saveAllData, type AppDB } from './lib/db';
 import { syncUserToSupabase, syncTransactionToSupabase, syncMessageToSupabase, fetchUsersFromSupabase, fetchTransactionsFromSupabase, fetchMessagesFromSupabase } from './lib/supabase';
-import { requestNotificationPermission, showSystemNotification } from './lib/utils';
+import { requestNotificationPermission, showSystemNotification, formatCurrency } from './lib/utils';
 import { faker } from '@faker-js/faker';
 
 import HomePage from './components/views/HomePage';
@@ -347,7 +347,7 @@ const App: React.FC = () => {
       if (tx.userId === loggedUser?.id && loggedUser) {
           const dailyLimit = (loggedUser.monthlyProfitUSD / 30);
           if (withdrawalAmount > dailyLimit) {
-            alert(`Erro: Valor superior ao limite diário de saque (US$ ${dailyLimit.toFixed(2)}).`);
+            alert(`Erro: Valor superior ao limite diário de saque (${formatCurrency(dailyLimit, 'USD')}).`);
             return;
           }
       }
@@ -377,14 +377,14 @@ const App: React.FC = () => {
     if (!user || !loggedUser?.isAdmin) return;
 
     const actionType = newStatus === TransactionStatus.Completed ? AdminActionType.TransactionApprove : AdminActionType.TransactionReject;
-    const description = `${newStatus === TransactionStatus.Completed ? 'Aprovou' : 'Rejeitou'} transação de ${tx.type} no valor de US$ ${Math.abs(tx.amountUSD).toFixed(2)} para ${user.name}.`;
+    const description = `${newStatus === TransactionStatus.Completed ? 'Aprovou' : 'Rejeitou'} transação de ${tx.type} no valor de ${formatCurrency(Math.abs(tx.amountUSD), 'USD')} para ${user.name}.`;
     handleAddAdminLog(loggedUser, actionType, description, transactionId);
 
     // ---------------- Notification Logic ----------------
     const notification: Notification = {
         id: faker.string.uuid(),
         userId: user.id,
-        message: `Sua transação de ${tx.type} no valor de US$ ${Math.abs(tx.amountUSD).toFixed(2)} foi atualizada para: ${newStatus === TransactionStatus.Completed ? 'APROVADA' : 'REJEITADA'}.`,
+        message: `Sua transação de ${tx.type} no valor de ${formatCurrency(Math.abs(tx.amountUSD), 'USD')} foi atualizada para: ${newStatus === TransactionStatus.Completed ? 'APROVADA' : 'REJEITADA'}.`,
         date: new Date().toISOString(),
         isRead: false
     };
@@ -425,15 +425,12 @@ const App: React.FC = () => {
             const bonusNotif: Notification = {
                 id: faker.string.uuid(),
                 userId: referrer.id,
-                message: `Você recebeu um bônus de US$ ${bonusAmount.toFixed(2)} pela indicação de ${user.name}!`,
+                message: `Você recebeu um bônus de ${formatCurrency(bonusAmount, 'USD')} pela indicação de ${user.name}!`,
                 date: new Date().toISOString(),
                 isRead: false
             };
             
             // We need to add these bonus notifications to the state update
-            // For simplicity, I'll just append them in the final setState call logic
-            // BUT wait, notification must be added to dbState.notifications.
-            // I'll aggregate notifications.
 
             const newBalance = referrer.balanceUSD + bonusAmount;
             const updatedReferrer = { 
@@ -499,7 +496,7 @@ const App: React.FC = () => {
              newNotifications.push({
                 id: faker.string.uuid(),
                 userId: btx.userId,
-                message: `Bônus de indicação recebido: US$ ${btx.amountUSD.toFixed(2)} (Origem: ${refName})`,
+                message: `Bônus de indicação recebido: ${formatCurrency(btx.amountUSD, 'USD')} (Origem: ${refName})`,
                 date: new Date().toISOString(),
                 isRead: false
              });
@@ -553,7 +550,7 @@ const App: React.FC = () => {
           newNotifications.push({
               id: faker.string.uuid(),
               userId: referrer.id,
-              message: `Você recebeu um bônus manual de US$ ${bonusAmount.toFixed(2)}!`,
+              message: `Você recebeu um bônus manual de ${formatCurrency(bonusAmount, 'USD')}!`,
               date: new Date().toISOString(),
               isRead: false
           });
@@ -642,14 +639,14 @@ const App: React.FC = () => {
       
       const user = dbState.users.find(u => u.id === userId);
       if (loggedUser) {
-        handleAddAdminLog(loggedUser, AdminActionType.UserBalanceEdit, `Alterou o saldo de ${user?.name} para US$ ${newBalance.toFixed(2)}.`, userId);
+        handleAddAdminLog(loggedUser, AdminActionType.UserBalanceEdit, `Alterou o saldo de ${user?.name} para ${formatCurrency(newBalance, 'USD')}.`, userId);
       }
       
       // Notify User
       const notif: Notification = {
           id: faker.string.uuid(),
           userId: userId,
-          message: `Seu saldo foi atualizado manualmente pelo administrador para US$ ${newBalance.toFixed(2)}.`,
+          message: `Seu saldo foi atualizado manualmente pelo administrador para ${formatCurrency(newBalance, 'USD')}.`,
           date: new Date().toISOString(),
           isRead: false
       };
