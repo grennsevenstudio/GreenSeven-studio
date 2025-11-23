@@ -94,6 +94,38 @@ const App: React.FC = () => {
         syncUserToSupabase(admin, 'admin123').then(res => {
             if (res.error) {
                 console.error("Erro ao conectar Admin ao Supabase:", JSON.stringify(res.error, null, 2));
+            } else if (res.resolvedId && res.resolvedId !== admin.id) {
+                console.log("Admin conectado com sucesso! Atualizando ID local para coincidir com remoto:", res.resolvedId);
+                // Update local state to match remote ID (Fixes conflict 23505)
+                setDbState(prev => {
+                    const oldId = admin.id;
+                    const newId = res.resolvedId!;
+                    return {
+                        ...prev,
+                        users: prev.users.map(u => u.id === oldId ? { ...u, id: newId } : u),
+                        transactions: prev.transactions.map(t => ({
+                            ...t,
+                            userId: t.userId === oldId ? newId : t.userId,
+                            sourceUserId: t.sourceUserId === oldId ? newId : t.sourceUserId
+                        })),
+                        chatMessages: prev.chatMessages.map(m => ({
+                            ...m,
+                            senderId: m.senderId === oldId ? newId : m.senderId,
+                            receiverId: m.receiverId === oldId ? newId : m.receiverId
+                        })),
+                        notifications: prev.notifications.map(n => ({
+                            ...n,
+                            userId: n.userId === oldId ? newId : n.userId
+                        })),
+                        adminActionLogs: prev.adminActionLogs.map(l => ({
+                            ...l,
+                            adminId: l.adminId === oldId ? newId : l.adminId,
+                            targetId: l.targetId === oldId ? newId : l.targetId
+                        }))
+                    };
+                });
+                // Also update logged user if it's the admin
+                setLoggedUser(current => current?.id === admin.id ? { ...current, id: res.resolvedId! } : current);
             } else {
                 console.log("Admin conectado ao Supabase com sucesso.");
             }

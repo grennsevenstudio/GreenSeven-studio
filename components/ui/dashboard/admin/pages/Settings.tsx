@@ -65,7 +65,7 @@ const Settings: React.FC<SettingsProps> = ({ platformSettings, onUpdateSettings,
 
     // SQL Code Definition - REFINED FOR ROBUSTNESS
     const sqlCode = `-- SCRIPT SQL DE CONFIGURAÇÃO (GreennSeven Invest)
--- Projeto: greenn7investiments.tecnologic@gmail.com's Project (dvmaukjrkepgktfnuesf)
+-- Projeto: grennsevenstudio's Project (kcwbtbjngrthtxtojqus)
 
 -- 1. Habilita extensão para gerar IDs únicos (UUID)
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
