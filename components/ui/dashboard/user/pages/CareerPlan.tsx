@@ -25,7 +25,7 @@ const StatCard: React.FC<{ title: string; value: string; icon: React.ReactNode; 
 );
 
 const CareerPlan: React.FC<CareerPlanProps> = ({ user, allUsers, allTransactions }) => {
-    const referralLink = `https://green-seven-studio-cuqm.vercel.app/register?ref=${user.referralCode}`;
+    const referralLink = `https://www.greenseven.online/register?ref=${user.referralCode}`;
 
     const directReferrals = useMemo(() => {
         return allUsers.filter(u => u.referredById === user.id);
@@ -86,52 +86,38 @@ const CareerPlan: React.FC<CareerPlanProps> = ({ user, allUsers, allTransactions
                  <StatCard 
                     title="Total de Bônus Ganhos (USD)" 
                     value={`$ ${totalBonusEarned.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-                    icon={ICONS.dollar}
+                    icon={ICONS.dollar} 
                 />
             </div>
-
-            <div className="grid md:grid-cols-3 gap-6 text-center">
-                <Card>
-                    <p className="text-4xl font-black text-brand-green">{(REFERRAL_BONUS_RATES[1] * 100)}%</p>
-                    <p className="font-bold mt-2">Nível 1</p>
-                    <p className="text-sm text-gray-400">Bônus sobre o primeiro depósito dos seus indicados diretos.</p>
-                </Card>
-                <Card>
-                    <p className="text-4xl font-black text-brand-blue">{(REFERRAL_BONUS_RATES[2] * 100)}%</p>
-                    <p className="font-bold mt-2">Nível 2</p>
-                    <p className="text-sm text-gray-400">Bônus sobre os indicados dos seus indicados.</p>
-                </Card>
-                 <Card>
-                    <p className="text-4xl font-black text-gray-400">{(REFERRAL_BONUS_RATES[3] * 100)}%</p>
-                    <p className="font-bold mt-2">Nível 3</p>
-                    <p className="text-sm text-gray-400">Bônus sobre o terceiro nível de indicações.</p>
-                </Card>
-            </div>
-
+            
             <Card>
-                 <h2 className="text-xl font-bold mb-4">Minhas Indicações (Nível 1)</h2>
-                 <div className="overflow-x-auto">
+                <h2 className="text-xl font-bold mb-6">Seus Indicados</h2>
+                <div className="overflow-x-auto">
                     <table className="w-full text-left">
                         <thead className="bg-brand-black text-gray-400 uppercase text-xs">
                             <tr>
-                                <th className="p-4">Nome</th>
+                                <th className="p-4 rounded-tl-lg">Nome</th>
                                 <th className="p-4">Email</th>
                                 <th className="p-4">Data de Cadastro</th>
-                                <th className="p-4">Status</th>
+                                <th className="p-4 rounded-tr-lg">Status</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {directReferrals.length > 0 ? directReferrals.map(ref => (
-                                <tr key={ref.id} className="border-b border-gray-800 hover:bg-brand-gray/50">
-                                    <td className="p-4 font-semibold">{ref.name}</td>
-                                    <td className="p-4 text-gray-300">{ref.email}</td>
-                                    <td className="p-4 text-gray-300">{ref.joinedDate}</td>
-                                    <td className="p-4">{getReferralStatus(ref.id)}</td>
-                                </tr>
-                            )) : (
+                            {directReferrals.length > 0 ? (
+                                directReferrals.map(referral => (
+                                    <tr key={referral.id} className="border-b border-gray-800 hover:bg-brand-gray/50">
+                                        <td className="p-4 font-medium">{referral.name}</td>
+                                        <td className="p-4 text-gray-400">{referral.email}</td>
+                                        <td className="p-4">{referral.joinedDate}</td>
+                                        <td className="p-4">
+                                            {getReferralStatus(referral.id)}
+                                        </td>
+                                    </tr>
+                                ))
+                            ) : (
                                 <tr>
-                                    <td colSpan={4} className="text-center p-8 text-gray-500">
-                                        Você ainda não tem nenhuma indicação direta.
+                                    <td colSpan={4} className="p-8 text-center text-gray-500">
+                                        Você ainda não possui indicações. Compartilhe seu link para começar!
                                     </td>
                                 </tr>
                             )}
@@ -139,9 +125,8 @@ const CareerPlan: React.FC<CareerPlanProps> = ({ user, allUsers, allTransactions
                     </table>
                 </div>
             </Card>
-
         </div>
-    );
+    )
 }
 
 export default CareerPlan;
