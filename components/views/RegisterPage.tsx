@@ -1,6 +1,6 @@
 
-import React, { useState, useMemo, useEffect } from 'react';
-import { View } from '../../types';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { View, Language } from '../../types';
 import Button from '../ui/Button';
 import Card from '../ui/Card';
 import Input from '../ui/Input';
@@ -9,6 +9,7 @@ import { TERMS_OF_USE_CONTENT, PRIVACY_POLICY_CONTENT } from '../legal/TermsAndP
 import PasswordStrengthIndicator from '../ui/PasswordStrengthIndicator';
 import { formatCPF } from '../../lib/utils';
 import { ICONS } from '../../constants';
+import { TRANSLATIONS } from '../../lib/translations';
 
 export interface ExtendedRegisterData {
     name: string;
@@ -35,7 +36,17 @@ export interface ExtendedRegisterData {
 interface RegisterPageProps {
   setView: (view: View) => void;
   onRegister: (data: ExtendedRegisterData) => void;
+  language: Language;
+  setLanguage: (lang: Language) => void;
 }
+
+const LANGUAGE_OPTIONS: { code: Language; flag: string; label: string }[] = [
+  { code: 'pt', flag: '🇧🇷', label: 'Português' },
+  { code: 'en', flag: '🇺🇸', label: 'English' },
+  { code: 'es', flag: '🇪🇸', label: 'Español' },
+  { code: 'fr', flag: '🇫🇷', label: 'Français' },
+  { code: 'de', flag: '🇩🇪', label: 'Deutsch' },
+];
 
 const calculatePasswordStrength = (password: string): number => {
     let strength = 0;
@@ -53,7 +64,8 @@ const FileUploadField: React.FC<{
     onChange: (e: React.ChangeEvent<HTMLInputElement>) => void; 
     fileName?: string; 
     error?: boolean | string; 
-}> = ({ label, id, onChange, fileName, error }) => (
+    placeholderText?: string;
+}> = ({ label, id, onChange, fileName, error, placeholderText = "Clique para enviar foto" }) => (
     <div className="mb-4">
         <label className="block text-sm font-medium text-gray-400 mb-1">{label}</label>
         <div className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-all ${error ? 'border-red-500 bg-red-500/10' : 'border-gray-700 hover:border-brand-green hover:bg-brand-green/5'}`}>
@@ -71,7 +83,7 @@ const FileUploadField: React.FC<{
                         <div className="text-gray-400 mb-2">
                             {ICONS.upload}
                         </div>
-                        <span className="text-sm text-gray-400">Clique para enviar foto</span>
+                        <span className="text-sm text-gray-400">{placeholderText}</span>
                     </>
                 )}
              </label>
@@ -80,7 +92,7 @@ const FileUploadField: React.FC<{
     </div>
 );
 
-const RegisterPage: React.FC<RegisterPageProps> = ({ setView, onRegister }) => {
+const RegisterPage: React.FC<RegisterPageProps> = ({ setView, onRegister, language, setLanguage }) => {
     const [step, setStep] = useState(1);
     const [formData, setFormData] = useState({
         // Step 1: Account
@@ -113,12 +125,31 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ setView, onRegister }) => {
     const [isSubmitted, setIsSubmitted] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
 
+    // Language Dropdown
+    const [isLangMenuOpen, setIsLangMenuOpen] = useState(false);
+    const langMenuRef = useRef<HTMLDivElement>(null);
+
+    const t = TRANSLATIONS[language].auth;
+
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
         const ref = params.get('ref');
         if (ref) {
             setFormData(prev => ({ ...prev, referralCode: ref }));
         }
+    }, []);
+
+    // Close language dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+        if (langMenuRef.current && !langMenuRef.current.contains(event.target as Node)) {
+            setIsLangMenuOpen(false);
+        }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+        };
     }, []);
 
     const passwordStrength = useMemo(() => calculatePasswordStrength(formData.password), [formData.password]);
@@ -292,9 +323,9 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ setView, onRegister }) => {
 
     const openModal = (type: 'terms' | 'privacy') => {
       if (type === 'terms') {
-        setModalContent({ title: 'Termos de Uso', content: TERMS_OF_USE_CONTENT });
+        setModalContent({ title: t.terms_link, content: TERMS_OF_USE_CONTENT });
       } else {
-        setModalContent({ title: 'Política de Privacidade', content: PRIVACY_POLICY_CONTENT });
+        setModalContent({ title: t.privacy_link, content: PRIVACY_POLICY_CONTENT });
       }
     };
 
@@ -307,11 +338,11 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ setView, onRegister }) => {
                             ✓
                         </div>
                     </div>
-                    <h2 className="text-2xl font-bold text-brand-green mb-4">Cadastro Realizado!</h2>
+                    <h2 className="text-2xl font-bold text-brand-green mb-4">{t.success_title}</h2>
                     <p className="text-gray-400 mb-6">
-                        Sua conta foi criada e enviada para análise. Você será notificado assim que aprovada.
+                        {t.success_desc}
                     </p>
-                    <Button onClick={() => setView(View.Login)}>Ir para o Login</Button>
+                    <Button onClick={() => setView(View.Login)}>{t.goto_login}</Button>
                 </Card>
             </div>
         );
@@ -338,8 +369,39 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ setView, onRegister }) => {
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
             </svg>
-            <span className="hidden sm:inline font-medium">Voltar para Home</span>
+            <span className="hidden sm:inline font-medium">{t.back_home}</span>
         </button>
+
+        {/* Language Selector */}
+        <div className="absolute top-6 right-6 z-20" ref={langMenuRef}>
+            <button 
+                onClick={() => setIsLangMenuOpen(!isLangMenuOpen)}
+                className="flex items-center gap-1.5 focus:outline-none hover:opacity-80 transition-opacity p-2 rounded-md hover:bg-gray-800"
+            >
+                <span className="text-2xl leading-none">{LANGUAGE_OPTIONS.find(l => l.code === language)?.flag}</span>
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                </svg>
+            </button>
+            
+            {isLangMenuOpen && (
+                <div className="absolute right-0 mt-2 w-36 bg-brand-gray border border-gray-700 rounded-lg shadow-xl py-1 animate-fade-in-up z-50">
+                    {LANGUAGE_OPTIONS.map((option) => (
+                        <button
+                            key={option.code}
+                            onClick={() => {
+                                setLanguage(option.code);
+                                setIsLangMenuOpen(false);
+                            }}
+                            className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-800 flex items-center gap-3 transition-colors ${language === option.code ? 'bg-gray-800/50 text-brand-green' : 'text-gray-300'}`}
+                        >
+                            <span className="text-lg">{option.flag}</span>
+                            <span className="font-medium">{option.code.toUpperCase()}</span>
+                        </button>
+                    ))}
+                </div>
+            )}
+        </div>
 
         <div className="w-full max-w-lg">
           <div 
@@ -357,26 +419,26 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ setView, onRegister }) => {
              <div className="absolute top-1/2 left-0 w-full h-1 bg-gray-800 -z-10 transform -translate-y-1/2"></div>
              <div className={`flex flex-col items-center gap-1 ${step >= 1 ? 'text-brand-green' : 'text-gray-500'}`}>
                  <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm border-2 ${step >= 1 ? 'bg-brand-black border-brand-green' : 'bg-gray-800 border-gray-600'}`}>1</div>
-                 <span className="text-xs font-semibold bg-brand-black px-1">Conta</span>
+                 <span className="text-xs font-semibold bg-brand-black px-1">{t.account_step}</span>
              </div>
              <div className={`flex flex-col items-center gap-1 ${step >= 2 ? 'text-brand-green' : 'text-gray-500'}`}>
                  <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm border-2 ${step >= 2 ? 'bg-brand-black border-brand-green' : 'bg-gray-800 border-gray-600'}`}>2</div>
-                 <span className="text-xs font-semibold bg-brand-black px-1">Pessoal</span>
+                 <span className="text-xs font-semibold bg-brand-black px-1">{t.personal_step}</span>
              </div>
              <div className={`flex flex-col items-center gap-1 ${step >= 3 ? 'text-brand-green' : 'text-gray-500'}`}>
                  <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm border-2 ${step >= 3 ? 'bg-brand-black border-brand-green' : 'bg-gray-800 border-gray-600'}`}>3</div>
-                 <span className="text-xs font-semibold bg-brand-black px-1">Documentos</span>
+                 <span className="text-xs font-semibold bg-brand-black px-1">{t.docs_step}</span>
              </div>
           </div>
 
           <Card className="border-brand-green/20">
             <h2 className="text-2xl font-bold text-center text-white mb-2">
-                {step === 1 && 'Dados de Acesso'}
-                {step === 2 && 'Dados Pessoais'}
-                {step === 3 && 'Verificação KYC'}
+                {step === 1 && t.register_title}
+                {step === 2 && t.personal_step}
+                {step === 3 && t.docs_step}
             </h2>
             <p className="text-center text-gray-400 mb-6 text-sm">
-                {step === 1 && 'Crie suas credenciais de acesso.'}
+                {step === 1 && t.register_subtitle}
                 {step === 2 && 'Precisamos de alguns dados para validar sua conta.'}
                 {step === 3 && 'Envie fotos legíveis dos seus documentos.'}
             </p>
@@ -385,20 +447,20 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ setView, onRegister }) => {
                 {/* STEP 1 */}
                 {step === 1 && (
                     <div className="space-y-4 animate-fade-in">
-                        <Input label="Nome Completo" id="name" value={formData.name} onChange={handleInputChange} error={errors.name} required />
-                        <Input label="Email" id="email" type="email" value={formData.email} onChange={handleInputChange} error={errors.email} required />
+                        <Input label={t.name_label} id="name" value={formData.name} onChange={handleInputChange} error={errors.name} required />
+                        <Input label={t.email_label} id="email" type="email" value={formData.email} onChange={handleInputChange} error={errors.email} required />
                         <div>
-                            <Input label="Senha" id="password" type="password" value={formData.password} onChange={handleInputChange} error={errors.password} required />
+                            <Input label={t.password_label} id="password" type="password" value={formData.password} onChange={handleInputChange} error={errors.password} required />
                             <PasswordStrengthIndicator strength={passwordStrength} />
-                            <p className="text-[10px] text-gray-500 mt-1">Mín. 8 caracteres, maiúscula, número e símbolo.</p>
+                            <p className="text-[10px] text-gray-500 mt-1">{t.pass_min}</p>
                         </div>
-                        <Input label="Confirmar Senha" id="confirmPassword" type="password" value={formData.confirmPassword} onChange={handleInputChange} error={errors.confirmPassword} required />
+                        <Input label={t.confirm_password_label} id="confirmPassword" type="password" value={formData.confirmPassword} onChange={handleInputChange} error={errors.confirmPassword} required />
                         <Input 
-                            label="Código de Indicação (Opcional)"
+                            label={t.referral_label}
                             id="referralCode"
                             value={formData.referralCode}
                             onChange={handleInputChange}
-                            placeholder="Insira o código do seu indicador"
+                            placeholder=""
                         />
                     </div>
                 )}
@@ -407,28 +469,28 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ setView, onRegister }) => {
                 {step === 2 && (
                     <div className="space-y-4 animate-fade-in">
                          <div className="grid grid-cols-2 gap-4">
-                            <Input label="CPF" id="cpf" value={formData.cpf} onChange={handleInputChange} error={errors.cpf} placeholder="000.000.000-00" maxLength={14} required />
-                            <Input label="Celular" id="phone" value={formData.phone} onChange={handleInputChange} error={errors.phone} placeholder="(00) 00000-0000" maxLength={15} required />
+                            <Input label={t.cpf_label} id="cpf" value={formData.cpf} onChange={handleInputChange} error={errors.cpf} placeholder="000.000.000-00" maxLength={14} required />
+                            <Input label={t.phone_label} id="phone" value={formData.phone} onChange={handleInputChange} error={errors.phone} placeholder="(00) 00000-0000" maxLength={15} required />
                          </div>
                          <div className="grid grid-cols-3 gap-4">
                              <div className="col-span-1">
-                                <Input label="CEP" id="cep" value={formData.cep} onChange={handleInputChange} error={errors.cep} placeholder="00000-000" maxLength={9} required />
+                                <Input label={t.cep_label} id="cep" value={formData.cep} onChange={handleInputChange} error={errors.cep} placeholder="00000-000" maxLength={9} required />
                              </div>
                              <div className="col-span-2">
-                                <Input label="Cidade" id="city" value={formData.city} onChange={handleInputChange} error={errors.city} required />
+                                <Input label={t.city_label} id="city" value={formData.city} onChange={handleInputChange} error={errors.city} required />
                              </div>
                          </div>
                          <div className="grid grid-cols-3 gap-4">
                              <div className="col-span-2">
-                                <Input label="Rua" id="street" value={formData.street} onChange={handleInputChange} error={errors.street} required />
+                                <Input label={t.street_label} id="street" value={formData.street} onChange={handleInputChange} error={errors.street} required />
                              </div>
                              <div className="col-span-1">
-                                <Input label="Número" id="number" value={formData.number} onChange={handleInputChange} error={errors.number} required />
+                                <Input label={t.number_label} id="number" value={formData.number} onChange={handleInputChange} error={errors.number} required />
                              </div>
                          </div>
                          <div className="grid grid-cols-2 gap-4">
-                            <Input label="Bairro" id="neighborhood" value={formData.neighborhood} onChange={handleInputChange} error={errors.neighborhood} required />
-                            <Input label="Estado (UF)" id="state" value={formData.state} onChange={handleInputChange} error={errors.state} maxLength={2} required />
+                            <Input label={t.neighborhood_label} id="neighborhood" value={formData.neighborhood} onChange={handleInputChange} error={errors.neighborhood} required />
+                            <Input label={t.state_label} id="state" value={formData.state} onChange={handleInputChange} error={errors.state} maxLength={2} required />
                          </div>
                     </div>
                 )}
@@ -437,25 +499,28 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ setView, onRegister }) => {
                 {step === 3 && (
                     <div className="space-y-4 animate-fade-in">
                          <FileUploadField 
-                            label="Foto do RG ou CNH (Frente)" 
+                            label={t.doc_front_label} 
                             id="idFront" 
                             onChange={(e) => handleFileChange(e, 'idFront')} 
                             fileName={files.idFront?.name} 
                             error={errors.idFront} 
+                            placeholderText={t.click_upload}
                          />
                          <FileUploadField 
-                            label="Foto do RG ou CNH (Verso)" 
+                            label={t.doc_back_label} 
                             id="idBack" 
                             onChange={(e) => handleFileChange(e, 'idBack')} 
                             fileName={files.idBack?.name} 
                             error={errors.idBack} 
+                            placeholderText={t.click_upload}
                          />
                          <FileUploadField 
-                            label="Selfie segurando o documento" 
+                            label={t.selfie_label} 
                             id="selfie" 
                             onChange={(e) => handleFileChange(e, 'selfie')} 
                             fileName={files.selfie?.name} 
                             error={errors.selfie} 
+                            placeholderText={t.click_upload}
                          />
 
                         <div className="pt-2">
@@ -474,7 +539,7 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ setView, onRegister }) => {
                                 </div>
                                 <div className="ml-3 text-sm">
                                     <label htmlFor="terms" className="text-gray-400">
-                                        Li e concordo com os <a href="#" onClick={(e) => {e.preventDefault(); openModal('terms')}} className="font-medium text-brand-green hover:underline">Termos de Uso</a> e <a href="#" onClick={(e) => {e.preventDefault(); openModal('privacy')}} className="font-medium text-brand-green hover:underline">Privacidade</a>.
+                                        {t.terms_agree} <a href="#" onClick={(e) => {e.preventDefault(); openModal('terms')}} className="font-medium text-brand-green hover:underline">{t.terms_link}</a> e <a href="#" onClick={(e) => {e.preventDefault(); openModal('privacy')}} className="font-medium text-brand-green hover:underline">{t.privacy_link}</a>.
                                     </label>
                                     {errors.terms && <p className="text-red-500 text-xs mt-1">Você deve aceitar os termos.</p>}
                                 </div>
@@ -485,13 +550,13 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ setView, onRegister }) => {
                 
                 <div className="flex gap-3 mt-8">
                     {step > 1 && (
-                        <Button type="button" variant="secondary" onClick={handleBack} className="w-1/3">Voltar</Button>
+                        <Button type="button" variant="secondary" onClick={handleBack} className="w-1/3">{t.back_btn}</Button>
                     )}
                     {step < 3 ? (
-                        <Button type="button" variant="primary" onClick={handleNext} fullWidth>Próximo</Button>
+                        <Button type="button" variant="primary" onClick={handleNext} fullWidth>{t.next_btn}</Button>
                     ) : (
                         <Button type="submit" variant="primary" fullWidth isLoading={isProcessing} disabled={isProcessing}>
-                            {isProcessing ? 'Enviando...' : 'Finalizar Cadastro'}
+                            {isProcessing ? 'Enviando...' : t.finish_btn}
                         </Button>
                     )}
                 </div>
@@ -499,9 +564,9 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ setView, onRegister }) => {
             </form>
             
             <p className="mt-6 text-center text-sm text-gray-400">
-              Já tem uma conta?{' '}
+              {t.back_login_link}{' '}
               <a href="#" onClick={(e) => {e.preventDefault(); setView(View.Login)}} className="font-medium text-brand-green hover:text-brand-green-light">
-                Faça login
+                {t.login_link}
               </a>
             </p>
           </Card>

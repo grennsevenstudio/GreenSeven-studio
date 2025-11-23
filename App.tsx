@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect, useRef } from 'react';
 import type { User, Transaction, Notification, ChatMessage, PlatformSettings, AdminActionLog, Language } from './types';
 import { View, TransactionStatus, TransactionType, AdminActionType, UserStatus, InvestorRank } from './types';
@@ -150,7 +149,7 @@ const App: React.FC = () => {
 
   useEffect(() => {
       const savedLang = localStorage.getItem('app_language') as Language;
-      if (savedLang && ['pt', 'en', 'es'].includes(savedLang)) {
+      if (savedLang && ['pt', 'en', 'es', 'fr', 'de'].includes(savedLang)) {
           setLanguage(savedLang);
       }
   }, []);
@@ -831,11 +830,11 @@ const App: React.FC = () => {
   if (view === View.Home) {
       content = <HomePage setView={setView} language={language} setLanguage={handleSetLanguage} />;
   } else if (view === View.Login) {
-      content = <LoginPage setView={setView} onLogin={handleLogin} />;
+      content = <LoginPage setView={setView} onLogin={handleLogin} language={language} setLanguage={handleSetLanguage} />;
   } else if (view === View.Register) {
-      content = <RegisterPage setView={setView} onRegister={handleRegister} />;
+      content = <RegisterPage setView={setView} onRegister={handleRegister} language={language} setLanguage={handleSetLanguage} />;
   } else if (view === View.ForgotPassword) {
-      content = <ForgotPasswordPage setView={setView} />;
+      content = <ForgotPasswordPage setView={setView} language={language} setLanguage={handleSetLanguage} />;
   } else if (view === View.UserDashboard && loggedUser) {
       content = <UserDashboard 
                     user={loggedUser} 
