@@ -1,4 +1,5 @@
 
+
 export enum View {
   Home,
   Login,
@@ -72,6 +73,11 @@ export interface InvestmentPlan {
   returnRate: number; // Taxa numérica para cálculo (ex: 0.25 para 25%)
   minDepositUSD: number;
   color: string;
+}
+
+export interface ReferralLevel {
+    level: number;
+    percentage: number;
 }
 
 export enum TransactionType {

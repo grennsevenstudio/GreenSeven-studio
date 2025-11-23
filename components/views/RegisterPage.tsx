@@ -393,11 +393,13 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ setView, onRegister }) => {
                             <p className="text-[10px] text-gray-500 mt-1">Mín. 8 caracteres, maiúscula, número e símbolo.</p>
                         </div>
                         <Input label="Confirmar Senha" id="confirmPassword" type="password" value={formData.confirmPassword} onChange={handleInputChange} error={errors.confirmPassword} required />
-                        {formData.referralCode && (
-                             <div className="text-xs text-center text-brand-green">
-                                 Código de indicação aplicado: <strong>{formData.referralCode}</strong>
-                             </div>
-                        )}
+                        <Input 
+                            label="Código de Indicação (Opcional)"
+                            id="referralCode"
+                            value={formData.referralCode}
+                            onChange={handleInputChange}
+                            placeholder="Insira o código do seu indicador"
+                        />
                     </div>
                 )}
 

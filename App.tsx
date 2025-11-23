@@ -4,7 +4,7 @@ import type { User, Transaction, Notification, ChatMessage, PlatformSettings, Ad
 import { View, TransactionStatus, TransactionType, AdminActionType, UserStatus, InvestorRank } from './types';
 import { REFERRAL_BONUS_RATES, INVESTMENT_PLANS } from './constants';
 import { initializeDB, getAllData, saveAllData, type AppDB } from './lib/db';
-import { syncUserToSupabase, syncTransactionToSupabase, syncMessageToSupabase, fetchUsersFromSupabase, fetchTransactionsFromSupabase, fetchMessagesFromSupabase } from './lib/supabase';
+import { syncUserToSupabase, syncTransactionToSupabase, syncMessageToSupabase, fetchUsersFromSupabase, fetchTransactionsFromSupabase, fetchMessagesFromSupabase, fetchCareerPlanConfig } from './lib/supabase';
 import { requestNotificationPermission, showSystemNotification, formatCurrency } from './lib/utils';
 import { faker } from '@faker-js/faker';
 
@@ -80,6 +80,9 @@ const App: React.FC = () => {
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [language, setLanguage] = useState<Language>('pt');
   
+  // Dynamic Career Plan Rates State (loaded from Supabase)
+  const [referralRates, setReferralRates] = useState<{[key:number]: number}>(REFERRAL_BONUS_RATES);
+
   // --- Notification System Logic ---
   const previousNotificationsCountRef = useRef(0);
 
@@ -198,11 +201,18 @@ const App: React.FC = () => {
   }, []);
 
   const loadRemoteData = async () => {
-    // console.log("Carregando dados do Supabase..."); // Reduced log noise
     try {
         const { data: remoteUsers } = await fetchUsersFromSupabase();
         const { data: remoteTxs } = await fetchTransactionsFromSupabase();
         const { data: remoteMessages } = await fetchMessagesFromSupabase();
+        
+        // Ensure fetchCareerPlanConfig exists before calling it (safety check for partial updates)
+        if (typeof fetchCareerPlanConfig === 'function') {
+            const { data: remoteCareerPlan } = await fetchCareerPlanConfig();
+            if (remoteCareerPlan && Object.keys(remoteCareerPlan).length > 0) {
+                setReferralRates(remoteCareerPlan);
+            }
+        }
 
         setDbState(prev => {
             let newState = { ...prev };
@@ -456,8 +466,9 @@ const App: React.FC = () => {
             const referrer = dbState.users.find(u => u.id === currentUser.referredById);
             if (!referrer) break;
 
-            const bonusRateKey = level as keyof typeof REFERRAL_BONUS_RATES;
-            const bonusRate = REFERRAL_BONUS_RATES[bonusRateKey];
+            const bonusRate = referralRates[level] || 0;
+            if (bonusRate === 0) continue;
+            
             const bonusAmount = tx.amountUSD * bonusRate;
 
             const bonusTx: Transaction = {
@@ -573,8 +584,9 @@ const App: React.FC = () => {
           const referrer = dbState.users.find(u => u.id === currentUser.referredById);
           if (!referrer) break;
 
-          const bonusRateKey = level as keyof typeof REFERRAL_BONUS_RATES;
-          const bonusRate = REFERRAL_BONUS_RATES[bonusRateKey];
+          const bonusRate = referralRates[level] || 0;
+          if (bonusRate === 0) continue;
+
           const bonusAmount = depositTx.amountUSD * bonusRate;
 
           const bonusTx: Transaction = {
@@ -851,6 +863,7 @@ const App: React.FC = () => {
                     setLanguage={handleSetLanguage}
                     onRefreshData={refreshData}
                     onBroadcastNotification={handleBroadcastNotification}
+                    referralRates={referralRates}
                 />;
   } else {
       content = <HomePage setView={setView} />;

@@ -1,4 +1,5 @@
 
+
 import React, { useState } from 'react';
 import type { User, Transaction, ChatMessage, PlatformSettings, AdminActionLog, Language } from '../../../../types';
 import { TransactionStatus, UserStatus } from '../../../../types';
@@ -37,10 +38,11 @@ interface AdminDashboardProps {
   setLanguage: (lang: Language) => void;
   onRefreshData: () => void;
   onBroadcastNotification: (message: string) => void;
+  referralRates?: {[key:number]: number};
 }
 
 const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
-  const { user, allUsers, allTransactions, chatMessages, platformSettings, adminActionLogs, onLogout, onUpdateTransaction, onUpdateUserStatus, onPayoutBonus, onSendMessage, onUpdateSettings, onAdminUpdateUserBalance, onUpdateUser, isDarkMode, toggleTheme, language, setLanguage, onRefreshData, onBroadcastNotification } = props;
+  const { user, allUsers, allTransactions, chatMessages, platformSettings, adminActionLogs, onLogout, onUpdateTransaction, onUpdateUserStatus, onPayoutBonus, onSendMessage, onUpdateSettings, onAdminUpdateUserBalance, onUpdateUser, isDarkMode, toggleTheme, language, setLanguage, onRefreshData, onBroadcastNotification, referralRates } = props;
   const [activeView, setActiveView] = useState('dashboard');
   const [isSidebarOpen, setSidebarOpen] = useState(false);
 
@@ -63,7 +65,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
       case 'users':
         return <ManageUsers allUsers={allUsers} onAdminUpdateUserBalance={onAdminUpdateUserBalance} onUpdateUserStatus={onUpdateUserStatus} />;
       case 'transactions':
-        return <ManageTransactions allUsers={allUsers} transactions={allTransactions} onUpdateTransaction={onUpdateTransaction} onPayoutBonus={onPayoutBonus} />;
+        return <ManageTransactions allUsers={allUsers} transactions={allTransactions} onUpdateTransaction={onUpdateTransaction} onPayoutBonus={onPayoutBonus} referralRates={referralRates} />;
       case 'logs':
         return <AdminActionLogs adminActionLogs={adminActionLogs} />;
       case 'support':

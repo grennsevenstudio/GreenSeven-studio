@@ -25,7 +25,7 @@ const StatCard: React.FC<{ title: string; value: string; icon: React.ReactNode; 
 );
 
 const CareerPlan: React.FC<CareerPlanProps> = ({ user, allUsers, allTransactions }) => {
-    const referralLink = `https://www.greenseven.online/register?ref=${user.referralCode}`;
+    const referralLink = `https://greenseven.online/register?ref=${user.referralCode}`;
 
     const directReferrals = useMemo(() => {
         return allUsers.filter(u => u.referredById === user.id);
@@ -40,6 +40,11 @@ const CareerPlan: React.FC<CareerPlanProps> = ({ user, allUsers, allTransactions
     const copyLink = () => {
         navigator.clipboard.writeText(referralLink);
         alert('Link de indicação copiado para a área de transferência!');
+    };
+
+    const copyCode = () => {
+        navigator.clipboard.writeText(user.referralCode);
+        alert('Código de indicação copiado!');
     };
 
     const getReferralStatus = (referralId: string) => {
@@ -59,21 +64,46 @@ const CareerPlan: React.FC<CareerPlanProps> = ({ user, allUsers, allTransactions
             </div>
 
             <Card className="border-brand-green/30">
-                <h2 className="text-xl font-bold mb-4">Seu Link de Indicação</h2>
-                <p className="text-gray-400 mb-4">Compartilhe este link com seus amigos. Quando eles se cadastrarem e fizerem o primeiro depósito, você ganhará um bônus.</p>
-                <div className="relative">
-                    <input 
-                        type="text" 
-                        readOnly 
-                        value={referralLink} 
-                        className="w-full bg-brand-black border border-gray-700 rounded-lg py-3 px-4 text-gray-300 pr-28"
-                    />
-                    <Button 
-                        onClick={copyLink} 
-                        className="absolute inset-y-0 right-0 my-1.5 mr-1.5 px-4 py-2 text-sm"
-                    >
-                        {ICONS.copy} Copiar
-                    </Button>
+                <h2 className="text-xl font-bold mb-4">Indique e Ganhe</h2>
+                <p className="text-gray-400 mb-6">Compartilhe seu link exclusivo ou código com amigos. Quando eles investirem, você ganha.</p>
+                
+                <div className="flex flex-col md:flex-row gap-6">
+                    <div className="flex-1">
+                        <label className="text-xs text-gray-500 font-bold mb-2 block uppercase tracking-wider">Seu Link de Indicação</label>
+                        <div className="relative">
+                            <input 
+                                type="text" 
+                                readOnly 
+                                value={referralLink} 
+                                className="w-full bg-brand-black border border-gray-700 rounded-lg py-3 pl-4 pr-28 text-gray-300 focus:ring-1 focus:ring-brand-green focus:border-brand-green transition-all"
+                            />
+                            <Button 
+                                onClick={copyLink} 
+                                className="absolute inset-y-0 right-0 my-1 mr-1 px-4 py-1 text-xs"
+                            >
+                                {ICONS.copy} Copiar
+                            </Button>
+                        </div>
+                    </div>
+
+                    <div className="md:w-1/3">
+                         <label className="text-xs text-gray-500 font-bold mb-2 block uppercase tracking-wider">Seu Código</label>
+                         <div className="relative">
+                            <input 
+                                type="text" 
+                                readOnly 
+                                value={user.referralCode} 
+                                className="w-full bg-brand-black border border-gray-700 rounded-lg py-3 px-4 text-center text-white font-bold tracking-widest focus:ring-1 focus:ring-brand-green focus:border-brand-green transition-all"
+                            />
+                             <button 
+                                onClick={copyCode} 
+                                className="absolute inset-y-0 right-0 px-4 text-gray-400 hover:text-white transition-colors"
+                                title="Copiar Código"
+                            >
+                                {ICONS.copy}
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </Card>
 

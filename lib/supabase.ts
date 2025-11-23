@@ -57,6 +57,27 @@ export const checkSupabaseConnection = async () => {
     }
 }
 
+export const fetchCareerPlanConfig = async () => {
+    try {
+        const { data, error } = await supabase.from('career_plan_config').select('*');
+        if (error) {
+             // Silently fail if table doesn't exist yet (fallback to defaults in App)
+             return { data: null, error };
+        }
+        
+        // Convert array [{level: 1, percentage: 0.03}] to object {1: 0.03}
+        const config: {[key: number]: number} = {};
+        if (data) {
+            data.forEach((item: any) => {
+                config[item.level] = Number(item.percentage);
+            });
+        }
+        return { data: config, error: null };
+    } catch (e) {
+        return { data: null, error: e };
+    }
+}
+
 export const fetchUsersFromSupabase = async () => {
     try {
         const { data, error } = await supabase.from('users').select('*');
@@ -154,8 +175,8 @@ export const fetchMessagesFromSupabase = async () => {
         
         const mapped: ChatMessage[] = data.map((m: any) => ({
             id: m.id,
-            senderId: m.sender_id,
-            receiverId: m.receiver_id,
+            sender_id: m.sender_id,
+            receiver_id: m.receiver_id,
             text: m.text,
             timestamp: m.timestamp,
             is_read: m.is_read,

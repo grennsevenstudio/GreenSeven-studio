@@ -1,4 +1,5 @@
 
+
 import React, { useState, useMemo } from 'react';
 import Card from '../../../../ui/Card';
 import Button from '../../../../ui/Button';
@@ -143,11 +144,14 @@ interface ManageTransactionsProps {
     allUsers: User[];
     onUpdateTransaction: (transactionId: string, newStatus: TransactionStatus) => void;
     onPayoutBonus: (depositTransaction: Transaction) => void;
+    referralRates?: {[key:number]: number};
 }
 
-const ManageTransactions: React.FC<ManageTransactionsProps> = ({ transactions, allUsers, onUpdateTransaction, onPayoutBonus }) => {
+const ManageTransactions: React.FC<ManageTransactionsProps> = ({ transactions, allUsers, onUpdateTransaction, onPayoutBonus, referralRates }) => {
     const [selectedTxForBonus, setSelectedTxForBonus] = useState<Transaction | null>(null);
     const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+    const activeReferralRates = referralRates || REFERRAL_BONUS_RATES;
 
     const bonusPayoutDetails = useMemo((): BonusPayoutDetails[] => {
         if (!selectedTxForBonus) return [];
@@ -159,15 +163,16 @@ const ManageTransactions: React.FC<ManageTransactionsProps> = ({ transactions, a
             const referrer = allUsers.find(u => u.id === currentUser.referredById);
             if (!referrer) break;
 
-            const bonusRateKey = level as keyof typeof REFERRAL_BONUS_RATES;
-            const bonusRate = REFERRAL_BONUS_RATES[bonusRateKey];
+            const bonusRate = activeReferralRates[level as any] || 0;
+            if (bonusRate === 0) continue;
+
             const bonusAmount = selectedTxForBonus.amountUSD * bonusRate;
 
             details.push({ level, referrer, bonusAmount });
             currentUser = referrer;
         }
         return details;
-    }, [selectedTxForBonus, allUsers]);
+    }, [selectedTxForBonus, allUsers, activeReferralRates]);
 
     const isTxBonusEligible = (tx: Transaction, allTransactions: Transaction[]): boolean => {
         if (tx.type !== TransactionType.Deposit || tx.status !== TransactionStatus.Completed || tx.bonusPayoutHandled) {

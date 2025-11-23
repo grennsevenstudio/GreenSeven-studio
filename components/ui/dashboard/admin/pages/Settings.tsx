@@ -127,25 +127,41 @@ CREATE TABLE IF NOT EXISTS public.messages (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
 
--- 5. POLÍTICAS DE SEGURANÇA (RLS) - PERMISSÃO TOTAL PARA APP
+-- 5. TABELA PLANO DE CARREIRA (NOVA)
+CREATE TABLE IF NOT EXISTS public.career_plan_config (
+    level INTEGER PRIMARY KEY,
+    percentage NUMERIC NOT NULL
+);
+
+INSERT INTO public.career_plan_config (level, percentage) VALUES
+(1, 0.03), -- 3%
+(2, 0.02), -- 2%
+(3, 0.01)  -- 1%
+ON CONFLICT (level) DO UPDATE SET percentage = EXCLUDED.percentage;
+
+-- 6. POLÍTICAS DE SEGURANÇA (RLS) - PERMISSÃO TOTAL PARA APP
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.career_plan_config ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Public Access Users" ON public.users;
 DROP POLICY IF EXISTS "Public Access Transactions" ON public.transactions;
 DROP POLICY IF EXISTS "Public Access Messages" ON public.messages;
+DROP POLICY IF EXISTS "Public Access Career" ON public.career_plan_config;
 
 -- Cria políticas públicas (Cuidado: Ideal apenas para modo desenvolvimento/demo onde a auth é gerida pelo app)
 CREATE POLICY "Public Access Users" ON public.users FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Public Access Transactions" ON public.transactions FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Public Access Messages" ON public.messages FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Public Access Career" ON public.career_plan_config FOR ALL USING (true) WITH CHECK (true);
 
 GRANT ALL ON TABLE public.users TO anon, authenticated, service_role;
 GRANT ALL ON TABLE public.transactions TO anon, authenticated, service_role;
 GRANT ALL ON TABLE public.messages TO anon, authenticated, service_role;
+GRANT ALL ON TABLE public.career_plan_config TO anon, authenticated, service_role;
 
--- 6. USUÁRIO ADMIN PADRÃO
+-- 7. USUÁRIO ADMIN PADRÃO
 INSERT INTO public.users (
     email, password, full_name, is_admin, status, rank, balance_usd, plan, referral_code, additional_data
 ) VALUES (
@@ -362,7 +378,7 @@ INSERT INTO public.users (
                                 value={sqlCode}
                                 onClick={(e) => e.currentTarget.select()} 
                              />
-                             <p className="text-[10px] text-gray-500 mt-1">Este script cria as tabelas 'users', 'transactions' e 'messages' necessárias.</p>
+                             <p className="text-[10px] text-gray-500 mt-1">Este script cria as tabelas 'users', 'transactions', 'messages' e 'career_plan_config'.</p>
                         </div>
 
                         <div className="mt-6 pt-4 border-t border-gray-700">
