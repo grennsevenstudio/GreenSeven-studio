@@ -1,4 +1,6 @@
 
+
+
 import React, { useState, useEffect } from 'react';
 import type { PlatformSettings, User, Transaction } from '../../../../../types';
 import Card from '../../../../ui/Card';
@@ -7,7 +9,7 @@ import Input from '../../../../ui/Input';
 import ToggleSwitch from '../../../../ui/ToggleSwitch';
 import { ICONS } from '../../../../../constants';
 import { GoogleGenAI, Modality } from "@google/genai";
-import { checkSupabaseConnection, syncUserToSupabase, syncTransactionToSupabase } from '../../../../../lib/supabase';
+import { checkSupabaseConnection, syncUserToSupabase, syncTransactionToSupabase, syncSettingsToSupabase } from '../../../../../lib/supabase';
 
 interface SettingsProps {
     platformSettings: PlatformSettings;
@@ -127,41 +129,74 @@ CREATE TABLE IF NOT EXISTS public.messages (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
 
--- 5. TABELA PLANO DE CARREIRA (NOVA)
+-- 5. TABELA PLANO DE CARREIRA
 CREATE TABLE IF NOT EXISTS public.career_plan_config (
     level INTEGER PRIMARY KEY,
     percentage NUMERIC NOT NULL
 );
 
 INSERT INTO public.career_plan_config (level, percentage) VALUES
-(1, 0.03), -- 3%
-(2, 0.02), -- 2%
+(1, 0.05), -- 5%
+(2, 0.03), -- 3%
 (3, 0.01)  -- 1%
 ON CONFLICT (level) DO UPDATE SET percentage = EXCLUDED.percentage;
 
--- 6. POLÍTICAS DE SEGURANÇA (RLS) - PERMISSÃO TOTAL PARA APP
+-- 6. TABELA DE CONFIGURAÇÕES DA PLATAFORMA (NOVO)
+CREATE TABLE IF NOT EXISTS public.platform_settings (
+    id INTEGER PRIMARY KEY DEFAULT 1,
+    dollar_rate NUMERIC,
+    withdrawal_fee_percent NUMERIC,
+    signup_bonus_usd NUMERIC,
+    pix_key TEXT,
+    is_maintenance_mode BOOLEAN,
+    allow_new_registrations BOOLEAN,
+    logo_url TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+);
+
+-- 7. TABELA DE LOGS ADMINISTRATIVOS (NOVO)
+CREATE TABLE IF NOT EXISTS public.admin_logs (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    timestamp TEXT,
+    admin_id UUID REFERENCES public.users(id) ON DELETE SET NULL,
+    admin_name TEXT,
+    action_type TEXT,
+    description TEXT,
+    target_id TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+);
+
+-- 8. POLÍTICAS DE SEGURANÇA (RLS) - PERMISSÃO TOTAL PARA APP
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.career_plan_config ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.platform_settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.admin_logs ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Public Access Users" ON public.users;
 DROP POLICY IF EXISTS "Public Access Transactions" ON public.transactions;
 DROP POLICY IF EXISTS "Public Access Messages" ON public.messages;
 DROP POLICY IF EXISTS "Public Access Career" ON public.career_plan_config;
+DROP POLICY IF EXISTS "Public Access Settings" ON public.platform_settings;
+DROP POLICY IF EXISTS "Public Access Logs" ON public.admin_logs;
 
--- Cria políticas públicas (Cuidado: Ideal apenas para modo desenvolvimento/demo onde a auth é gerida pelo app)
+-- Cria políticas públicas
 CREATE POLICY "Public Access Users" ON public.users FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Public Access Transactions" ON public.transactions FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Public Access Messages" ON public.messages FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Public Access Career" ON public.career_plan_config FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Public Access Settings" ON public.platform_settings FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Public Access Logs" ON public.admin_logs FOR ALL USING (true) WITH CHECK (true);
 
 GRANT ALL ON TABLE public.users TO anon, authenticated, service_role;
 GRANT ALL ON TABLE public.transactions TO anon, authenticated, service_role;
 GRANT ALL ON TABLE public.messages TO anon, authenticated, service_role;
 GRANT ALL ON TABLE public.career_plan_config TO anon, authenticated, service_role;
+GRANT ALL ON TABLE public.platform_settings TO anon, authenticated, service_role;
+GRANT ALL ON TABLE public.admin_logs TO anon, authenticated, service_role;
 
--- 7. USUÁRIO ADMIN PADRÃO
+-- 9. USUÁRIO ADMIN PADRÃO
 INSERT INTO public.users (
     email, password, full_name, is_admin, status, rank, balance_usd, plan, referral_code, additional_data
 ) VALUES (
@@ -203,7 +238,7 @@ INSERT INTO public.users (
         setTimeout(() => {
             onUpdateSettings(settings);
             setIsSaving(false);
-            showToast("Configurações salvas com sucesso!");
+            showToast("Configurações salvas e sincronizadas com sucesso!");
         }, 1000);
     };
 
@@ -319,8 +354,11 @@ INSERT INTO public.users (
             }
         }
         
+        // Sync Settings
+        await syncSettingsToSupabase(settings);
+        
         setIsSyncing(false);
-        showToast(`Sincronização: ${userSuccess} usuários, ${txSuccess} transações.`, 'success');
+        showToast(`Sincronização: ${userSuccess} usuários, ${txSuccess} transações e configurações salvas.`, 'success');
         handleCheckSupabase(); 
     };
     
@@ -378,12 +416,12 @@ INSERT INTO public.users (
                                 value={sqlCode}
                                 onClick={(e) => e.currentTarget.select()} 
                              />
-                             <p className="text-[10px] text-gray-500 mt-1">Este script cria as tabelas 'users', 'transactions', 'messages' e 'career_plan_config'.</p>
+                             <p className="text-[10px] text-gray-500 mt-1">Este script cria as tabelas 'users', 'transactions', 'messages', 'career_plan_config', 'platform_settings' e 'admin_logs'.</p>
                         </div>
 
                         <div className="mt-6 pt-4 border-t border-gray-700">
                             <h4 className="text-white font-semibold text-sm mb-2">Forçar Sincronização de Dados</h4>
-                            <p className="text-xs text-gray-500 mb-2">Envia todos os dados locais atuais para o Supabase.</p>
+                            <p className="text-xs text-gray-500 mb-2">Envia todos os dados locais atuais para o Supabase, incluindo usuários, transações e configurações.</p>
                             <Button 
                                 type="button" 
                                 onClick={handleSyncData} 

@@ -1,10 +1,11 @@
 
+
 import React, { useState, useEffect, useRef } from 'react';
 import type { User, Transaction, Notification, ChatMessage, PlatformSettings, AdminActionLog, Language } from './types';
 import { View, TransactionStatus, TransactionType, AdminActionType, UserStatus, InvestorRank } from './types';
 import { REFERRAL_BONUS_RATES, INVESTMENT_PLANS } from './constants';
 import { initializeDB, getAllData, saveAllData, type AppDB } from './lib/db';
-import { syncUserToSupabase, syncTransactionToSupabase, syncMessageToSupabase, fetchUsersFromSupabase, fetchTransactionsFromSupabase, fetchMessagesFromSupabase, fetchCareerPlanConfig } from './lib/supabase';
+import { syncUserToSupabase, syncTransactionToSupabase, syncMessageToSupabase, syncSettingsToSupabase, syncAdminLogToSupabase, fetchUsersFromSupabase, fetchTransactionsFromSupabase, fetchMessagesFromSupabase, fetchCareerPlanConfig, fetchSettingsFromSupabase, fetchAdminLogsFromSupabase } from './lib/supabase';
 import { requestNotificationPermission, showSystemNotification, formatCurrency } from './lib/utils';
 import { faker } from '@faker-js/faker';
 
@@ -64,8 +65,9 @@ const App: React.FC = () => {
       return null;
   });
 
-  // 3. Initialize View based on Session
+  // 3. Initialize View based on Session and URL Path
   const [view, setView] = useState<View>(() => {
+      // Check session first
       const storedUserId = localStorage.getItem('greennseven_session_user_id');
       if (storedUserId) {
            const data = getAllData();
@@ -74,6 +76,12 @@ const App: React.FC = () => {
                return user.isAdmin ? View.AdminDashboard : View.UserDashboard;
            }
       }
+
+      // If no session, check URL path for routing
+      const path = window.location.pathname;
+      if (path === '/register') return View.Register;
+      if (path === '/login') return View.Login;
+
       return View.Home;
   });
 
@@ -205,6 +213,8 @@ const App: React.FC = () => {
         const { data: remoteUsers } = await fetchUsersFromSupabase();
         const { data: remoteTxs } = await fetchTransactionsFromSupabase();
         const { data: remoteMessages } = await fetchMessagesFromSupabase();
+        const { data: remoteSettings } = await fetchSettingsFromSupabase();
+        const { data: remoteLogs } = await fetchAdminLogsFromSupabase();
         
         // Ensure fetchCareerPlanConfig exists before calling it (safety check for partial updates)
         if (typeof fetchCareerPlanConfig === 'function') {
@@ -221,6 +231,8 @@ const App: React.FC = () => {
             if (remoteUsers) newState.users = remoteUsers;
             if (remoteTxs) newState.transactions = remoteTxs;
             if (remoteMessages) newState.chatMessages = remoteMessages;
+            if (remoteSettings) newState.platformSettings = remoteSettings;
+            if (remoteLogs) newState.adminActionLogs = remoteLogs;
             
             return newState;
         });
@@ -313,6 +325,8 @@ const App: React.FC = () => {
     setLoggedUser(null);
     setView(View.Home);
     localStorage.removeItem('greennseven_session_user_id'); // Clear Session
+    // Also clear URL path to avoid confusion
+    window.history.pushState({}, '', '/');
   };
 
   const handleRegister = (userData: ExtendedRegisterData) => {
@@ -376,6 +390,7 @@ const App: React.FC = () => {
       targetId,
     };
     setDbState(prev => ({ ...prev, adminActionLogs: [newLog, ...prev.adminActionLogs] }));
+    syncAdminLogToSupabase(newLog);
   };
 
   const handleAddTransaction = (newTransaction: Omit<Transaction, 'id' | 'date' | 'bonusPayoutHandled'>) => {
@@ -786,6 +801,7 @@ const App: React.FC = () => {
       if (!loggedUser?.isAdmin) return;
       setDbState(prev => ({ ...prev, platformSettings: newSettings }));
       handleAddAdminLog(loggedUser, AdminActionType.SettingsUpdate, "Atualizou as configurações da plataforma.");
+      syncSettingsToSupabase(newSettings);
   };
   
   const handleUpdateUser = (updatedUser: User) => {

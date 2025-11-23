@@ -1,6 +1,7 @@
 
+
 import { createClient } from '@supabase/supabase-js';
-import type { User, Transaction, ChatMessage } from '../types';
+import type { User, Transaction, ChatMessage, PlatformSettings, AdminActionLog } from '../types';
 
 // ============================================================================
 // CONFIGURAÇÃO DO SUPABASE
@@ -146,7 +147,8 @@ export const fetchTransactionsFromSupabase = async () => {
 
         const mappedTxs: Transaction[] = data.map((t: any) => ({
             id: t.id,
-            userId: t.user_id,
+            user_id: t.user_id, // Keep user_id available for mapping if needed
+            userId: t.user_id, // Map to types.ts standard
             type: t.type,
             amountUSD: Number(t.amount_usd),
             amountBRL: Number(t.amount_brl),
@@ -168,21 +170,63 @@ export const fetchMessagesFromSupabase = async () => {
     try {
         const { data, error } = await supabase.from('messages').select('*');
         if (error) {
-            // Silently fail for messages on network error to avoid spam
             return { data: null, error };
         }
         if (!data) return { data: [], error: null };
         
         const mapped: ChatMessage[] = data.map((m: any) => ({
             id: m.id,
-            sender_id: m.sender_id,
-            receiver_id: m.receiver_id,
+            senderId: m.sender_id,
+            receiverId: m.receiver_id,
             text: m.text,
             timestamp: m.timestamp,
-            is_read: m.is_read,
+            isRead: m.is_read,
             attachment: m.attachment
         }));
         return { data: mapped, error: null };
+    } catch (e) {
+        return { data: null, error: e };
+    }
+};
+
+export const fetchSettingsFromSupabase = async () => {
+    try {
+        const { data, error } = await supabase.from('platform_settings').select('*').single();
+        if (error) {
+            // If table doesn't exist or is empty, return null to use local defaults
+            return { data: null, error };
+        }
+        
+        const settings: PlatformSettings = {
+            dollarRate: Number(data.dollar_rate),
+            withdrawalFeePercent: Number(data.withdrawal_fee_percent),
+            signupBonusUSD: Number(data.signup_bonus_usd),
+            pixKey: data.pix_key,
+            isMaintenanceMode: data.is_maintenance_mode,
+            allowNewRegistrations: data.allow_new_registrations,
+            logoUrl: data.logo_url
+        };
+        return { data: settings, error: null };
+    } catch (e) {
+        return { data: null, error: e };
+    }
+};
+
+export const fetchAdminLogsFromSupabase = async () => {
+    try {
+        const { data, error } = await supabase.from('admin_logs').select('*').order('timestamp', { ascending: false });
+        if (error) return { data: null, error };
+        
+        const logs: AdminActionLog[] = data.map((l: any) => ({
+            id: l.id,
+            timestamp: l.timestamp,
+            adminId: l.admin_id,
+            adminName: l.admin_name,
+            actionType: l.action_type,
+            description: l.description,
+            targetId: l.target_id
+        }));
+        return { data: logs, error: null };
     } catch (e) {
         return { data: null, error: e };
     }
@@ -237,10 +281,6 @@ export const syncUserToSupabase = async (user: User, password?: string): Promise
                     return { error: null, resolvedId: existingUser.id }; 
                 }
             }
-
-            if (!isNetworkError(error) && error.code !== '42P01') {
-                 // console.error("Erro ao sincronizar usuário:", JSON.stringify(error, null, 2));
-            }
             return { error };
         }
         return { error: null };
@@ -286,6 +326,43 @@ export const syncMessageToSupabase = async (msg: ChatMessage) => {
         const { error } = await supabase.from('messages').upsert(dbMsg, { onConflict: 'id' });
         if (error) return { error };
         return { error: null };
+    } catch (e) {
+        return { error: e };
+    }
+};
+
+export const syncSettingsToSupabase = async (settings: PlatformSettings) => {
+    try {
+        const dbSettings = {
+            id: 1, // Singleton row
+            dollar_rate: settings.dollarRate,
+            withdrawal_fee_percent: settings.withdrawalFeePercent,
+            signup_bonus_usd: settings.signupBonusUSD,
+            pix_key: settings.pixKey,
+            is_maintenance_mode: settings.isMaintenanceMode,
+            allow_new_registrations: settings.allowNewRegistrations,
+            logo_url: settings.logoUrl
+        };
+        const { error } = await supabase.from('platform_settings').upsert(dbSettings, { onConflict: 'id' });
+        return { error };
+    } catch (e) {
+        return { error: e };
+    }
+};
+
+export const syncAdminLogToSupabase = async (log: AdminActionLog) => {
+    try {
+        const dbLog = {
+            id: log.id,
+            timestamp: log.timestamp,
+            admin_id: log.adminId,
+            admin_name: log.adminName,
+            action_type: log.actionType,
+            description: log.description,
+            target_id: log.targetId
+        };
+        const { error } = await supabase.from('admin_logs').upsert(dbLog, { onConflict: 'id' });
+        return { error };
     } catch (e) {
         return { error: e };
     }
