@@ -4,13 +4,13 @@ import type { User, Transaction } from '../../../../../types';
 import { TransactionStatus, TransactionType } from '../../../../../types';
 import Card from '../../../../ui/Card';
 import Button from '../../../../ui/Button';
-import { ICONS, REFERRAL_BONUS_RATES } from '../../../../../constants';
+import { ICONS } from '../../../../../constants';
 import { formatCurrency } from '../../../../../lib/utils';
 
 interface CareerPlanProps {
     user: User;
-    allUsers: User[];
-    allTransactions: Transaction[];
+    allUsers?: User[];
+    allTransactions?: Transaction[];
 }
 
 const StatCard: React.FC<{ title: string; value: string; icon: React.ReactNode; color?: string }> = ({ title, value, icon, color = "text-brand-green" }) => (
@@ -70,15 +70,22 @@ const InfiniteWidthExplanation: React.FC = () => (
                         <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-gray-600"></div>
                         <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-gray-600"></div>
                     </div>
-                    <div className="flex gap-4 mt-0 pt-2">
-                        {[1, 2, 3, 4, '...'].map((n, i) => (
-                            <div key={i} className="flex flex-col items-center">
+                    
+                    <div className="flex gap-2 justify-center mt-0 pt-2 overflow-x-auto pb-2 max-w-[300px] md:max-w-full no-scrollbar">
+                        {Array.from({ length: 4 }).map((_, i) => (
+                            <div key={i} className="flex flex-col items-center min-w-[40px]">
                                 <div className="w-px h-6 bg-gray-600 -mt-2 mb-1"></div>
-                                <div className="w-10 h-10 rounded-full bg-gray-800 border border-gray-600 flex items-center justify-center text-xs text-gray-400">
-                                    {n}
+                                <div className="w-10 h-10 rounded-full bg-gray-800 border border-brand-green/30 flex items-center justify-center text-xs text-gray-400">
+                                    {i + 1}
                                 </div>
                             </div>
                         ))}
+                        <div className="flex flex-col items-center min-w-[40px]">
+                             <div className="w-px h-6 bg-gray-600 -mt-2 mb-1"></div>
+                             <div className="w-10 h-10 rounded-full bg-gray-800 border-2 border-dashed border-gray-600 flex items-center justify-center text-xl text-brand-green font-bold">
+                                ∞
+                             </div>
+                        </div>
                     </div>
                     <p className="text-xs text-brand-green mt-4 font-bold uppercase tracking-wider">Infinitos Diretos</p>
                 </div>
@@ -87,27 +94,27 @@ const InfiniteWidthExplanation: React.FC = () => (
     </Card>
 );
 
-const CareerPlan: React.FC<CareerPlanProps> = ({ user, allUsers, allTransactions }) => {
+const CareerPlan: React.FC<CareerPlanProps> = ({ user, allUsers = [], allTransactions = [] }) => {
     const [referralCode] = useState(user.referralCode);
     
     // Calculate total referrals count
     const referralsCount = useMemo(() => {
-        return allUsers.filter(u => u.referredById === user.id).length;
+        return (allUsers || []).filter(u => u.referredById === user.id).length;
     }, [allUsers, user.id]);
 
     // Calculate total bonus earned
     const totalBonus = useMemo(() => {
-        return allTransactions
+        return (allTransactions || [])
             .filter(tx => tx.userId === user.id && tx.type === TransactionType.Bonus && tx.status === TransactionStatus.Completed)
             .reduce((acc, curr) => acc + curr.amountUSD, 0);
     }, [allTransactions, user.id]);
 
     // Bonus History List
     const bonusHistory = useMemo(() => {
-        return allTransactions
+        return (allTransactions || [])
             .filter(tx => tx.userId === user.id && tx.type === TransactionType.Bonus && tx.status === TransactionStatus.Completed)
             .map(tx => {
-                const sourceUser = tx.sourceUserId ? allUsers.find(u => u.id === tx.sourceUserId) : null;
+                const sourceUser = tx.sourceUserId ? (allUsers || []).find(u => u.id === tx.sourceUserId) : null;
                 return {
                     id: tx.id,
                     date: tx.date,
@@ -132,6 +139,13 @@ const CareerPlan: React.FC<CareerPlanProps> = ({ user, allUsers, allTransactions
                     to { opacity: 1; }
                 }
                 .animate-fade-in { animation: fade-in 0.3s ease-out forwards; }
+                .no-scrollbar::-webkit-scrollbar {
+                    display: none;
+                }
+                .no-scrollbar {
+                    -ms-overflow-style: none;
+                    scrollbar-width: none;
+                }
             `}</style>
             <div>
                 <h1 className="text-3xl font-bold">Plano de Carreira</h1>
