@@ -32,11 +32,7 @@ const calculateProfit = (balance: number, planName: string = 'Conservador'): num
 };
 
 const App: React.FC = () => {
-  const [view, setView] = useState<View>(View.Home);
-  const [loggedUser, setLoggedUser] = useState<User | null>(null);
-  const [isDarkMode, setIsDarkMode] = useState(true);
-  const [language, setLanguage] = useState<Language>('pt');
-  
+  // 1. Initialize DB State first
   const [dbState, setDbState] = useState<AppDB>(() => {
       try {
           const data = getAllData();
@@ -53,12 +49,54 @@ const App: React.FC = () => {
       }
   });
 
+  // 2. Initialize Logged User from LocalStorage (Session Persistence)
+  const [loggedUser, setLoggedUser] = useState<User | null>(() => {
+      try {
+          const storedUserId = localStorage.getItem('greennseven_session_user_id');
+          if (storedUserId) {
+              const data = getAllData();
+              const user = data?.users?.find((u: User) => u.id === storedUserId);
+              return user || null;
+          }
+      } catch (e) {
+          console.error("Error restoring session", e);
+      }
+      return null;
+  });
+
+  // 3. Initialize View based on Session
+  const [view, setView] = useState<View>(() => {
+      const storedUserId = localStorage.getItem('greennseven_session_user_id');
+      if (storedUserId) {
+           const data = getAllData();
+           const user = data?.users?.find((u: User) => u.id === storedUserId);
+           if (user) {
+               return user.isAdmin ? View.AdminDashboard : View.UserDashboard;
+           }
+      }
+      return View.Home;
+  });
+
+  const [isDarkMode, setIsDarkMode] = useState(true);
+  const [language, setLanguage] = useState<Language>('pt');
+  
   // --- Notification System Logic ---
   const previousNotificationsCountRef = useRef(0);
 
   useEffect(() => {
       requestNotificationPermission();
   }, []);
+
+  // Sync loggedUser with dbState updates (e.g. from Supabase background update)
+  useEffect(() => {
+      if (loggedUser) {
+          const updatedUser = dbState.users.find(u => u.id === loggedUser.id);
+          // Only update if the object reference is different (meaning it was updated in dbState)
+          if (updatedUser && updatedUser !== loggedUser) {
+              setLoggedUser(updatedUser);
+          }
+      }
+  }, [dbState.users]);
 
   // Watch for new notifications for the logged user and trigger "Push"
   useEffect(() => {
@@ -147,6 +185,10 @@ const App: React.FC = () => {
                 }));
                 
                 setLoggedUser(current => (current && current.id === oldId) ? { ...current, id: newId } : current);
+                // Update session if it was the admin
+                if (localStorage.getItem('greennseven_session_user_id') === oldId) {
+                    localStorage.setItem('greennseven_session_user_id', newId);
+                }
             }
         });
     }
@@ -229,6 +271,7 @@ const App: React.FC = () => {
     if (userToLogin.isAdmin) {
         setLoggedUser(userToLogin);
         setView(View.AdminDashboard);
+        localStorage.setItem('greennseven_session_user_id', userToLogin.id); // Save Session
         return true;
     }
 
@@ -243,12 +286,14 @@ const App: React.FC = () => {
 
     setLoggedUser(userToLogin);
     setView(View.UserDashboard);
+    localStorage.setItem('greennseven_session_user_id', userToLogin.id); // Save Session
     return true;
   };
 
   const handleLogout = () => {
     setLoggedUser(null);
     setView(View.Home);
+    localStorage.removeItem('greennseven_session_user_id'); // Clear Session
   };
 
   const handleRegister = (userData: ExtendedRegisterData) => {
