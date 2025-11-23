@@ -1,6 +1,8 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import Card from '../../../../ui/Card';
+import Button from '../../../../ui/Button';
+import Modal from '../../../../layout/Modal';
 import { ICONS } from '../../../../../constants';
 import { TransactionStatus, type Transaction, type User } from '../../../../../types';
 
@@ -30,22 +32,76 @@ const ProfitChart = () => (
     </div>
 );
 
+const BroadcastModal: React.FC<{ 
+    isOpen: boolean; 
+    onClose: () => void; 
+    onSend: (msg: string) => void; 
+}> = ({ isOpen, onClose, onSend }) => {
+    const [message, setMessage] = useState('');
+    
+    return (
+        <Modal isOpen={isOpen} onClose={onClose} title="Enviar Notificação Global">
+            <div className="space-y-4">
+                <p className="text-gray-400 text-sm">
+                    Esta mensagem será enviada como notificação para <strong>todos</strong> os usuários da plataforma. Use com cautela para anúncios importantes.
+                </p>
+                <textarea 
+                    className="w-full bg-brand-black border border-gray-700 rounded-lg p-3 text-white placeholder-gray-500 focus:outline-none focus:border-brand-green min-h-[100px]"
+                    placeholder="Digite sua mensagem aqui..."
+                    value={message}
+                    onChange={e => setMessage(e.target.value)}
+                />
+                <div className="flex justify-end gap-3">
+                    <Button variant="secondary" onClick={onClose}>Cancelar</Button>
+                    <Button 
+                        variant="primary" 
+                        onClick={() => { onSend(message); onClose(); setMessage(''); }}
+                        disabled={!message.trim()}
+                    >
+                        Enviar Notificação
+                    </Button>
+                </div>
+            </div>
+        </Modal>
+    );
+};
+
 interface AdminDashboardHomeProps {
     allUsers: User[];
     allTransactions: Transaction[];
+    onBroadcastNotification: (message: string) => void;
 }
 
-const AdminDashboardHome: React.FC<AdminDashboardHomeProps> = ({ allUsers, allTransactions }) => {
+const AdminDashboardHome: React.FC<AdminDashboardHomeProps> = ({ allUsers, allTransactions, onBroadcastNotification }) => {
     const totalVolume = allUsers.reduce((sum, user) => sum + user.balanceUSD, 0);
     const totalUsers = allUsers.length;
     const pendingTransactions = allTransactions.filter(tx => tx.status === TransactionStatus.Pending).length;
+    
+    const [isBroadcastOpen, setIsBroadcastOpen] = useState(false);
 
     return (
         <div className="space-y-8">
-            <div>
-                <h1 className="text-3xl font-bold">Dashboard do Administrador</h1>
-                <p className="text-gray-400">Visão geral da plataforma GreennSeven Invest.</p>
+            <BroadcastModal 
+                isOpen={isBroadcastOpen}
+                onClose={() => setIsBroadcastOpen(false)}
+                onSend={onBroadcastNotification}
+            />
+            
+            <div className="flex justify-between items-start">
+                <div>
+                    <h1 className="text-3xl font-bold">Dashboard do Administrador</h1>
+                    <p className="text-gray-400">Visão geral da plataforma GreennSeven Invest.</p>
+                </div>
+                <Button variant="secondary" onClick={() => setIsBroadcastOpen(true)}>
+                    <div className="flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z" />
+                        </svg>
+                        Notificação Global
+                    </div>
+                </Button>
             </div>
+
             {/* Stats */}
             <div className="flex flex-col md:flex-row gap-6">
                 <StatCard 

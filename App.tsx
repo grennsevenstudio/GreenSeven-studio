@@ -1,10 +1,11 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import type { User, Transaction, Notification, ChatMessage, PlatformSettings, AdminActionLog, Language } from './types';
 import { View, TransactionStatus, TransactionType, AdminActionType, UserStatus, InvestorRank } from './types';
 import { REFERRAL_BONUS_RATES, INVESTMENT_PLANS } from './constants';
 import { initializeDB, getAllData, saveAllData, type AppDB } from './lib/db';
 import { syncUserToSupabase, syncTransactionToSupabase, syncMessageToSupabase, fetchUsersFromSupabase, fetchTransactionsFromSupabase, fetchMessagesFromSupabase } from './lib/supabase';
+import { requestNotificationPermission, showSystemNotification } from './lib/utils';
 import { faker } from '@faker-js/faker';
 
 import HomePage from './components/views/HomePage';
@@ -52,6 +53,36 @@ const App: React.FC = () => {
       }
   });
 
+  // --- Notification System Logic ---
+  const previousNotificationsCountRef = useRef(0);
+
+  useEffect(() => {
+      requestNotificationPermission();
+  }, []);
+
+  // Watch for new notifications for the logged user and trigger "Push"
+  useEffect(() => {
+      if (!loggedUser) return;
+      
+      const userNotifications = dbState.notifications.filter(n => n.userId === loggedUser.id);
+      
+      // If we have more notifications than before, trigger the latest one
+      if (userNotifications.length > previousNotificationsCountRef.current) {
+          const latest = userNotifications[userNotifications.length - 1];
+          
+          // Ensure it's a fresh notification (created in the last 10 seconds) to avoid spam on reload
+          const now = new Date().getTime();
+          const notifTime = new Date(latest.date).getTime();
+          
+          if (now - notifTime < 10000 && !latest.isRead) {
+               showSystemNotification('GreennSeven Invest', latest.message);
+          }
+      }
+      
+      previousNotificationsCountRef.current = userNotifications.length;
+  }, [dbState.notifications, loggedUser]);
+
+
   useEffect(() => {
     if (dbState) {
         saveAllData(dbState);
@@ -82,12 +113,9 @@ const App: React.FC = () => {
   useEffect(() => {
     if (!dbState?.users || dbState.users.length === 0) return;
     
-    // Busca o admin local (pelo email específico para garantir)
     const admin = dbState.users.find(u => u.email === 'admin@greennseven.com' && u.isAdmin);
     
     if (admin) {
-        // Tenta sincronizar. Se retornar 'resolvedId', significa que o ID local estava errado
-        // e o Supabase devolveu o ID correto que já existe lá.
         syncUserToSupabase(admin, 'admin123').then(res => {
             if (res.resolvedId && res.resolvedId !== admin.id) {
                 console.log(`[AUTO-FIX] Corrigindo ID do Admin: Local(${admin.id}) -> Remoto(${res.resolvedId})`);
@@ -98,7 +126,6 @@ const App: React.FC = () => {
                 setDbState(prev => ({
                     ...prev,
                     users: prev.users.map(u => u.id === oldId ? { ...u, id: newId } : u),
-                    // Atualiza referências em outras tabelas
                     transactions: prev.transactions.map(t => ({
                         ...t,
                         userId: t.userId === oldId ? newId : t.userId,
@@ -119,35 +146,24 @@ const App: React.FC = () => {
                     }))
                 }));
                 
-                // Se o admin estiver logado, atualiza a sessão também para evitar crash
                 setLoggedUser(current => (current && current.id === oldId) ? { ...current, id: newId } : current);
             }
         });
     }
-  }, []); // Roda apenas na montagem para corrigir inicialização
+  }, []);
 
   const loadRemoteData = async () => {
     console.log("Carregando dados do Supabase...");
-    
     try {
-        const { data: remoteUsers, error: userError } = await fetchUsersFromSupabase();
-        const { data: remoteTxs, error: txError } = await fetchTransactionsFromSupabase();
-        const { data: remoteMessages, error: msgError } = await fetchMessagesFromSupabase();
+        const { data: remoteUsers } = await fetchUsersFromSupabase();
+        const { data: remoteTxs } = await fetchTransactionsFromSupabase();
+        const { data: remoteMessages } = await fetchMessagesFromSupabase();
 
         setDbState(prev => {
             let newState = { ...prev };
-            
-            // Only update if data is not null. If null, connection failed.
-            if (remoteUsers !== null) {
-                // Mescla usuários remotos, preservando admin local se houver conflito temporário
-                newState.users = remoteUsers;
-            }
-            if (remoteTxs !== null) {
-                newState.transactions = remoteTxs;
-            }
-            if (remoteMessages !== null) {
-                 newState.chatMessages = remoteMessages;
-            }
+            if (remoteUsers !== null) newState.users = remoteUsers;
+            if (remoteTxs !== null) newState.transactions = remoteTxs;
+            if (remoteMessages !== null) newState.chatMessages = remoteMessages;
             return newState;
         });
         return remoteUsers !== null;
@@ -174,7 +190,6 @@ const App: React.FC = () => {
   
   const { users = [], transactions = [], notifications = [], chatMessages = [], platformSettings, adminActionLogs } = dbState || {};
   
-  // Fallback Admin para evitar crash se DB estiver vazio
   const fallbackAdmin: User = {
       id: 'admin-fallback',
       name: 'Admin System',
@@ -205,8 +220,6 @@ const App: React.FC = () => {
     }
 
     if (password) {
-         // Em produção, a validação de senha deve ser feita no backend. 
-         // Aqui comparamos com o local ou ignoramos se veio do Supabase (senha hashada não disponível).
          if (userToLogin.password && userToLogin.password !== password) {
              alert("Senha incorreta. Tente novamente.");
              return false;
@@ -270,13 +283,22 @@ const App: React.FC = () => {
         plan: 'Conservador', 
     };
     
-    setDbState(prev => ({...prev, users: [...prev.users, newUser]}));
+    // Create notification for Admin
+    const adminNotification: Notification = {
+        id: faker.string.uuid(),
+        userId: adminUser.id,
+        message: `Novo usuário registrado: ${newUser.name}. Pendente de aprovação.`,
+        date: new Date().toISOString(),
+        isRead: false
+    };
 
-    syncUserToSupabase(newUser, userData.password).then((result) => {
-        if (result.error) {
-            console.error("Erro ao registrar usuário no Supabase:", JSON.stringify(result.error, null, 2));
-        }
-    });
+    setDbState(prev => ({
+        ...prev, 
+        users: [...prev.users, newUser],
+        notifications: [...prev.notifications, adminNotification]
+    }));
+
+    syncUserToSupabase(newUser, userData.password);
   };
 
   const handleAddAdminLog = (adminUser: User, actionType: AdminActionType, description: string, targetId?: string) => {
@@ -302,7 +324,6 @@ const App: React.FC = () => {
     
     if (tx.type === TransactionType.Withdrawal) {
       const withdrawalAmount = Math.abs(tx.amountUSD);
-      
       const now = new Date();
       const currentHour = now.getHours();
       if (currentHour < 9 || currentHour >= 18) {
@@ -331,9 +352,22 @@ const App: React.FC = () => {
           }
       }
     }
+    
+    // Admin Notification
+    const adminNotif: Notification = {
+        id: faker.string.uuid(),
+        userId: adminUser.id,
+        message: `Nova transação de ${tx.type} solicitada por ${users.find(u => u.id === tx.userId)?.name}.`,
+        date: new Date().toISOString(),
+        isRead: false
+    };
 
     syncTransactionToSupabase(tx);
-    setDbState(prev => ({ ...prev, transactions: [...prev.transactions, tx] }));
+    setDbState(prev => ({ 
+        ...prev, 
+        transactions: [...prev.transactions, tx],
+        notifications: [...prev.notifications, adminNotif]
+    }));
   };
 
   const handleUpdateTransactionStatus = (transactionId: string, newStatus: TransactionStatus) => {
@@ -345,6 +379,16 @@ const App: React.FC = () => {
     const actionType = newStatus === TransactionStatus.Completed ? AdminActionType.TransactionApprove : AdminActionType.TransactionReject;
     const description = `${newStatus === TransactionStatus.Completed ? 'Aprovou' : 'Rejeitou'} transação de ${tx.type} no valor de US$ ${Math.abs(tx.amountUSD).toFixed(2)} para ${user.name}.`;
     handleAddAdminLog(loggedUser, actionType, description, transactionId);
+
+    // ---------------- Notification Logic ----------------
+    const notification: Notification = {
+        id: faker.string.uuid(),
+        userId: user.id,
+        message: `Sua transação de ${tx.type} no valor de US$ ${Math.abs(tx.amountUSD).toFixed(2)} foi atualizada para: ${newStatus === TransactionStatus.Completed ? 'APROVADA' : 'REJEITADA'}.`,
+        date: new Date().toISOString(),
+        isRead: false
+    };
+    // ----------------------------------------------------
 
     let bonusTransactions: Transaction[] = [];
     let referrersToUpdate: User[] = [];
@@ -376,6 +420,20 @@ const App: React.FC = () => {
             
             bonusTransactions.push(bonusTx);
             syncTransactionToSupabase(bonusTx);
+            
+            // Notify Referrer
+            const bonusNotif: Notification = {
+                id: faker.string.uuid(),
+                userId: referrer.id,
+                message: `Você recebeu um bônus de US$ ${bonusAmount.toFixed(2)} pela indicação de ${user.name}!`,
+                date: new Date().toISOString(),
+                isRead: false
+            };
+            
+            // We need to add these bonus notifications to the state update
+            // For simplicity, I'll just append them in the final setState call logic
+            // BUT wait, notification must be added to dbState.notifications.
+            // I'll aggregate notifications.
 
             const newBalance = referrer.balanceUSD + bonusAmount;
             const updatedReferrer = { 
@@ -432,11 +490,27 @@ const App: React.FC = () => {
     referrersToUpdate.forEach(ref => {
         updatedUsers = updatedUsers.map(u => u.id === ref.id ? ref : u);
     });
+    
+    // Aggregate all new notifications (Transaction Status + Bonus)
+    const newNotifications = [notification];
+    if (bonusTransactions.length > 0) {
+         bonusTransactions.forEach(btx => {
+             const refName = dbState.users.find(u => u.id === btx.sourceUserId)?.name || 'Indicado';
+             newNotifications.push({
+                id: faker.string.uuid(),
+                userId: btx.userId,
+                message: `Bônus de indicação recebido: US$ ${btx.amountUSD.toFixed(2)} (Origem: ${refName})`,
+                date: new Date().toISOString(),
+                isRead: false
+             });
+         });
+    }
 
     setDbState(prev => ({
         ...prev,
         transactions: [...updatedTransactions, ...bonusTransactions],
-        users: updatedUsers
+        users: updatedUsers,
+        notifications: [...prev.notifications, ...newNotifications]
     }));
   };
 
@@ -447,6 +521,7 @@ const App: React.FC = () => {
       }
 
       let bonusTransactions: Transaction[] = [];
+      let newNotifications: Notification[] = [];
       let referrersToUpdate: User[] = [];
       let currentUser = dbState.users.find(u => u.id === depositTx.userId);
       if (!currentUser) return;
@@ -473,6 +548,15 @@ const App: React.FC = () => {
           
           bonusTransactions.push(bonusTx);
           syncTransactionToSupabase(bonusTx);
+          
+          // Create notification
+          newNotifications.push({
+              id: faker.string.uuid(),
+              userId: referrer.id,
+              message: `Você recebeu um bônus manual de US$ ${bonusAmount.toFixed(2)}!`,
+              date: new Date().toISOString(),
+              isRead: false
+          });
 
           const newBalance = referrer.balanceUSD + bonusAmount;
           const updatedReferrer = { 
@@ -495,7 +579,8 @@ const App: React.FC = () => {
               const ref = referrersToUpdate.find(r => r.id === u.id);
               return ref || u;
           }),
-          transactions: prev.transactions.map(t => t.id === depositTx.id ? updatedDepositTx : t).concat(bonusTransactions)
+          transactions: prev.transactions.map(t => t.id === depositTx.id ? updatedDepositTx : t).concat(bonusTransactions),
+          notifications: [...prev.notifications, ...newNotifications]
       }));
       
       if (loggedUser) {
@@ -514,13 +599,30 @@ const App: React.FC = () => {
           return u;
       });
       
+      let notification: Notification | null = null;
+      
       if (newStatus !== UserStatus.Pending && loggedUser) {
            const actionType = newStatus === UserStatus.Approved ? AdminActionType.UserApprove : AdminActionType.UserReject;
            const description = `${newStatus === UserStatus.Approved ? 'Aprovou' : 'Rejeitou'} o cadastro do usuário ${dbState.users.find(u => u.id === userId)?.name}.`;
            handleAddAdminLog(loggedUser, actionType, description, userId);
+           
+           // Create Notification
+           notification = {
+               id: faker.string.uuid(),
+               userId: userId,
+               message: newStatus === UserStatus.Approved 
+                    ? "Parabéns! Sua conta foi APROVADA. Você já pode realizar depósitos."
+                    : `Sua conta foi REJEITADA. Motivo: ${reason}`,
+               date: new Date().toISOString(),
+               isRead: false
+           };
       }
       
-      setDbState(prev => ({ ...prev, users: updatedUsers }));
+      setDbState(prev => ({ 
+          ...prev, 
+          users: updatedUsers,
+          notifications: notification ? [...prev.notifications, notification] : prev.notifications
+      }));
   };
 
   const handleAdminUpdateUserBalance = (userId: string, newBalance: number) => {
@@ -542,8 +644,40 @@ const App: React.FC = () => {
       if (loggedUser) {
         handleAddAdminLog(loggedUser, AdminActionType.UserBalanceEdit, `Alterou o saldo de ${user?.name} para US$ ${newBalance.toFixed(2)}.`, userId);
       }
+      
+      // Notify User
+      const notif: Notification = {
+          id: faker.string.uuid(),
+          userId: userId,
+          message: `Seu saldo foi atualizado manualmente pelo administrador para US$ ${newBalance.toFixed(2)}.`,
+          date: new Date().toISOString(),
+          isRead: false
+      };
 
-      setDbState(prev => ({ ...prev, users: updatedUsers }));
+      setDbState(prev => ({ ...prev, users: updatedUsers, notifications: [...prev.notifications, notif] }));
+  };
+
+  const handleBroadcastNotification = (message: string) => {
+      // Create a notification for EVERY non-admin user
+      const newNotifications: Notification[] = users
+          .filter(u => !u.isAdmin)
+          .map(u => ({
+              id: faker.string.uuid(),
+              userId: u.id,
+              message: message,
+              date: new Date().toISOString(),
+              isRead: false
+          }));
+      
+      setDbState(prev => ({
+          ...prev,
+          notifications: [...prev.notifications, ...newNotifications]
+      }));
+      
+      if (loggedUser) {
+         handleAddAdminLog(loggedUser, AdminActionType.SettingsUpdate, `Enviou notificação global: "${message}"`);
+      }
+      alert("Notificação enviada para todos os usuários.");
   };
 
   const handleSendMessage = async (senderId: string, receiverId: string, text: string, attachment?: File) => {
@@ -673,6 +807,7 @@ const App: React.FC = () => {
                     language={language}
                     setLanguage={handleSetLanguage}
                     onRefreshData={refreshData}
+                    onBroadcastNotification={handleBroadcastNotification}
                 />;
   } else {
       content = <HomePage setView={setView} />;

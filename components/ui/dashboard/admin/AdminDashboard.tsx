@@ -36,10 +36,11 @@ interface AdminDashboardProps {
   language: Language;
   setLanguage: (lang: Language) => void;
   onRefreshData: () => void;
+  onBroadcastNotification: (message: string) => void;
 }
 
 const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
-  const { user, allUsers, allTransactions, chatMessages, platformSettings, adminActionLogs, onLogout, onUpdateTransaction, onUpdateUserStatus, onPayoutBonus, onSendMessage, onUpdateSettings, onAdminUpdateUserBalance, onUpdateUser, isDarkMode, toggleTheme, language, setLanguage, onRefreshData } = props;
+  const { user, allUsers, allTransactions, chatMessages, platformSettings, adminActionLogs, onLogout, onUpdateTransaction, onUpdateUserStatus, onPayoutBonus, onSendMessage, onUpdateSettings, onAdminUpdateUserBalance, onUpdateUser, isDarkMode, toggleTheme, language, setLanguage, onRefreshData, onBroadcastNotification } = props;
   const [activeView, setActiveView] = useState('dashboard');
   const [isSidebarOpen, setSidebarOpen] = useState(false);
 
@@ -58,7 +59,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
   const renderContent = () => {
     switch (activeView) {
       case 'dashboard':
-        return <AdminDashboardHome allUsers={allUsers} allTransactions={allTransactions} />;
+        return <AdminDashboardHome allUsers={allUsers} allTransactions={allTransactions} onBroadcastNotification={onBroadcastNotification} />;
       case 'users':
         return <ManageUsers allUsers={allUsers} onAdminUpdateUserBalance={onAdminUpdateUserBalance} onUpdateUserStatus={onUpdateUserStatus} />;
       case 'transactions':
@@ -72,7 +73,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
       case 'settings':
         return <Settings platformSettings={platformSettings} onUpdateSettings={onUpdateSettings} allUsers={allUsers} />;
       default:
-        return <AdminDashboardHome allUsers={allUsers} allTransactions={allTransactions} />;
+        return <AdminDashboardHome allUsers={allUsers} allTransactions={allTransactions} onBroadcastNotification={onBroadcastNotification} />;
     }
   };
 

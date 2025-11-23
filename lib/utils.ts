@@ -44,3 +44,34 @@ export const validateCPF = (value: string): boolean => {
 
   return rest(10) === cpfArray[9] && rest(11) === cpfArray[10];
 };
+
+/**
+ * Requests permission for browser notifications.
+ */
+export const requestNotificationPermission = async () => {
+  if ('Notification' in window) {
+    if (Notification.permission === 'default') {
+      await Notification.requestPermission();
+    }
+  }
+};
+
+/**
+ * Triggers a system/browser notification.
+ * @param title The title of the notification.
+ * @param body The body text of the notification.
+ */
+export const showSystemNotification = (title: string, body: string) => {
+  if ('Notification' in window && Notification.permission === 'granted') {
+    try {
+      new Notification(title, {
+        body,
+        icon: 'https://cdn-icons-png.flaticon.com/512/2953/2953363.png', // Generic investment icon
+        tag: 'greennseven-notification',
+        renotify: true
+      } as any);
+    } catch (e) {
+      console.error("Error showing notification:", e);
+    }
+  }
+};
