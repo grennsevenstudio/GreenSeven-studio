@@ -1,5 +1,6 @@
 
 
+
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import type { User, Transaction, WithdrawalDetails, Stock, Language } from '../../../../../types';
 import { TransactionType, TransactionStatus } from '../../../../../types';
@@ -243,14 +244,25 @@ const BalanceEvolutionChart: React.FC<{ user: User; transactions: Transaction[] 
     );
 };
 
-const StatCard: React.FC<{ title: string; value: React.ReactNode; icon: React.ReactNode; subValue?: React.ReactNode; highlight?: boolean }> = ({ title, value, icon, subValue, highlight = false }) => {
+const StatCard: React.FC<{ title: string; value: React.ReactNode; icon: React.ReactNode; subValue?: React.ReactNode; highlight?: boolean; locked?: boolean }> = ({ title, value, icon, subValue, highlight = false, locked = false }) => {
     const borderGradient = highlight 
         ? 'from-brand-green via-brand-green/50 to-brand-gray' 
-        : 'from-brand-blue/30 via-brand-gray to-brand-gray/30';
+        : locked 
+            ? 'from-gray-700 via-gray-800 to-gray-900'
+            : 'from-brand-blue/30 via-brand-gray to-brand-gray/30';
+
+    const lockedIcon = locked ? (
+        <div className="absolute top-3 right-3">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+            </svg>
+        </div>
+    ) : null;
 
     return (
         <div className={`relative p-[2px] rounded-2xl bg-gradient-to-br ${borderGradient} transition-all duration-300 hover:shadow-lg hover:shadow-brand-green/10 transform hover:-translate-y-1`}>
-            <div className="bg-brand-gray rounded-[14px] p-3 sm:p-6 h-full flex flex-col justify-between overflow-hidden group">
+            <div className="bg-brand-gray rounded-[14px] p-3 sm:p-6 h-full flex flex-col justify-between overflow-hidden group relative">
+                {lockedIcon}
                 {highlight && <div className="absolute -top-1/4 -right-1/4 w-1/2 h-1/2 bg-brand-green/10 rounded-full blur-3xl opacity-50 group-hover:opacity-80 transition-opacity duration-500"></div>}
 
                 <div className="flex justify-between items-start">
@@ -467,7 +479,7 @@ const WithdrawModalContent: React.FC<{
             return;
         }
         if (amount > availableBalance) {
-            alert(`Saldo insuficiente para realizar este saque. Seu saldo disponível atual é ${formatCurrency(availableBalance, 'USD')}.`);
+            alert(`Saldo insuficiente para realizar este saque. Seu saldo disponível de LUCRO DIÁRIO é ${formatCurrency(availableBalance, 'USD')}. O Capital Principal permanece bloqueado.`);
             return;
         }
         setStep(2);
@@ -594,21 +606,27 @@ const WithdrawModalContent: React.FC<{
         <form onSubmit={handleAmountSubmit} className="space-y-4">
              <div className="bg-brand-black border border-gray-700 rounded-lg p-4 flex justify-between items-center shadow-inner">
                 <div>
-                    <p className="text-sm text-gray-400">Saldo Disponível</p>
-                    <p className="text-xs text-gray-500">Rendimentos acumulados</p>
+                    <p className="text-sm text-gray-400">Lucro Disponível (Diário)</p>
+                    <p className="text-xs text-gray-500">Apenas rendimentos acumulados</p>
                 </div>
                 <p className="text-2xl font-bold text-brand-green">
                     {formatCurrency(availableBalance, 'USD')}
                 </p>
             </div>
             
-            <p className="text-sm text-yellow-400 bg-yellow-500/10 p-3 rounded-lg">Seus rendimentos diários são somados automaticamente a este saldo disponível.</p>
+            <div className="bg-yellow-500/10 border-l-2 border-yellow-500 p-3 rounded-r-lg">
+                <p className="text-xs text-yellow-400 font-bold uppercase mb-1">Regra de Saque</p>
+                <p className="text-sm text-gray-300">
+                    Seu capital principal ({formatCurrency(user.capitalInvestedUSD, 'USD')}) permanece <strong>bloqueado</strong>. 
+                    Apenas os rendimentos diários creditados a cada 24h podem ser sacados.
+                </p>
+            </div>
             
             <Input 
                 label="Valor do Saque (USD)"
                 id="withdraw-usd"
                 type="number"
-                placeholder="Ex: 100.00"
+                placeholder="Ex: 50.00"
                 value={amountUSD}
                 onChange={(e) => setAmountUSD(e.target.value)}
                 required
@@ -804,7 +822,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions = [], 
         <Modal 
             isOpen={isWithdrawModalOpen} 
             onClose={() => setWithdrawModalOpen(false)} 
-            title="Solicitar Saque via PIX"
+            title="Solicitar Saque de Rendimentos"
         >
             <WithdrawModalContent 
                 user={user} 
@@ -830,22 +848,20 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions = [], 
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-6">
+                {/* Locked Capital Card */}
                 <StatCard 
                     title={`${t.total_balance} (USD)`} 
                     value={
                         <AnimatedBalance 
-                            value={showBalance ? formatCurrency(user.balanceUSD || 0, 'USD') : `$ ${maskedValue}`}
+                            value={showBalance ? formatCurrency(user.capitalInvestedUSD || 0, 'USD') : `$ ${maskedValue}`}
                             isShown={showBalance}
                         />
                     }
-                    subValue={
-                         <AnimatedBalance 
-                            value={showBalance ? `~ ${formatCurrency(balanceBRL, 'BRL')}` : `~ R$ ${maskedValue}`}
-                            isShown={showBalance}
-                        />
-                    }
-                    icon={ICONS.dollar} 
+                    subValue={t.locked_capital}
+                    icon={ICONS.shield} 
+                    locked={true}
                 />
+                 {/* Daily Available Card */}
                  <StatCard 
                     title={t.available_withdraw} 
                     value={
@@ -858,12 +874,14 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions = [], 
                     icon={ICONS.withdraw}
                     highlight={true}
                 />
+                 {/* Monthly Profit Projection Card */}
                  <StatCard 
                     title={t.projected_profit} 
                     value={formatCurrency(user.monthlyProfitUSD || 0, 'USD')}
                     subValue={t.projection_30_days}
                     icon={ICONS.plans}
                 />
+                 {/* Live Earnings Card */}
                  <StatCard 
                     title={t.earnings_today} 
                     value={
