@@ -51,7 +51,6 @@ class ErrorBoundary extends Component<Props, State> {
       );
     }
 
-    // Cast 'this' to 'any' to bypass TS error: Property 'props' does not exist on type 'ErrorBoundary'
     return (this as any).props.children;
   }
 }

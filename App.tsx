@@ -4,7 +4,23 @@ import type { User, Transaction, Notification, ChatMessage, PlatformSettings, Ad
 import { View, TransactionStatus, TransactionType, AdminActionType, UserStatus, InvestorRank } from './types';
 import { REFERRAL_BONUS_RATES, INVESTMENT_PLANS } from './constants';
 import { initializeDB, getAllData, saveAllData, type AppDB } from './lib/db';
-import { syncUserToSupabase, syncTransactionToSupabase, syncMessageToSupabase, syncSettingsToSupabase, syncAdminLogToSupabase, fetchUsersFromSupabase, fetchTransactionsFromSupabase, fetchMessagesFromSupabase, fetchCareerPlanConfig, fetchSettingsFromSupabase, fetchAdminLogsFromSupabase } from './lib/supabase';
+import { 
+    syncUserToSupabase, 
+    syncTransactionToSupabase, 
+    syncMessageToSupabase, 
+    syncSettingsToSupabase, 
+    syncAdminLogToSupabase, 
+    fetchUsersFromSupabase, 
+    fetchTransactionsFromSupabase, 
+    fetchMessagesFromSupabase, 
+    fetchCareerPlanConfig, 
+    fetchSettingsFromSupabase, 
+    fetchAdminLogsFromSupabase,
+    fetchNotificationsFromSupabase,
+    syncNotificationToSupabase,
+    syncNotificationsToSupabase,
+    supabase
+} from './lib/supabase';
 import { requestNotificationPermission, showSystemNotification, formatCurrency } from './lib/utils';
 import { faker } from '@faker-js/faker';
 
@@ -214,6 +230,7 @@ const App: React.FC = () => {
         const { data: remoteMessages } = await fetchMessagesFromSupabase();
         const { data: remoteSettings } = await fetchSettingsFromSupabase();
         const { data: remoteLogs } = await fetchAdminLogsFromSupabase();
+        const { data: remoteNotifications } = await fetchNotificationsFromSupabase();
         
         // Ensure fetchCareerPlanConfig exists before calling it (safety check for partial updates)
         if (typeof fetchCareerPlanConfig === 'function') {
@@ -232,6 +249,7 @@ const App: React.FC = () => {
             if (remoteMessages) newState.chatMessages = remoteMessages;
             if (remoteSettings) newState.platformSettings = remoteSettings;
             if (remoteLogs) newState.adminActionLogs = remoteLogs;
+            if (remoteNotifications) newState.notifications = remoteNotifications;
             
             return newState;
         });
@@ -243,10 +261,28 @@ const App: React.FC = () => {
   };
 
   useEffect(() => {
+    // Initial load
     loadRemoteData();
-    // Setup interval to refresh data periodically (every 60s)
+    
+    // Setup interval to refresh data periodically (fallback for redundancy)
     const interval = setInterval(loadRemoteData, 60000);
-    return () => clearInterval(interval);
+
+    // Supabase Realtime Subscription
+    const channel = supabase.channel('global-changes')
+        .on(
+            'postgres_changes', 
+            { event: '*', schema: 'public' }, 
+            (payload) => {
+                console.log('🔄 Realtime Update:', payload);
+                loadRemoteData(); // Trigger fresh fetch on any DB change
+            }
+        )
+        .subscribe();
+
+    return () => {
+        clearInterval(interval);
+        supabase.removeChannel(channel);
+    };
   }, []);
   
   const refreshData = async () => {
@@ -376,6 +412,7 @@ const App: React.FC = () => {
     }));
 
     syncUserToSupabase(newUser, userData.password);
+    syncNotificationToSupabase(adminNotification);
   };
 
   const handleAddAdminLog = (adminUser: User, actionType: AdminActionType, description: string, targetId?: string) => {
@@ -441,6 +478,7 @@ const App: React.FC = () => {
     };
 
     syncTransactionToSupabase(tx);
+    syncNotificationToSupabase(adminNotif);
     setDbState(prev => ({ 
         ...prev, 
         transactions: [...prev.transactions, tx],
@@ -581,6 +619,8 @@ const App: React.FC = () => {
         users: updatedUsers,
         notifications: [...prev.notifications, ...newNotifications]
     }));
+    
+    syncNotificationsToSupabase(newNotifications);
   };
 
   const handlePayoutBonus = (depositTx: Transaction) => {
@@ -656,6 +696,7 @@ const App: React.FC = () => {
       if (loggedUser) {
         handleAddAdminLog(loggedUser, AdminActionType.BonusPayout, `Pagamento manual de bônus para o depósito de ${currentUser?.name}.`, depositTx.id);
       }
+      syncNotificationsToSupabase(newNotifications);
       alert("Bônus repassados com sucesso!");
   };
 
@@ -693,6 +734,7 @@ const App: React.FC = () => {
           users: updatedUsers,
           notifications: notification ? [...prev.notifications, notification] : prev.notifications
       }));
+      if (notification) syncNotificationToSupabase(notification);
   };
 
   const handleAdminUpdateUserBalance = (userId: string, newBalance: number) => {
@@ -725,6 +767,7 @@ const App: React.FC = () => {
       };
 
       setDbState(prev => ({ ...prev, users: updatedUsers, notifications: [...prev.notifications, notif] }));
+      syncNotificationToSupabase(notif);
   };
 
   const handleBroadcastNotification = (message: string) => {
@@ -747,6 +790,7 @@ const App: React.FC = () => {
       if (loggedUser) {
          handleAddAdminLog(loggedUser, AdminActionType.SettingsUpdate, `Enviou notificação global: "${message}"`);
       }
+      syncNotificationsToSupabase(newNotifications);
       alert("Notificação enviada para todos os usuários.");
   };
 
@@ -795,6 +839,10 @@ const App: React.FC = () => {
           n.userId === loggedUser.id ? { ...n, isRead: true } : n
       );
       setDbState(prev => ({ ...prev, notifications: updatedNotifications }));
+      
+      // Sync changes
+      const userNotifs = updatedNotifications.filter(n => n.userId === loggedUser.id);
+      syncNotificationsToSupabase(userNotifs);
   };
 
   const handleUpdateSettings = (newSettings: PlatformSettings) => {

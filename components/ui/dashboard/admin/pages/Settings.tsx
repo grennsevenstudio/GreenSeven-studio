@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import type { PlatformSettings, User, Transaction } from '../../../../../types';
 import Card from '../../../../ui/Card';
@@ -164,13 +163,24 @@ CREATE TABLE IF NOT EXISTS public.admin_logs (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
 
--- 8. POLÍTICAS DE SEGURANÇA (RLS) - PERMISSÃO TOTAL PARA APP
+-- 8. TABELA DE NOTIFICAÇÕES (NOVO)
+CREATE TABLE IF NOT EXISTS public.notifications (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
+  message TEXT NOT NULL,
+  date TEXT NOT NULL,
+  is_read BOOLEAN DEFAULT false,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+);
+
+-- 9. POLÍTICAS DE SEGURANÇA (RLS) - PERMISSÃO TOTAL PARA APP
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.career_plan_config ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.platform_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.admin_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Public Access Users" ON public.users;
 DROP POLICY IF EXISTS "Public Access Transactions" ON public.transactions;
@@ -178,6 +188,7 @@ DROP POLICY IF EXISTS "Public Access Messages" ON public.messages;
 DROP POLICY IF EXISTS "Public Access Career" ON public.career_plan_config;
 DROP POLICY IF EXISTS "Public Access Settings" ON public.platform_settings;
 DROP POLICY IF EXISTS "Public Access Logs" ON public.admin_logs;
+DROP POLICY IF EXISTS "Public Access Notifications" ON public.notifications;
 
 -- Cria políticas públicas
 CREATE POLICY "Public Access Users" ON public.users FOR ALL USING (true) WITH CHECK (true);
@@ -186,6 +197,7 @@ CREATE POLICY "Public Access Messages" ON public.messages FOR ALL USING (true) W
 CREATE POLICY "Public Access Career" ON public.career_plan_config FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Public Access Settings" ON public.platform_settings FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Public Access Logs" ON public.admin_logs FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Public Access Notifications" ON public.notifications FOR ALL USING (true) WITH CHECK (true);
 
 GRANT ALL ON TABLE public.users TO anon, authenticated, service_role;
 GRANT ALL ON TABLE public.transactions TO anon, authenticated, service_role;
@@ -193,8 +205,9 @@ GRANT ALL ON TABLE public.messages TO anon, authenticated, service_role;
 GRANT ALL ON TABLE public.career_plan_config TO anon, authenticated, service_role;
 GRANT ALL ON TABLE public.platform_settings TO anon, authenticated, service_role;
 GRANT ALL ON TABLE public.admin_logs TO anon, authenticated, service_role;
+GRANT ALL ON TABLE public.notifications TO anon, authenticated, service_role;
 
--- 9. USUÁRIO ADMIN PADRÃO
+-- 10. USUÁRIO ADMIN PADRÃO
 INSERT INTO public.users (
     email, password, full_name, is_admin, status, rank, balance_usd, plan, referral_code, additional_data
 ) VALUES (
@@ -253,13 +266,12 @@ INSERT INTO public.users (
     
     const getApiKey = () => {
         try {
-            if (typeof process !== 'undefined' && process.env && process.env.API_KEY) {
-                return process.env.API_KEY;
-            }
+            // Safe access to process.env preventing ReferenceError in some environments
+            const env = typeof process !== 'undefined' ? process.env : {};
+            return env.API_KEY || '';
         } catch (e) {
             return '';
         }
-        return '';
     };
 
     const handleGenerateLogo = async () => {
@@ -513,7 +525,7 @@ INSERT INTO public.users (
                             </label>
                             <select 
                                 id="user-reset-select" 
-                                className="w-full bg-brand-black border border-gray-700 rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-brand-green"
+                                className="w-full bg-brand-black border border-gray-700 rounded-lg py-3 px-4 text-white focus:outline-none focus:border-brand-green"
                                 value={selectedUserToReset}
                                 onChange={(e) => setSelectedUserToReset(e.target.value)}
                             >

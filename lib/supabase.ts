@@ -1,7 +1,7 @@
 
 
 import { createClient } from '@supabase/supabase-js';
-import type { User, Transaction, ChatMessage, PlatformSettings, AdminActionLog } from '../types';
+import type { User, Transaction, ChatMessage, PlatformSettings, AdminActionLog, Notification } from '../types';
 
 // ============================================================================
 // CONFIGURAÇÃO DO SUPABASE
@@ -232,6 +232,25 @@ export const fetchAdminLogsFromSupabase = async () => {
     }
 };
 
+export const fetchNotificationsFromSupabase = async () => {
+    try {
+        const { data, error } = await supabase.from('notifications').select('*');
+        if (error) return { data: null, error };
+        if (!data) return { data: [], error: null };
+        
+        const mapped: Notification[] = data.map((n: any) => ({
+            id: n.id,
+            userId: n.user_id,
+            message: n.message,
+            date: n.date,
+            isRead: n.is_read
+        }));
+        return { data: mapped, error: null };
+    } catch (e) {
+        return { data: null, error: e };
+    }
+};
+
 // ============================================================================
 // SYNC FUNCTIONS (Upsert)
 // ============================================================================
@@ -362,6 +381,41 @@ export const syncAdminLogToSupabase = async (log: AdminActionLog) => {
             target_id: log.targetId
         };
         const { error } = await supabase.from('admin_logs').upsert(dbLog, { onConflict: 'id' });
+        return { error };
+    } catch (e) {
+        return { error: e };
+    }
+};
+
+export const syncNotificationToSupabase = async (notif: Notification) => {
+    try {
+        const dbNotif = {
+            id: notif.id,
+            user_id: notif.userId,
+            message: notif.message,
+            date: notif.date,
+            is_read: notif.isRead
+        };
+        const { error } = await supabase.from('notifications').upsert(dbNotif, { onConflict: 'id' });
+        return { error };
+    } catch (e) {
+        return { error: e };
+    }
+};
+
+export const syncNotificationsToSupabase = async (notifs: Notification[]) => {
+    try {
+        if (notifs.length === 0) return { error: null };
+        
+        const dbNotifs = notifs.map(n => ({
+            id: n.id,
+            user_id: n.userId,
+            message: n.message,
+            date: n.date,
+            is_read: n.isRead
+        }));
+        
+        const { error } = await supabase.from('notifications').upsert(dbNotifs, { onConflict: 'id' });
         return { error };
     } catch (e) {
         return { error: e };
