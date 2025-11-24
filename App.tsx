@@ -225,19 +225,29 @@ const App: React.FC = () => {
 
   const loadRemoteData = async () => {
     try {
-        const { data: remoteUsers } = await fetchUsersFromSupabase();
-        const { data: remoteTxs } = await fetchTransactionsFromSupabase();
-        const { data: remoteMessages } = await fetchMessagesFromSupabase();
-        const { data: remoteSettings } = await fetchSettingsFromSupabase();
-        const { data: remoteLogs } = await fetchAdminLogsFromSupabase();
-        const { data: remoteNotifications } = await fetchNotificationsFromSupabase();
-        
-        // Ensure fetchCareerPlanConfig exists before calling it (safety check for partial updates)
-        if (typeof fetchCareerPlanConfig === 'function') {
-            const { data: remoteCareerPlan } = await fetchCareerPlanConfig();
-            if (remoteCareerPlan && Object.keys(remoteCareerPlan).length > 0) {
-                setReferralRates(remoteCareerPlan);
-            }
+        // Fetch all data in parallel to reduce latency
+        const [
+            { data: remoteUsers },
+            { data: remoteTxs },
+            { data: remoteMessages },
+            { data: remoteSettings },
+            { data: remoteLogs },
+            { data: remoteNotifications },
+            { data: remoteCareerPlan }
+        ] = await Promise.all([
+            fetchUsersFromSupabase(),
+            fetchTransactionsFromSupabase(),
+            fetchMessagesFromSupabase(),
+            fetchSettingsFromSupabase(),
+            fetchAdminLogsFromSupabase(),
+            fetchNotificationsFromSupabase(),
+            // Safely call fetchCareerPlanConfig if it exists
+            typeof fetchCareerPlanConfig === 'function' ? fetchCareerPlanConfig() : Promise.resolve({ data: null })
+        ]);
+
+        // Update career plan rates if available
+        if (remoteCareerPlan && Object.keys(remoteCareerPlan).length > 0) {
+            setReferralRates(remoteCareerPlan);
         }
 
         setDbState(prev => {
@@ -288,7 +298,7 @@ const App: React.FC = () => {
   const refreshData = async () => {
       const success = await loadRemoteData();
       if (success) {
-          // Optional: Visual feedback
+          // Optional: Visual feedback handled in Header
       } else {
           console.warn("Falha ao atualizar dados em segundo plano (Modo Offline possível).");
       }

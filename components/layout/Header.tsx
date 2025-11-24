@@ -1,5 +1,4 @@
 
-
 import React, { useState, useRef, useEffect } from 'react';
 import type { User, Notification, Language } from '../../types';
 import { ICONS, RANK_COLORS } from '../../constants';
@@ -45,6 +44,18 @@ const LANGUAGE_OPTIONS: { code: Language; flag: string; label: string }[] = [
   { code: 'de', flag: '🇩🇪', label: 'Deutsch' },
 ];
 
+// Toast Component for Refresh Feedback
+const Toast = ({ message }: { message: string }) => (
+    <div className="fixed top-20 right-4 bg-brand-green text-brand-black px-4 py-2 rounded shadow-lg z-50 animate-fade-in-up font-bold text-sm flex items-center gap-2 border border-brand-black/10">
+        <div className="bg-black/10 p-0.5 rounded-full">
+             <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+            </svg>
+        </div>
+        {message}
+    </div>
+);
+
 interface HeaderProps {
   user: User;
   onLogout: () => void;
@@ -63,6 +74,7 @@ const Header: React.FC<HeaderProps> = ({ user, onLogout, toggleSidebar, notifica
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isLangMenuOpen, setIsLangMenuOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
   
   const notificationRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
@@ -96,16 +108,19 @@ const Header: React.FC<HeaderProps> = ({ user, onLogout, toggleSidebar, notifica
       setIsNotificationsOpen(!isNotificationsOpen);
   };
   
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
       if (onRefreshData) {
           setIsRefreshing(true);
-          onRefreshData();
-          // Animate for at least 1s
-          setTimeout(() => setIsRefreshing(false), 1000);
+          await onRefreshData();
+          setTimeout(() => setIsRefreshing(false), 500);
+          setToastMessage("Dados atualizados!");
+          setTimeout(() => setToastMessage(null), 3000);
       }
   };
 
   return (
+    <>
+    {toastMessage && <Toast message={toastMessage} />}
     <header className="h-16 bg-brand-gray border-b border-gray-800 flex items-center justify-between px-4 lg:px-8 sticky top-0 z-30">
       <div className="flex items-center gap-4">
         <button
@@ -250,6 +265,7 @@ const Header: React.FC<HeaderProps> = ({ user, onLogout, toggleSidebar, notifica
         </div>
       </div>
     </header>
+    </>
   );
 };
 
