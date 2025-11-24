@@ -142,6 +142,7 @@ export const fetchUsersFromSupabase = async () => {
                 capitalInvestedUSD: Number(u.capital_invested_usd || 0),
                 monthlyProfitUSD: Number(u.monthly_profit_usd || 0),
                 dailyWithdrawableUSD: Number(u.daily_withdrawable_usd || 0),
+                bonusBalanceUSD: Number(u.bonus_balance_usd || 0), // Mapped from new column
                 lastProfitUpdate: extra.lastProfitUpdate || u.created_at || new Date().toISOString(),
                 isAdmin: u.is_admin === true,
                 joinedDate: u.created_at ? new Date(u.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
@@ -184,7 +185,8 @@ export const fetchTransactionsFromSupabase = async () => {
             withdrawalDetails: t.withdrawal_details,
             referralLevel: t.referral_level,
             sourceUserId: t.source_user_id,
-            bonusPayoutHandled: t.bonus_payout_handled
+            bonusPayoutHandled: t.bonus_payout_handled,
+            walletSource: t.wallet_source // Map new column
         }));
 
         return { data: mappedTxs, error: null };
@@ -299,6 +301,7 @@ export const syncUserToSupabase = async (user: User, password?: string): Promise
             capital_invested_usd: user.capitalInvestedUSD,
             monthly_profit_usd: user.monthlyProfitUSD,
             daily_withdrawable_usd: user.dailyWithdrawableUSD,
+            bonus_balance_usd: user.bonusBalanceUSD, // Sync new column
             last_plan_change_date: user.lastPlanChangeDate,
             referral_code: user.referralCode,
             referred_by_id: user.referredById || null,
@@ -349,7 +352,8 @@ export const syncTransactionToSupabase = async (tx: Transaction) => {
             withdrawal_details: tx.withdrawalDetails,
             referral_level: tx.referralLevel,
             source_user_id: tx.sourceUserId,
-            bonus_payout_handled: tx.bonusPayoutHandled
+            bonus_payout_handled: tx.bonusPayoutHandled,
+            wallet_source: tx.walletSource // Sync new column
         };
         const { error } = await supabase.from('transactions').upsert(dbTx, { onConflict: 'id' });
         if (error) return { error };

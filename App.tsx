@@ -1,3 +1,5 @@
+
+
 import React, { useState, useEffect, useRef } from 'react';
 import type { User, Transaction, Notification, ChatMessage, PlatformSettings, AdminActionLog, Language } from './types';
 import { View, TransactionStatus, TransactionType, AdminActionType, UserStatus, InvestorRank } from './types';
@@ -373,7 +375,7 @@ const App: React.FC = () => {
       status: UserStatus.Approved,
       avatarUrl: 'https://via.placeholder.com/150',
       rank: InvestorRank.Diamond,
-      balanceUSD: 0, capitalInvestedUSD: 0, monthlyProfitUSD: 0, dailyWithdrawableUSD: 0,
+      balanceUSD: 0, capitalInvestedUSD: 0, monthlyProfitUSD: 0, dailyWithdrawableUSD: 0, bonusBalanceUSD: 0,
       isAdmin: true, joinedDate: new Date().toISOString(), referralCode: 'ADMIN', plan: 'Select'
   };
   
@@ -454,6 +456,7 @@ const App: React.FC = () => {
         capitalInvestedUSD: 0,
         monthlyProfitUSD: 0,
         dailyWithdrawableUSD: 0,
+        bonusBalanceUSD: 0, // Initialize bonus balance
         isAdmin: false,
         joinedDate: new Date().toISOString().split('T')[0],
         referralCode: `${userData.name.split(' ')[0].toUpperCase()}${faker.string.numeric(4)}`,
@@ -507,9 +510,11 @@ const App: React.FC = () => {
       const withdrawalAmount = Math.abs(tx.amountUSD);
       const now = new Date();
       const currentHour = now.getHours();
-      // Logic for withdrawal hours
-      if (currentHour < 9 || currentHour >= 18) {
-          // Warning but generally allowed to queue
+      
+      // Logic for withdrawal hours: Only between 08:00 and 18:00
+      if (currentHour < 8 || currentHour >= 18) {
+          alert("Horário de Saque: Os saques estão disponíveis apenas das 08:00 às 18:00.");
+          return;
       }
 
       const today = tx.date;
@@ -526,9 +531,15 @@ const App: React.FC = () => {
       }
 
       if (tx.userId === loggedUser?.id && loggedUser) {
-          const dailyLimit = loggedUser.dailyWithdrawableUSD || 0;
-          if (withdrawalAmount > dailyLimit + 0.01) { // Adding small buffer for floating point
-            alert(`Erro: Valor superior ao saldo disponível para saque (${formatCurrency(dailyLimit, 'USD')}).`);
+          // Check wallet source (Yield vs Bonus)
+          const availableBalance = tx.walletSource === 'bonus' 
+                ? (loggedUser.bonusBalanceUSD || 0) 
+                : (loggedUser.dailyWithdrawableUSD || 0);
+          
+          const walletName = tx.walletSource === 'bonus' ? 'Bônus' : 'Rendimento Diário';
+
+          if (withdrawalAmount > availableBalance + 0.01) { // Adding small buffer for floating point
+            alert(`Erro: Valor superior ao saldo disponível em ${walletName} (${formatCurrency(availableBalance, 'USD')}).`);
             return;
           }
       }
@@ -607,6 +618,7 @@ const App: React.FC = () => {
                 referralLevel: level as 1 | 2 | 3,
                 sourceUserId: user.id,
                 bonusPayoutHandled: true,
+                walletSource: 'bonus' // Explicitly mark as bonus wallet source
             };
             
             bonusTransactions.push(bonusTx);
@@ -616,6 +628,7 @@ const App: React.FC = () => {
             const updatedReferrer = { 
                 ...referrer, 
                 balanceUSD: newBalance,
+                bonusBalanceUSD: (referrer.bonusBalanceUSD || 0) + bonusAmount, // Add to BONUS wallet
                 monthlyProfitUSD: calculateProfit(newBalance, referrer.plan),
                 rank: calculateRank(newBalance)
             };
@@ -639,6 +652,7 @@ const App: React.FC = () => {
                 let newBalance = u.balanceUSD;
                 let newInvested = u.capitalInvestedUSD;
                 let newDailyWithdrawable = u.dailyWithdrawableUSD || 0;
+                let newBonusBalance = u.bonusBalanceUSD || 0;
 
                 if (tx.type === TransactionType.Deposit) {
                     newBalance += tx.amountUSD;
@@ -647,9 +661,15 @@ const App: React.FC = () => {
                      // Deduction logic
                      newBalance += tx.amountUSD; // amountUSD is negative for withdrawals
                      
-                     // Also deduct from daily withdrawable bucket
-                     newDailyWithdrawable += tx.amountUSD; 
-                     if (newDailyWithdrawable < 0) newDailyWithdrawable = 0;
+                     // Determine source bucket to deduct from
+                     if (tx.walletSource === 'bonus') {
+                         newBonusBalance += tx.amountUSD; // Decrease Bonus Wallet
+                         if (newBonusBalance < 0) newBonusBalance = 0;
+                     } else {
+                         // Default to Yield Wallet
+                         newDailyWithdrawable += tx.amountUSD; 
+                         if (newDailyWithdrawable < 0) newDailyWithdrawable = 0;
+                     }
                 }
                 
                 const updated = { 
@@ -657,6 +677,7 @@ const App: React.FC = () => {
                     balanceUSD: newBalance, 
                     capitalInvestedUSD: newInvested,
                     dailyWithdrawableUSD: newDailyWithdrawable,
+                    bonusBalanceUSD: newBonusBalance,
                     rank: calculateRank(newBalance),
                     monthlyProfitUSD: calculateProfit(newBalance, u.plan)
                 };
@@ -727,6 +748,7 @@ const App: React.FC = () => {
               referralLevel: level as 1 | 2 | 3,
               sourceUserId: depositTx.userId,
               bonusPayoutHandled: true,
+              walletSource: 'bonus' // Explicitly mark
           };
           
           bonusTransactions.push(bonusTx);
@@ -745,6 +767,7 @@ const App: React.FC = () => {
           const updatedReferrer = { 
               ...referrer, 
               balanceUSD: newBalance,
+              bonusBalanceUSD: (referrer.bonusBalanceUSD || 0) + bonusAmount, // Add to bonus wallet
               monthlyProfitUSD: calculateProfit(newBalance, referrer.plan),
               rank: calculateRank(newBalance)
             };

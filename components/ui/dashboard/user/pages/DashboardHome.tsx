@@ -1,6 +1,4 @@
 
-
-
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import type { User, Transaction, WithdrawalDetails, Stock, Language } from '../../../../../types';
 import { TransactionType, TransactionStatus } from '../../../../../types';
@@ -8,7 +6,7 @@ import Card from '../../../../ui/Card';
 import Button from '../../../../ui/Button';
 import Input from '../../../../ui/Input';
 import Modal from '../../../../layout/Modal';
-import { ICONS, DOLLAR_RATE, MOCK_STOCKS } from '../../../../../constants';
+import { ICONS, DOLLAR_RATE, MOCK_STOCKS, INVESTMENT_PLANS } from '../../../../../constants';
 import { TRANSLATIONS } from '../../../../../lib/translations';
 import { formatCurrency } from '../../../../../lib/utils';
 
@@ -463,13 +461,16 @@ const WithdrawModalContent: React.FC<{
     const [pixDetails, setPixDetails] = useState<WithdrawalDetails>({ pixKey: '', fullName: '', cpf: '', bank: '' });
     const [pixKeyError, setPixKeyError] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
+    const [withdrawalSource, setWithdrawalSource] = useState<'yield' | 'bonus'>('yield');
 
     const fee = (parseFloat(amountUSD) || 0) * (WITHDRAWAL_FEE_PERCENT / 100);
     const amountToReceiveUSD = (parseFloat(amountUSD) || 0) - fee;
     const amountToReceiveBRL = amountToReceiveUSD * DOLLAR_RATE;
     
-    // Use Accumulated Daily Balance
-    const availableBalance = user.dailyWithdrawableUSD || 0;
+    // Calculate available balance based on selection
+    const availableBalance = withdrawalSource === 'yield' 
+        ? (user.dailyWithdrawableUSD || 0) 
+        : (user.bonusBalanceUSD || 0);
 
     const handleAmountSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -479,7 +480,8 @@ const WithdrawModalContent: React.FC<{
             return;
         }
         if (amount > availableBalance) {
-            alert(`Saldo insuficiente para realizar este saque. Seu saldo disponível de LUCRO DIÁRIO é ${formatCurrency(availableBalance, 'USD')}. O Capital Principal permanece bloqueado.`);
+            const walletName = withdrawalSource === 'yield' ? 'Lucro Diário' : 'Bônus de Indicação';
+            alert(`Saldo insuficiente na carteira de ${walletName}. Disponível: ${formatCurrency(availableBalance, 'USD')}.`);
             return;
         }
         setStep(2);
@@ -519,6 +521,7 @@ const WithdrawModalContent: React.FC<{
                 amountUSD: -Math.abs(parseFloat(amountUSD)),
                 amountBRL: amountToReceiveBRL,
                 withdrawalDetails: pixDetails,
+                walletSource: withdrawalSource
             });
             setStep(4);
         }, 2000);
@@ -604,22 +607,43 @@ const WithdrawModalContent: React.FC<{
     
     return (
         <form onSubmit={handleAmountSubmit} className="space-y-4">
-             <div className="bg-brand-black border border-gray-700 rounded-lg p-4 flex justify-between items-center shadow-inner">
-                <div>
-                    <p className="text-sm text-gray-400">Lucro Disponível (Diário)</p>
-                    <p className="text-xs text-gray-500">Apenas rendimentos acumulados</p>
+             <div className="bg-brand-black border border-gray-700 rounded-lg p-4 flex flex-col gap-2 shadow-inner">
+                <div className="flex justify-between items-center">
+                    <label className="text-sm text-gray-400 font-medium">Origem do Saque:</label>
+                    <select 
+                        value={withdrawalSource} 
+                        onChange={(e) => setWithdrawalSource(e.target.value as 'yield' | 'bonus')}
+                        className="bg-gray-900 border border-gray-600 text-white text-sm rounded-lg p-2 focus:outline-none focus:border-brand-green"
+                    >
+                        <option value="yield">Rendimentos Diários</option>
+                        <option value="bonus">Bônus de Indicação</option>
+                    </select>
                 </div>
-                <p className="text-2xl font-bold text-brand-green">
-                    {formatCurrency(availableBalance, 'USD')}
-                </p>
+                
+                <div className="flex justify-between items-center pt-2 border-t border-gray-800 mt-2">
+                    <div>
+                        <p className="text-sm text-gray-400">Saldo Disponível</p>
+                        <p className="text-xs text-gray-500">{withdrawalSource === 'yield' ? 'Lucro acumulado' : 'Bônus de rede'}</p>
+                    </div>
+                    <p className="text-2xl font-bold text-brand-green">
+                        {formatCurrency(availableBalance, 'USD')}
+                    </p>
+                </div>
             </div>
             
             <div className="bg-yellow-500/10 border-l-2 border-yellow-500 p-3 rounded-r-lg">
                 <p className="text-xs text-yellow-400 font-bold uppercase mb-1">Regra de Saque</p>
                 <p className="text-sm text-gray-300">
                     Seu capital principal ({formatCurrency(user.capitalInvestedUSD, 'USD')}) permanece <strong>bloqueado</strong>. 
-                    Apenas os rendimentos diários creditados a cada 24h podem ser sacados.
+                    Você pode sacar seus rendimentos diários e bônus de indicação separadamente.
                 </p>
+            </div>
+
+            <div className="bg-blue-500/10 border-l-2 border-blue-500 p-3 rounded-r-lg mt-2">
+                 <p className="text-xs text-blue-400 font-bold uppercase mb-1">Horário de Atendimento</p>
+                 <p className="text-sm text-gray-300">
+                     Saques disponíveis das <strong>08:00 às 18:00</strong>.
+                 </p>
             </div>
             
             <Input 
@@ -716,6 +740,29 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions = [], 
     
     // Use accumulated value from User object
     const dailyAvailable = user.dailyWithdrawableUSD || 0;
+    const bonusAvailable = user.bonusBalanceUSD || 0;
+
+    // NEW LOGIC
+    const userPlan = INVESTMENT_PLANS.find(p => p.name === user.plan) || INVESTMENT_PLANS[0];
+    const monthlyProfitUSD = user.capitalInvestedUSD * userPlan.returnRate;
+    const accumulatedBRL = (user.capitalInvestedUSD + monthlyProfitUSD) * DOLLAR_RATE;
+
+    const capitalSubValue = (
+        <div className="flex flex-col gap-1 mt-1 w-full">
+            <span className="text-xs sm:text-sm text-gray-400">{t.locked_capital}</span>
+            <div className="mt-2 pt-2 border-t border-gray-700/50 w-full space-y-1">
+                <div className="flex justify-between items-center w-full text-xs">
+                    <span className="text-gray-400">Rendimento Mensal ({userPlan.name}):</span>
+                    <span className="text-brand-green font-bold">+{formatCurrency(monthlyProfitUSD, 'USD')}</span>
+                </div>
+                <div className="flex justify-between items-center w-full text-xs">
+                    <span className="text-gray-400" title="Capital + Lucro em 30 dias">Acumulado 30d (BRL):</span>
+                    <span className="text-white font-medium">≈ {formatCurrency(accumulatedBRL, 'BRL')}</span>
+                </div>
+            </div>
+        </div>
+    );
+    // END NEW LOGIC
 
     useEffect(() => {
         const totalDailyProfit = (user.monthlyProfitUSD || 0) / 30;
@@ -822,7 +869,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions = [], 
         <Modal 
             isOpen={isWithdrawModalOpen} 
             onClose={() => setWithdrawModalOpen(false)} 
-            title="Solicitar Saque de Rendimentos"
+            title="Solicitar Saque"
         >
             <WithdrawModalContent 
                 user={user} 
@@ -857,7 +904,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions = [], 
                             isShown={showBalance}
                         />
                     }
-                    subValue={t.locked_capital}
+                    subValue={capitalSubValue}
                     icon={ICONS.shield} 
                     locked={true}
                 />
@@ -874,12 +921,18 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions = [], 
                     icon={ICONS.withdraw}
                     highlight={true}
                 />
-                 {/* Monthly Profit Projection Card */}
+                 {/* Bonus Available Card - NEW */}
                  <StatCard 
-                    title={t.projected_profit} 
-                    value={formatCurrency(user.monthlyProfitUSD || 0, 'USD')}
-                    subValue={t.projection_30_days}
-                    icon={ICONS.plans}
+                    title={t.bonus_available} 
+                    value={
+                        <AnimatedBalance 
+                            value={showBalance ? formatCurrency(bonusAvailable, 'USD') : `$ ${maskedValue}`}
+                            isShown={showBalance}
+                        />
+                    }
+                    subValue={t.bonus_desc}
+                    icon={ICONS.dollar}
+                    highlight={true}
                 />
                  {/* Live Earnings Card */}
                  <StatCard 

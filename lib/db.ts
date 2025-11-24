@@ -89,6 +89,7 @@ export const initializeDB = () => {
     capitalInvestedUSD: 20000,
     monthlyProfitUSD: 1200,
     dailyWithdrawableUSD: 1240.50,
+    bonusBalanceUSD: 4180.00, // Bonus balance
     lastProfitUpdate: new Date().toISOString(), // Initial profit update time
     isAdmin: true,
     joinedDate: '2023-01-01',

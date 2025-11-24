@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 import type { PlatformSettings, User, Transaction } from '../../../../../types';
 import Card from '../../../../ui/Card';
@@ -92,6 +93,7 @@ ALTER TABLE public.users ADD COLUMN IF NOT EXISTS balance_usd NUMERIC DEFAULT 0;
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS capital_invested_usd NUMERIC DEFAULT 0;
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS monthly_profit_usd NUMERIC DEFAULT 0;
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS daily_withdrawable_usd NUMERIC DEFAULT 0;
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS bonus_balance_usd NUMERIC DEFAULT 0; -- Nova coluna para bonus
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS last_plan_change_date TEXT;
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS referral_code TEXT; -- Correção para erro 42703
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS referred_by_id UUID;
@@ -112,6 +114,7 @@ CREATE TABLE IF NOT EXISTS public.transactions (
   referral_level NUMERIC,
   source_user_id UUID,
   bonus_payout_handled BOOLEAN DEFAULT false,
+  wallet_source TEXT, -- Nova coluna para origem do saque (yield/bonus)
   created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
 

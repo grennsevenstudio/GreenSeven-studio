@@ -54,10 +54,11 @@ export interface User {
   rank: InvestorRank;
   plan?: string; // Current investment plan name
   lastPlanChangeDate?: string; // Date of the last plan change
-  balanceUSD: number; // Total balance: capital + monthly profit
+  balanceUSD: number; // Total balance: capital + monthly profit + bonus
   capitalInvestedUSD: number;
   monthlyProfitUSD: number;
-  dailyWithdrawableUSD: number;
+  dailyWithdrawableUSD: number; // Accumulated daily yields
+  bonusBalanceUSD: number; // Accumulated referral bonuses (Separated)
   lastProfitUpdate?: string; // Date string tracking last daily yield accumulation
   isAdmin: boolean;
   joinedDate: string;
@@ -113,6 +114,7 @@ export interface Transaction {
   referralLevel?: 1 | 2 | 3;
   sourceUserId?: string;
   bonusPayoutHandled?: boolean;
+  walletSource?: 'yield' | 'bonus'; // Indicates which wallet to deduct from (for withdrawals)
 }
 
 export interface Stock {
