@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import type { User, Transaction, Notification, ChatMessage, PlatformSettings, AdminActionLog, Language } from './types';
 import { View, TransactionStatus, TransactionType, AdminActionType, UserStatus, InvestorRank } from './types';
@@ -841,6 +840,41 @@ const App: React.FC = () => {
       
       syncMessageToSupabase(newMessage);
       setDbState(prev => ({ ...prev, chatMessages: [...prev.chatMessages, newMessage] }));
+
+      // --- NOTIFICATION LOGIC START ---
+      const sender = dbState.users.find(u => u.id === senderId);
+      if (sender) {
+          let notification: Notification | null = null;
+
+          if (sender.isAdmin) {
+              // Admin sent message -> Notify User
+              notification = {
+                  id: faker.string.uuid(),
+                  userId: receiverId,
+                  message: `💬 Suporte: Nova mensagem recebida.`,
+                  date: new Date().toISOString(),
+                  isRead: false
+              };
+          } else {
+              // User sent message -> Notify Admin (receiverId here is admin's ID)
+              notification = {
+                  id: faker.string.uuid(),
+                  userId: receiverId, 
+                  message: `💬 Suporte: ${sender.name} enviou uma mensagem.`,
+                  date: new Date().toISOString(),
+                  isRead: false
+              };
+          }
+
+          if (notification) {
+              syncNotificationToSupabase(notification);
+              setDbState(prev => ({
+                  ...prev,
+                  notifications: [...prev.notifications, notification]
+              }));
+          }
+      }
+      // --- NOTIFICATION LOGIC END ---
   };
   
   const handleMarkAllNotificationsAsRead = () => {
@@ -923,6 +957,7 @@ const App: React.FC = () => {
                     chatMessages={chatMessages}
                     platformSettings={platformSettings}
                     adminActionLogs={adminActionLogs}
+                    notifications={notifications.filter(n => n.userId === loggedUser.id)}
                     onLogout={handleLogout}
                     onUpdateTransaction={handleUpdateTransactionStatus}
                     onUpdateUserStatus={handleUpdateUserStatus}
@@ -931,6 +966,7 @@ const App: React.FC = () => {
                     onUpdateSettings={handleUpdateSettings}
                     onAdminUpdateUserBalance={handleAdminUpdateUserBalance}
                     onUpdateUser={handleUpdateUser}
+                    onMarkAllNotificationsAsRead={handleMarkAllNotificationsAsRead}
                     isDarkMode={isDarkMode}
                     toggleTheme={toggleTheme}
                     language={language}

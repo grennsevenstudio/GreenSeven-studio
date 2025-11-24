@@ -1,7 +1,7 @@
 
 
 import React, { useState } from 'react';
-import type { User, Transaction, ChatMessage, PlatformSettings, AdminActionLog, Language } from '../../../../types';
+import type { User, Transaction, ChatMessage, PlatformSettings, AdminActionLog, Language, Notification } from '../../../../types';
 import { TransactionStatus, UserStatus } from '../../../../types';
 import Sidebar from '../../../layout/Sidebar';
 import Header from '../../../layout/Header';
@@ -24,6 +24,7 @@ interface AdminDashboardProps {
   chatMessages: ChatMessage[];
   platformSettings: PlatformSettings;
   adminActionLogs: AdminActionLog[];
+  notifications: Notification[];
   onLogout: () => void;
   onUpdateTransaction: (transactionId: string, newStatus: TransactionStatus) => void;
   onUpdateUserStatus: (userId: string, newStatus: UserStatus, reason?: string) => void;
@@ -32,6 +33,7 @@ interface AdminDashboardProps {
   onUpdateSettings: (newSettings: PlatformSettings) => void;
   onAdminUpdateUserBalance: (userId: string, newBalance: number) => void;
   onUpdateUser: (updatedUser: User) => void;
+  onMarkAllNotificationsAsRead: () => void;
   isDarkMode: boolean;
   toggleTheme: () => void;
   language: Language;
@@ -42,7 +44,7 @@ interface AdminDashboardProps {
 }
 
 const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
-  const { user, allUsers, allTransactions, chatMessages, platformSettings, adminActionLogs, onLogout, onUpdateTransaction, onUpdateUserStatus, onPayoutBonus, onSendMessage, onUpdateSettings, onAdminUpdateUserBalance, onUpdateUser, isDarkMode, toggleTheme, language, setLanguage, onRefreshData, onBroadcastNotification, referralRates } = props;
+  const { user, allUsers, allTransactions, chatMessages, platformSettings, adminActionLogs, notifications, onLogout, onUpdateTransaction, onUpdateUserStatus, onPayoutBonus, onSendMessage, onUpdateSettings, onAdminUpdateUserBalance, onUpdateUser, onMarkAllNotificationsAsRead, isDarkMode, toggleTheme, language, setLanguage, onRefreshData, onBroadcastNotification, referralRates } = props;
   const [activeView, setActiveView] = useState('dashboard');
   const [isSidebarOpen, setSidebarOpen] = useState(false);
 
@@ -95,6 +97,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
             user={user} 
             onLogout={onLogout} 
             toggleSidebar={() => setSidebarOpen(!isSidebarOpen)} 
+            notifications={notifications}
+            onMarkAllAsRead={onMarkAllNotificationsAsRead}
             isDarkMode={isDarkMode}
             toggleTheme={toggleTheme}
             language={language}
