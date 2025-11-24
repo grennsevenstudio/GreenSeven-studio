@@ -1,3 +1,5 @@
+
+
 import React, { useState, useEffect, useRef } from 'react';
 import type { User, Transaction, Notification, ChatMessage, PlatformSettings, AdminActionLog, Language } from './types';
 import { View, TransactionStatus, TransactionType, AdminActionType, UserStatus, InvestorRank } from './types';
@@ -294,6 +296,59 @@ const App: React.FC = () => {
     };
   }, []);
   
+  // --- YIELD ACCUMULATION LOGIC ---
+  // Checks if enough time has passed to accumulate daily profit into withdrawable balance
+  useEffect(() => {
+    if (!loggedUser) return;
+    
+    const processProfitAccumulation = () => {
+        // Determine last update time safely
+        const lastUpdateStr = loggedUser.lastProfitUpdate || loggedUser.joinedDate;
+        if (!lastUpdateStr) return; // Sanity check
+
+        const lastUpdate = new Date(lastUpdateStr);
+        const now = new Date();
+        
+        if (isNaN(lastUpdate.getTime())) return; // Guard against invalid dates
+
+        const diffMs = now.getTime() - lastUpdate.getTime();
+        const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+        // If at least 1 day passed and user is approved
+        if (diffDays >= 1 && loggedUser.status === UserStatus.Approved) {
+            const dailyProfit = (loggedUser.monthlyProfitUSD || 0) / 30;
+            
+            // Clamp diffDays to reasonable amount (e.g., max 30 days catch-up) to prevent massive jumps if user returns after a year
+            const validDays = Math.min(diffDays, 60); 
+            const profitToAdd = dailyProfit * validDays;
+            
+            const newAvailable = (loggedUser.dailyWithdrawableUSD || 0) + profitToAdd;
+            
+            // Advance time by exactly 'validDays' to keep cycle clean, or reset to now if gap was huge
+            const daysMs = validDays * 24 * 60 * 60 * 1000;
+            const newLastUpdate = new Date(lastUpdate.getTime() + daysMs).toISOString();
+
+            const updatedUser = {
+                ...loggedUser,
+                dailyWithdrawableUSD: newAvailable,
+                // Assuming yield also increases Total Balance if it's reinvested/compounded, 
+                // but usually "Available" is a subset of "Total" or a separate bucket. 
+                // Here we assume Total Balance represents (Capital + Accumulated Profit).
+                balanceUSD: loggedUser.balanceUSD + profitToAdd,
+                lastProfitUpdate: newLastUpdate
+            };
+            
+            console.log(`Accumulating Profit for ${loggedUser.name}: ${validDays} days * ${dailyProfit} = ${profitToAdd}`);
+            handleUpdateUser(updatedUser);
+        }
+    };
+    
+    processProfitAccumulation();
+    // Check periodically while app is open (every minute)
+    const interval = setInterval(processProfitAccumulation, 60000); 
+    return () => clearInterval(interval);
+  }, [loggedUser]); 
+
   const refreshData = async () => {
       const success = await loadRemoteData();
       if (success) {
@@ -469,9 +524,9 @@ const App: React.FC = () => {
       }
 
       if (tx.userId === loggedUser?.id && loggedUser) {
-          const dailyLimit = (loggedUser.monthlyProfitUSD / 30);
+          const dailyLimit = loggedUser.dailyWithdrawableUSD || 0;
           if (withdrawalAmount > dailyLimit + 0.01) { // Adding small buffer for floating point
-            alert(`Erro: Valor superior ao limite diário de saque (${formatCurrency(dailyLimit, 'USD')}).`);
+            alert(`Erro: Valor superior ao saldo disponível para saque (${formatCurrency(dailyLimit, 'USD')}).`);
             return;
           }
       }
@@ -581,18 +636,25 @@ const App: React.FC = () => {
             if (newStatus === TransactionStatus.Completed) {
                 let newBalance = u.balanceUSD;
                 let newInvested = u.capitalInvestedUSD;
+                let newDailyWithdrawable = u.dailyWithdrawableUSD || 0;
 
                 if (tx.type === TransactionType.Deposit) {
                     newBalance += tx.amountUSD;
                     newInvested += tx.amountUSD;
                 } else if (tx.type === TransactionType.Withdrawal) {
-                     newBalance += tx.amountUSD; 
+                     // Deduction logic
+                     newBalance += tx.amountUSD; // amountUSD is negative for withdrawals
+                     
+                     // Also deduct from daily withdrawable bucket
+                     newDailyWithdrawable += tx.amountUSD; 
+                     if (newDailyWithdrawable < 0) newDailyWithdrawable = 0;
                 }
                 
                 const updated = { 
                     ...u, 
                     balanceUSD: newBalance, 
                     capitalInvestedUSD: newInvested,
+                    dailyWithdrawableUSD: newDailyWithdrawable,
                     rank: calculateRank(newBalance),
                     monthlyProfitUSD: calculateProfit(newBalance, u.plan)
                 };

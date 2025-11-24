@@ -1,4 +1,5 @@
 
+
 import { faker } from '@faker-js/faker';
 import {
   type User,
@@ -88,6 +89,7 @@ export const initializeDB = () => {
     capitalInvestedUSD: 20000,
     monthlyProfitUSD: 1200,
     dailyWithdrawableUSD: 1240.50,
+    lastProfitUpdate: new Date().toISOString(), // Initial profit update time
     isAdmin: true,
     joinedDate: '2023-01-01',
     referralCode: 'ADMINPRO',

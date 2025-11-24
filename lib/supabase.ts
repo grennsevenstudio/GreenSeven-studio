@@ -1,5 +1,3 @@
-
-
 import { createClient } from '@supabase/supabase-js';
 import type { User, Transaction, ChatMessage, PlatformSettings, AdminActionLog, Notification } from '../types';
 
@@ -96,6 +94,26 @@ export const fetchUsersFromSupabase = async () => {
 
         const mappedUsers: User[] = data.map((u: any) => {
             const extra = u.additional_data || {};
+            
+            // Ensure address has all required fields by merging with default
+            const address = {
+                cep: '', 
+                street: '', 
+                number: '', 
+                neighborhood: '', 
+                city: '', 
+                state: '', 
+                ...(extra.address || {})
+            };
+
+            // Ensure documents has all required fields
+            const documents = {
+                idFrontUrl: '', 
+                idBackUrl: '', 
+                selfieUrl: '', 
+                ...(extra.documents || {})
+            };
+
             return {
                 id: u.id,
                 name: u.full_name || u.email?.split('@')[0] || 'Sem Nome',
@@ -103,8 +121,8 @@ export const fetchUsersFromSupabase = async () => {
                 password: u.password, 
                 cpf: extra.cpf || '',
                 phone: extra.phone || '',
-                address: extra.address || { cep: '', street: '', number: '', neighborhood: '', city: '', state: '' },
-                documents: extra.documents || { idFrontUrl: '', idBackUrl: '', selfieUrl: '' },
+                address: address,
+                documents: documents,
                 status: u.status || 'Pending',
                 rejectionReason: u.rejection_reason,
                 avatarUrl: u.avatar_url || 'https://via.placeholder.com/150',
@@ -115,9 +133,10 @@ export const fetchUsersFromSupabase = async () => {
                 capitalInvestedUSD: Number(u.capital_invested_usd || 0),
                 monthlyProfitUSD: Number(u.monthly_profit_usd || 0),
                 dailyWithdrawableUSD: Number(u.daily_withdrawable_usd || 0),
+                lastProfitUpdate: extra.lastProfitUpdate || u.created_at || new Date().toISOString(),
                 isAdmin: u.is_admin || false,
                 joinedDate: u.created_at ? new Date(u.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-                // Map explicit columns back to object properties
+                // Map explicit columns back to object properties with explicit checks
                 referralCode: u.referral_code || extra.referralCode || '',
                 referredById: u.referred_by_id || extra.referredById,
                 transactionPin: u.transaction_pin || extra.transactionPin,
@@ -282,6 +301,7 @@ export const syncUserToSupabase = async (user: User, password?: string): Promise
                 phone: user.phone,
                 address: user.address,
                 documents: user.documents,
+                lastProfitUpdate: user.lastProfitUpdate,
             }
         };
 
@@ -412,7 +432,7 @@ export const syncNotificationsToSupabase = async (notifs: Notification[]) => {
             user_id: n.userId,
             message: n.message,
             date: n.date,
-            is_read: n.isRead
+            is_read: n.is_read
         }));
         
         const { error } = await supabase.from('notifications').upsert(dbNotifs, { onConflict: 'id' });

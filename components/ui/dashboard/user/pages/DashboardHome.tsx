@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import type { User, Transaction, WithdrawalDetails, Stock, Language } from '../../../../../types';
 import { TransactionType, TransactionStatus } from '../../../../../types';
@@ -22,7 +23,7 @@ interface DashboardHomeProps {
 
 // --- COMPONENTS ---
 
-const BalanceEvolutionChart: React.FC<{ user: User; transactions: Transaction[] }> = ({ user, transactions }) => {
+const BalanceEvolutionChart: React.FC<{ user: User; transactions: Transaction[] }> = ({ user, transactions = [] }) => {
     const [hoveredPoint, setHoveredPoint] = useState<{ x: number; y: number; value: number; date: string } | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const [width, setWidth] = useState(0);
@@ -31,7 +32,7 @@ const BalanceEvolutionChart: React.FC<{ user: User; transactions: Transaction[] 
     const data = useMemo(() => {
         const days = 7;
         const history = [];
-        let currentBal = user.balanceUSD;
+        let currentBal = user.balanceUSD || 0;
         const now = new Date();
 
         // Helper to normalize date string to YYYY-MM-DD for comparison
@@ -57,7 +58,7 @@ const BalanceEvolutionChart: React.FC<{ user: User; transactions: Transaction[] 
                 t => t.date === dateStr && t.status === TransactionStatus.Completed
             );
             
-            const netChange = daysTransactions.reduce((acc, tx) => acc + tx.amountUSD, 0);
+            const netChange = daysTransactions.reduce((acc, tx) => acc + (tx.amountUSD || 0), 0);
             currentBal -= netChange;
         }
         return history.reverse();
@@ -80,24 +81,29 @@ const BalanceEvolutionChart: React.FC<{ user: User; transactions: Transaction[] 
     const padding = { top: 20, bottom: 30, left: 0, right: 0 };
     const chartHeight = height - padding.top - padding.bottom;
     
-    const minVal = Math.min(...data.map(d => d.value)) * 0.95; // 5% buffer bottom
-    const maxVal = Math.max(...data.map(d => d.value)) * 1.05; // 5% buffer top
-    const valRange = maxVal - minVal || 1; // Prevent division by zero
+    const values = data.map(d => d.value);
+    const minVal = values.length ? Math.min(...values) * 0.95 : 0;
+    const maxVal = values.length ? Math.max(...values) * 1.05 : 100;
+    const valRange = (maxVal - minVal) || 1; // Prevent division by zero if maxVal == minVal
 
-    const getX = (index: number) => (index / (data.length - 1)) * width;
-    const getY = (value: number) => height - padding.bottom - ((value - minVal) / valRange) * chartHeight;
+    const xStep = data.length > 1 ? width / (data.length - 1) : 0;
+    const getX = (index: number) => index * xStep;
+    const getY = (value: number) => {
+        if (isNaN(value)) return height - padding.bottom;
+        return height - padding.bottom - ((value - minVal) / valRange) * chartHeight;
+    };
 
     // 4. SVG Paths
     const points = data.map((d, i) => `${getX(i)},${getY(d.value)}`).join(' ');
     const areaPath = `${points} ${width},${height - padding.bottom} 0,${height - padding.bottom}`;
 
     const handleMouseMove = (e: React.MouseEvent) => {
-        if (!containerRef.current) return;
+        if (!containerRef.current || width === 0) return;
         const rect = containerRef.current.getBoundingClientRect();
         const x = e.clientX - rect.left;
         
         // Find closest data point
-        const index = Math.round((x / width) * (data.length - 1));
+        const index = Math.round(x / xStep);
         if (index >= 0 && index < data.length) {
             const pointX = getX(index);
             const pointY = getY(data[index].value);
@@ -114,9 +120,11 @@ const BalanceEvolutionChart: React.FC<{ user: User; transactions: Transaction[] 
         <Card className="w-full overflow-hidden relative select-none group">
             <div className="flex justify-between items-center mb-4">
                 <h2 className="text-lg font-bold text-white">Evolução Patrimonial (7 Dias)</h2>
-                <span className="text-xs font-medium text-brand-green bg-brand-green/10 px-2 py-1 rounded">
-                    +{((data[data.length-1].value - data[0].value) / (data[0].value || 1) * 100).toFixed(2)}%
-                </span>
+                {data.length > 0 && (
+                    <span className="text-xs font-medium text-brand-green bg-brand-green/10 px-2 py-1 rounded">
+                        +{((data[data.length-1].value - data[0].value) / (data[0].value || 1) * 100).toFixed(2)}%
+                    </span>
+                )}
             </div>
             
             <div 
@@ -125,7 +133,7 @@ const BalanceEvolutionChart: React.FC<{ user: User; transactions: Transaction[] 
                 onMouseMove={handleMouseMove}
                 onMouseLeave={() => setHoveredPoint(null)}
             >
-                {width > 0 && (
+                {width > 0 && data.length > 0 && (
                     <svg width={width} height={height} className="overflow-visible">
                         <defs>
                             <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
@@ -444,7 +452,9 @@ const WithdrawModalContent: React.FC<{
     const fee = (parseFloat(amountUSD) || 0) * (WITHDRAWAL_FEE_PERCENT / 100);
     const amountToReceiveUSD = (parseFloat(amountUSD) || 0) - fee;
     const amountToReceiveBRL = amountToReceiveUSD * DOLLAR_RATE;
-    const dailyLimit = user.monthlyProfitUSD / 30;
+    
+    // Use Accumulated Daily Balance
+    const availableBalance = user.dailyWithdrawableUSD || 0;
 
     const handleAmountSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -453,8 +463,8 @@ const WithdrawModalContent: React.FC<{
             alert("Por favor, insira um valor de saque válido.");
             return;
         }
-        if (amount > dailyLimit) {
-            alert(`Saldo insuficiente para realizar este saque. Você pode sacar até ${formatCurrency(dailyLimit, 'USD')} por dia, referente aos seus lucros.`);
+        if (amount > availableBalance) {
+            alert(`Saldo insuficiente para realizar este saque. Seu saldo disponível atual é ${formatCurrency(availableBalance, 'USD')}.`);
             return;
         }
         setStep(2);
@@ -581,15 +591,15 @@ const WithdrawModalContent: React.FC<{
         <form onSubmit={handleAmountSubmit} className="space-y-4">
              <div className="bg-brand-black border border-gray-700 rounded-lg p-4 flex justify-between items-center shadow-inner">
                 <div>
-                    <p className="text-sm text-gray-400">Saldo Disponível Hoje</p>
-                    <p className="text-xs text-gray-500">Baseado no seu plano</p>
+                    <p className="text-sm text-gray-400">Saldo Disponível</p>
+                    <p className="text-xs text-gray-500">Rendimentos acumulados</p>
                 </div>
                 <p className="text-2xl font-bold text-brand-green">
-                    {formatCurrency(dailyLimit, 'USD')}
+                    {formatCurrency(availableBalance, 'USD')}
                 </p>
             </div>
             
-            <p className="text-sm text-yellow-400 bg-yellow-500/10 p-3 rounded-lg">Seu limite diário de saque é renovado a cada 24h baseado na rentabilidade do seu plano.</p>
+            <p className="text-sm text-yellow-400 bg-yellow-500/10 p-3 rounded-lg">Seus rendimentos diários são somados automaticamente a este saldo disponível.</p>
             
             <Input 
                 label="Valor do Saque (USD)"
@@ -600,7 +610,7 @@ const WithdrawModalContent: React.FC<{
                 onChange={(e) => setAmountUSD(e.target.value)}
                 required
                 step="0.01"
-                max={dailyLimit}
+                max={availableBalance}
             />
             <div className="p-4 bg-brand-black rounded-lg space-y-2 text-sm">
                 <div className="flex justify-between items-center text-gray-400">
@@ -669,7 +679,7 @@ const AnimatedBalance: React.FC<{ value: string; isShown: boolean }> = ({ value,
     );
 };
 
-const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions, onAddTransaction, setActiveView, language }) => {
+const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions = [], onAddTransaction, setActiveView, language }) => {
     const [isDepositModalOpen, setDepositModalOpen] = useState(false);
     const [isWithdrawModalOpen, setWithdrawModalOpen] = useState(false);
     const [showBalance, setShowBalance] = useState(false);
@@ -678,15 +688,16 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions, onAdd
     // GPU OPTIMIZATION: Use Ref for direct DOM manipulation instead of State
     const earningsRef = useRef<HTMLSpanElement>(null);
     const requestRef = useRef<number>();
-    const profitRef = useRef(0);
 
     const t = TRANSLATIONS[language];
-    const balanceBRL = user.balanceUSD * DOLLAR_RATE;
+    const balanceBRL = (user.balanceUSD || 0) * DOLLAR_RATE;
     const maskedValue = '••••••••';
-    const dailyAvailable = user.monthlyProfitUSD / 30;
+    
+    // Use accumulated value from User object
+    const dailyAvailable = user.dailyWithdrawableUSD || 0;
 
     useEffect(() => {
-        const totalDailyProfit = user.monthlyProfitUSD / 30;
+        const totalDailyProfit = (user.monthlyProfitUSD || 0) / 30;
         const msInDay = 24 * 60 * 60 * 1000;
         const profitPerMs = totalDailyProfit / msInDay;
         
@@ -820,7 +831,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions, onAdd
                     title={`${t.total_balance} (USD)`} 
                     value={
                         <AnimatedBalance 
-                            value={showBalance ? formatCurrency(user.balanceUSD, 'USD') : `$ ${maskedValue}`}
+                            value={showBalance ? formatCurrency(user.balanceUSD || 0, 'USD') : `$ ${maskedValue}`}
                             isShown={showBalance}
                         />
                     }
@@ -846,7 +857,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions, onAdd
                 />
                  <StatCard 
                     title={t.projected_profit} 
-                    value={formatCurrency(user.monthlyProfitUSD, 'USD')}
+                    value={formatCurrency(user.monthlyProfitUSD || 0, 'USD')}
                     subValue={t.projection_30_days}
                     icon={ICONS.plans}
                 />
@@ -884,7 +895,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions, onAdd
                 </div>
             </Card>
 
-            {/* Balance Evolution Chart (Newly Added) */}
+            {/* Balance Evolution Chart */}
             <BalanceEvolutionChart user={user} transactions={transactions} />
 
             <Card>

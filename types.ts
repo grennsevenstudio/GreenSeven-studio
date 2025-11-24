@@ -58,6 +58,7 @@ export interface User {
   capitalInvestedUSD: number;
   monthlyProfitUSD: number;
   dailyWithdrawableUSD: number;
+  lastProfitUpdate?: string; // Date string tracking last daily yield accumulation
   isAdmin: boolean;
   joinedDate: string;
   referralCode: string;
