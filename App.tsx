@@ -451,6 +451,14 @@ const App: React.FC = () => {
   const handleUpdateTransactionStatus = (transactionId: string, newStatus: TransactionStatus) => {
     const tx = dbState.transactions.find(t => t.id === transactionId);
     if (!tx) return;
+    
+    // SAFETY CHECK: Prevent double processing
+    if (tx.status === newStatus) return;
+    if (tx.status === TransactionStatus.Completed) {
+        alert("Esta transação já foi finalizada e o saldo processado.");
+        return;
+    }
+
     const user = dbState.users.find(u => u.id === tx.userId);
     if (!user || !loggedUser?.isAdmin) return;
 
@@ -500,9 +508,6 @@ const App: React.FC = () => {
             bonusTransactions.push(bonusTx);
             syncTransactionToSupabase(bonusTx);
             
-            // Notify Referrer
-            // We need to add these bonus notifications to the state update
-
             const newBalance = referrer.balanceUSD + bonusAmount;
             const updatedReferrer = { 
                 ...referrer, 
@@ -544,10 +549,6 @@ const App: React.FC = () => {
                     rank: calculateRank(newBalance),
                     monthlyProfitUSD: calculateProfit(newBalance, u.plan)
                 };
-                syncUserToSupabase(updated);
-                return updated;
-            } else if (newStatus === TransactionStatus.Failed && tx.type === TransactionType.Withdrawal) {
-                const updated = { ...u };
                 syncUserToSupabase(updated);
                 return updated;
             }

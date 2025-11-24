@@ -1,6 +1,4 @@
 
-
-
 import React, { useState, useEffect } from 'react';
 import type { PlatformSettings, User, Transaction } from '../../../../../types';
 import Card from '../../../../ui/Card';
@@ -65,7 +63,7 @@ const Settings: React.FC<SettingsProps> = ({ platformSettings, onUpdateSettings,
         setTimeout(() => setToast(null), 3000);
     };
 
-    // SQL Code Definition - ATUALIZADO
+    // SQL Code Definition
     const sqlCode = `-- SCRIPT SQL ATUALIZADO (GreennSeven Invest)
 -- Copie e execute este script no Editor SQL do Supabase.
 
@@ -255,7 +253,7 @@ INSERT INTO public.users (
     
     const getApiKey = () => {
         try {
-            if (typeof process !== 'undefined' && process.env?.API_KEY) {
+            if (typeof process !== 'undefined' && process.env && process.env.API_KEY) {
                 return process.env.API_KEY;
             }
         } catch (e) {
