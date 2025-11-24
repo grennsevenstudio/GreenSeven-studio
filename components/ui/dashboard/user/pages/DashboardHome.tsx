@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import type { User, Transaction, WithdrawalDetails, Stock, Language } from '../../../../../types';
 import { TransactionType, TransactionStatus } from '../../../../../types';
 import Card from '../../../../ui/Card';
@@ -19,6 +19,218 @@ interface DashboardHomeProps {
     setActiveView: (view: string) => void;
     language: Language;
 }
+
+// --- COMPONENTS ---
+
+const BalanceEvolutionChart: React.FC<{ user: User; transactions: Transaction[] }> = ({ user, transactions }) => {
+    const [hoveredPoint, setHoveredPoint] = useState<{ x: number; y: number; value: number; date: string } | null>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
+    const [width, setWidth] = useState(0);
+    
+    // 1. Prepare Data (Last 7 Days)
+    const data = useMemo(() => {
+        const days = 7;
+        const history = [];
+        let currentBal = user.balanceUSD;
+        const now = new Date();
+
+        // Helper to normalize date string to YYYY-MM-DD for comparison
+        const toDateStr = (d: Date) => d.toISOString().split('T')[0];
+
+        for (let i = 0; i < days; i++) {
+            const date = new Date(now);
+            date.setDate(date.getDate() - i);
+            const dateStr = toDateStr(date);
+
+            history.push({
+                date: date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
+                fullDate: dateStr,
+                value: Math.max(0, currentBal) // Ensure no negative visual balance
+            });
+
+            // Calculate previous day's end balance by reversing today's transactions
+            // Formula: PrevBalance = CurrentBalance - (Incoming) + (Outgoing)
+            // Note: In our DB, Withdrawals are negative amountUSD, Deposits/Bonus are positive.
+            // So simply: PrevBalance = CurrentBalance - (Sum of Amounts on that day)
+            
+            const daysTransactions = transactions.filter(
+                t => t.date === dateStr && t.status === TransactionStatus.Completed
+            );
+            
+            const netChange = daysTransactions.reduce((acc, tx) => acc + tx.amountUSD, 0);
+            currentBal -= netChange;
+        }
+        return history.reverse();
+    }, [user.balanceUSD, transactions]);
+
+    // 2. Handle Resize
+    useEffect(() => {
+        if (containerRef.current) {
+            setWidth(containerRef.current.offsetWidth);
+        }
+        const handleResize = () => {
+            if (containerRef.current) setWidth(containerRef.current.offsetWidth);
+        };
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
+    // 3. Chart Dimensions & Scaling
+    const height = 220;
+    const padding = { top: 20, bottom: 30, left: 0, right: 0 };
+    const chartHeight = height - padding.top - padding.bottom;
+    
+    const minVal = Math.min(...data.map(d => d.value)) * 0.95; // 5% buffer bottom
+    const maxVal = Math.max(...data.map(d => d.value)) * 1.05; // 5% buffer top
+    const valRange = maxVal - minVal || 1; // Prevent division by zero
+
+    const getX = (index: number) => (index / (data.length - 1)) * width;
+    const getY = (value: number) => height - padding.bottom - ((value - minVal) / valRange) * chartHeight;
+
+    // 4. SVG Paths
+    const points = data.map((d, i) => `${getX(i)},${getY(d.value)}`).join(' ');
+    const areaPath = `${points} ${width},${height - padding.bottom} 0,${height - padding.bottom}`;
+
+    const handleMouseMove = (e: React.MouseEvent) => {
+        if (!containerRef.current) return;
+        const rect = containerRef.current.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        
+        // Find closest data point
+        const index = Math.round((x / width) * (data.length - 1));
+        if (index >= 0 && index < data.length) {
+            const pointX = getX(index);
+            const pointY = getY(data[index].value);
+            setHoveredPoint({
+                x: pointX,
+                y: pointY,
+                value: data[index].value,
+                date: data[index].date
+            });
+        }
+    };
+
+    return (
+        <Card className="w-full overflow-hidden relative select-none group">
+            <div className="flex justify-between items-center mb-4">
+                <h2 className="text-lg font-bold text-white">Evolução Patrimonial (7 Dias)</h2>
+                <span className="text-xs font-medium text-brand-green bg-brand-green/10 px-2 py-1 rounded">
+                    +{((data[data.length-1].value - data[0].value) / (data[0].value || 1) * 100).toFixed(2)}%
+                </span>
+            </div>
+            
+            <div 
+                ref={containerRef} 
+                className="h-[220px] w-full cursor-crosshair relative"
+                onMouseMove={handleMouseMove}
+                onMouseLeave={() => setHoveredPoint(null)}
+            >
+                {width > 0 && (
+                    <svg width={width} height={height} className="overflow-visible">
+                        <defs>
+                            <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stopColor="#00FF9C" stopOpacity="0.3" />
+                                <stop offset="100%" stopColor="#00FF9C" stopOpacity="0" />
+                            </linearGradient>
+                            <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+                                <feGaussianBlur stdDeviation="3" result="coloredBlur" />
+                                <feMerge>
+                                    <feMergeNode in="coloredBlur" />
+                                    <feMergeNode in="SourceGraphic" />
+                                </feMerge>
+                            </filter>
+                        </defs>
+
+                        {/* Grid Lines */}
+                        {[0, 0.25, 0.5, 0.75, 1].map(t => {
+                            const y = height - padding.bottom - (t * chartHeight);
+                            return (
+                                <line 
+                                    key={t} 
+                                    x1="0" 
+                                    y1={y} 
+                                    x2={width} 
+                                    y2={y} 
+                                    stroke="#333" 
+                                    strokeDasharray="4 4" 
+                                    strokeWidth="1" 
+                                />
+                            );
+                        })}
+
+                        {/* Area Fill */}
+                        <polygon points={areaPath} fill="url(#chartGradient)" />
+
+                        {/* Line Stroke */}
+                        <polyline 
+                            points={points} 
+                            fill="none" 
+                            stroke="#00FF9C" 
+                            strokeWidth="3" 
+                            strokeLinecap="round" 
+                            strokeLinejoin="round"
+                            filter="url(#glow)"
+                        />
+
+                        {/* X-Axis Labels */}
+                        {data.map((d, i) => (
+                            <text 
+                                key={i} 
+                                x={getX(i)} 
+                                y={height - 5} 
+                                textAnchor="middle" 
+                                fill="#666" 
+                                fontSize="10"
+                                className="font-medium"
+                            >
+                                {d.date}
+                            </text>
+                        ))}
+
+                        {/* Hover Interaction */}
+                        {hoveredPoint && (
+                            <g>
+                                <line 
+                                    x1={hoveredPoint.x} 
+                                    y1={padding.top} 
+                                    x2={hoveredPoint.x} 
+                                    y2={height - padding.bottom} 
+                                    stroke="#00FF9C" 
+                                    strokeWidth="1" 
+                                    strokeDasharray="4 4"
+                                    opacity="0.5"
+                                />
+                                <circle 
+                                    cx={hoveredPoint.x} 
+                                    cy={hoveredPoint.y} 
+                                    r="6" 
+                                    fill="#00FF9C" 
+                                    stroke="black" 
+                                    strokeWidth="2" 
+                                />
+                            </g>
+                        )}
+                    </svg>
+                )}
+
+                {/* Tooltip Overlay */}
+                {hoveredPoint && (
+                    <div 
+                        className="absolute bg-gray-900/90 border border-brand-green/30 backdrop-blur-md p-2 rounded-lg shadow-xl pointer-events-none z-10 transform -translate-x-1/2 -translate-y-full"
+                        style={{ 
+                            left: hoveredPoint.x, 
+                            top: hoveredPoint.y - 15,
+                            minWidth: '120px'
+                        }}
+                    >
+                        <p className="text-xs text-gray-400 text-center mb-1">{hoveredPoint.date}</p>
+                        <p className="text-sm font-bold text-white text-center">{formatCurrency(hoveredPoint.value, 'USD')}</p>
+                    </div>
+                )}
+            </div>
+        </Card>
+    );
+};
 
 const StatCard: React.FC<{ title: string; value: React.ReactNode; icon: React.ReactNode; subValue?: React.ReactNode; highlight?: boolean }> = ({ title, value, icon, subValue, highlight = false }) => {
     const borderGradient = highlight 
@@ -671,6 +883,9 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions, onAdd
                     </div>
                 </div>
             </Card>
+
+            {/* Balance Evolution Chart (Newly Added) */}
+            <BalanceEvolutionChart user={user} transactions={transactions} />
 
             <Card>
                 <h2 className="text-lg md:text-xl font-bold mb-4">{t.market_title}</h2>
