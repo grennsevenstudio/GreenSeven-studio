@@ -10,7 +10,7 @@ import { ICONS, DOLLAR_RATE, MOCK_STOCKS } from '../../../../../constants';
 import { TRANSLATIONS } from '../../../../../lib/translations';
 import { formatCurrency } from '../../../../../lib/utils';
 
-const WITHDRAWAL_FEE_PERCENT = 5;
+const WITHDRAWAL_FEE_PERCENT = 0;
 
 interface DashboardHomeProps {
     user: User;

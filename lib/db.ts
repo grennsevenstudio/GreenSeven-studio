@@ -96,7 +96,7 @@ export const initializeDB = () => {
 
   const MOCK_PLATFORM_SETTINGS: PlatformSettings = {
     dollarRate: DOLLAR_RATE,
-    withdrawalFeePercent: 5,
+    withdrawalFeePercent: 0, // Zero fee by default
     signupBonusUSD: 10,
     pixKey: 'seu-cnpj-ou-chave-aleatoria',
     isMaintenanceMode: false,
