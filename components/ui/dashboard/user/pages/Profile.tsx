@@ -207,7 +207,8 @@ const Profile: React.FC<ProfileProps> = ({ user, allTransactions, setActiveView,
         [InvestorRank.Diamond]: { next: null, threshold: Infinity, progress: 100 },
     };
     
-    const currentRankDetail = rankDetails[user.rank];
+    // Safe access to rank details, defaulting to Bronze if rank is invalid/unknown
+    const currentRankDetail = rankDetails[user.rank] || rankDetails[InvestorRank.Bronze];
 
     const totalBonusEarned = useMemo(() => {
         return allTransactions

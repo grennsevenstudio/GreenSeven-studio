@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect, useRef } from 'react';
 import type { User, Transaction, Notification, ChatMessage, PlatformSettings, AdminActionLog, Language } from './types';
 import { View, TransactionStatus, TransactionType, AdminActionType, UserStatus, InvestorRank } from './types';
@@ -309,7 +307,11 @@ const App: React.FC = () => {
         const lastUpdate = new Date(lastUpdateStr);
         const now = new Date();
         
-        if (isNaN(lastUpdate.getTime())) return; // Guard against invalid dates
+        // CRITICAL SAFETY CHECK: Guard against invalid dates (NaN) which cause infinite loops
+        if (isNaN(lastUpdate.getTime())) {
+            console.warn(`Invalid date detected for user ${loggedUser.id}. Yield accumulation skipped.`);
+            return; 
+        }
 
         const diffMs = now.getTime() - lastUpdate.getTime();
         const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));

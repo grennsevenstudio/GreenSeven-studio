@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import type { PlatformSettings, User, Transaction } from '../../../../../types';
 import Card from '../../../../ui/Card';
@@ -63,36 +64,40 @@ const Settings: React.FC<SettingsProps> = ({ platformSettings, onUpdateSettings,
     };
 
     // SQL Code Definition
-    const sqlCode = `-- SCRIPT SQL ATUALIZADO (GreennSeven Invest)
--- Copie e execute este script no Editor SQL do Supabase.
+    const sqlCode = `-- SCRIPT SQL COMPLETO - GreennSeven Invest
+-- ⚠️ IMPORTANTE: Execute este script no 'SQL Editor' do Supabase para corrigir o erro "column does not exist".
+-- Ele criará as tabelas e adicionará as colunas faltantes sem apagar seus dados existentes.
 
 -- 1. HABILITAR UUID
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- 2. TABELA DE USUÁRIOS
+-- 2. TABELA DE USUÁRIOS (Estrutura Base)
 CREATE TABLE IF NOT EXISTS public.users (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   email TEXT UNIQUE NOT NULL,
-  password TEXT,
-  full_name TEXT,
-  avatar_url TEXT,
-  plan TEXT,
-  rank TEXT,
-  status TEXT,
-  rejection_reason TEXT,
-  is_admin BOOLEAN DEFAULT false,
-  balance_usd NUMERIC DEFAULT 0,
-  capital_invested_usd NUMERIC DEFAULT 0,
-  monthly_profit_usd NUMERIC DEFAULT 0,
-  daily_withdrawable_usd NUMERIC DEFAULT 0,
-  last_plan_change_date TEXT,
-  referral_code TEXT,
-  referred_by_id UUID,
-  transaction_pin TEXT,
-  support_status TEXT DEFAULT 'open',
-  additional_data JSONB DEFAULT '{}'::jsonb,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
+
+-- ⚠️ MIGRATIONS (Correções de Esquema): 
+-- Estas linhas garantem que as colunas existam. Se já existirem, nada acontece.
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS password TEXT;
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS full_name TEXT;
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS avatar_url TEXT;
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS plan TEXT;
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS rank TEXT;
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS status TEXT;
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS rejection_reason TEXT;
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN DEFAULT false;
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS balance_usd NUMERIC DEFAULT 0;
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS capital_invested_usd NUMERIC DEFAULT 0;
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS monthly_profit_usd NUMERIC DEFAULT 0;
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS daily_withdrawable_usd NUMERIC DEFAULT 0;
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS last_plan_change_date TEXT;
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS referral_code TEXT; -- Correção para erro 42703
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS referred_by_id UUID;
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS transaction_pin TEXT;
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS support_status TEXT DEFAULT 'open';
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS additional_data JSONB DEFAULT '{}'::jsonb;
 
 -- 3. TABELA DE TRANSAÇÕES
 CREATE TABLE IF NOT EXISTS public.transactions (
@@ -110,11 +115,10 @@ CREATE TABLE IF NOT EXISTS public.transactions (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
 
--- Índices
 CREATE INDEX IF NOT EXISTS idx_transactions_user_id ON public.transactions(user_id);
 CREATE INDEX IF NOT EXISTS idx_transactions_status ON public.transactions(status);
 
--- 4. TABELA DE MENSAGENS
+-- 4. TABELA DE MENSAGENS (CHAT)
 CREATE TABLE IF NOT EXISTS public.messages (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   sender_id UUID REFERENCES public.users(id) ON DELETE SET NULL,
@@ -138,7 +142,7 @@ INSERT INTO public.career_plan_config (level, percentage) VALUES
 (3, 0.01)  -- 1%
 ON CONFLICT (level) DO UPDATE SET percentage = EXCLUDED.percentage;
 
--- 6. TABELA DE CONFIGURAÇÕES DA PLATAFORMA (NOVO)
+-- 6. TABELA DE CONFIGURAÇÕES DA PLATAFORMA
 CREATE TABLE IF NOT EXISTS public.platform_settings (
     id INTEGER PRIMARY KEY DEFAULT 1,
     dollar_rate NUMERIC,
@@ -151,7 +155,7 @@ CREATE TABLE IF NOT EXISTS public.platform_settings (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
 
--- 7. TABELA DE LOGS ADMINISTRATIVOS (NOVO)
+-- 7. TABELA DE LOGS ADMINISTRATIVOS
 CREATE TABLE IF NOT EXISTS public.admin_logs (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     timestamp TEXT,
@@ -163,7 +167,7 @@ CREATE TABLE IF NOT EXISTS public.admin_logs (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
 
--- 8. TABELA DE NOTIFICAÇÕES (NOVO)
+-- 8. TABELA DE NOTIFICAÇÕES
 CREATE TABLE IF NOT EXISTS public.notifications (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
@@ -173,7 +177,7 @@ CREATE TABLE IF NOT EXISTS public.notifications (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
 
--- 9. POLÍTICAS DE SEGURANÇA (RLS) - PERMISSÃO TOTAL PARA APP
+-- 9. POLÍTICAS DE SEGURANÇA (RLS)
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
@@ -182,6 +186,7 @@ ALTER TABLE public.platform_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.admin_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
 
+-- Remove políticas antigas para evitar conflitos
 DROP POLICY IF EXISTS "Public Access Users" ON public.users;
 DROP POLICY IF EXISTS "Public Access Transactions" ON public.transactions;
 DROP POLICY IF EXISTS "Public Access Messages" ON public.messages;
@@ -190,7 +195,7 @@ DROP POLICY IF EXISTS "Public Access Settings" ON public.platform_settings;
 DROP POLICY IF EXISTS "Public Access Logs" ON public.admin_logs;
 DROP POLICY IF EXISTS "Public Access Notifications" ON public.notifications;
 
--- Cria políticas públicas
+-- Cria políticas públicas (Apenas para desenvolvimento/MVP)
 CREATE POLICY "Public Access Users" ON public.users FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Public Access Transactions" ON public.transactions FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Public Access Messages" ON public.messages FOR ALL USING (true) WITH CHECK (true);
@@ -207,7 +212,7 @@ GRANT ALL ON TABLE public.platform_settings TO anon, authenticated, service_role
 GRANT ALL ON TABLE public.admin_logs TO anon, authenticated, service_role;
 GRANT ALL ON TABLE public.notifications TO anon, authenticated, service_role;
 
--- 10. USUÁRIO ADMIN PADRÃO
+-- 10. USUÁRIO ADMIN PADRÃO (Opcional - Se não existir)
 INSERT INTO public.users (
     email, password, full_name, is_admin, status, rank, balance_usd, plan, referral_code, additional_data
 ) VALUES (
@@ -220,8 +225,10 @@ INSERT INTO public.users (
     1000000, 
     'Select', 
     'ADMINPRO',
-    '{"cpf": "000.000.000-00"}'::jsonb
-) ON CONFLICT (email) DO UPDATE SET is_admin = true;
+    '{"cpf": "000.000.000-00", "address": {"city": "Sede", "state": "SP"}}'::jsonb
+) ON CONFLICT (email) DO UPDATE SET 
+    is_admin = true,
+    referral_code = EXCLUDED.referral_code;
 `;
 
     useEffect(() => {
@@ -410,23 +417,29 @@ INSERT INTO public.users (
                         {supabaseStatus === 'error' && (
                             <div>
                                 <p className="text-red-500 text-sm font-bold">{supabaseMessage}</p>
-                                <p className="text-gray-400 text-xs mt-2">
-                                    1. Copie o script SQL abaixo.<br/>
-                                    2. Vá ao Painel do Supabase {'>'} SQL Editor.<br/>
-                                    3. Cole e execute o script para criar as tabelas necessárias.
-                                </p>
+                                <div className="mt-4 bg-red-500/10 border border-red-500/30 rounded p-3">
+                                    <p className="text-white text-xs font-bold mb-1">⚠️ AÇÃO NECESSÁRIA:</p>
+                                    <p className="text-gray-300 text-xs">
+                                        O erro "column does not exist" indica que seu banco de dados precisa ser atualizado.
+                                    </p>
+                                    <ol className="list-decimal pl-4 mt-2 text-gray-400 text-xs space-y-1">
+                                        <li>Copie o script SQL abaixo.</li>
+                                        <li>Vá ao Painel do Supabase {'>'} SQL Editor.</li>
+                                        <li>Cole e execute o script para adicionar as colunas faltantes.</li>
+                                    </ol>
+                                </div>
                             </div>
                         )}
                         
                         <div className="mt-4">
-                             <label className="text-xs text-gray-500 uppercase font-bold">Script SQL de Configuração:</label>
+                             <label className="text-xs text-gray-500 uppercase font-bold">Script SQL de Configuração e Correção:</label>
                              <textarea 
                                 readOnly 
                                 className="w-full h-48 bg-gray-900 text-gray-300 text-[10px] p-2 rounded border border-gray-700 font-mono mt-1 focus:outline-none focus:border-brand-green leading-relaxed"
                                 value={sqlCode}
                                 onClick={(e) => e.currentTarget.select()} 
                              />
-                             <p className="text-[10px] text-gray-500 mt-1">Este script cria as tabelas 'users', 'transactions', 'messages', 'career_plan_config', 'platform_settings' e 'admin_logs'.</p>
+                             <p className="text-[10px] text-gray-500 mt-1">Este script contém comandos `ALTER TABLE` que corrigem automaticamente seu banco de dados.</p>
                         </div>
 
                         <div className="mt-6 pt-4 border-t border-gray-700">

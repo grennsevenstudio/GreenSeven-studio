@@ -43,10 +43,13 @@ const BalanceEvolutionChart: React.FC<{ user: User; transactions: Transaction[] 
             date.setDate(date.getDate() - i);
             const dateStr = toDateStr(date);
 
+            // Safety check for NaN
+            const safeValue = isNaN(currentBal) ? 0 : Math.max(0, currentBal);
+
             history.push({
                 date: date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
                 fullDate: dateStr,
-                value: Math.max(0, currentBal) // Ensure no negative visual balance
+                value: safeValue
             });
 
             // Calculate previous day's end balance by reversing today's transactions

@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import type { User, Transaction, ChatMessage, PlatformSettings, AdminActionLog, Notification } from '../types';
+import { InvestorRank } from '../types';
 
 // ============================================================================
 // CONFIGURAÇÃO DO SUPABASE
@@ -36,6 +37,18 @@ const isNetworkError = (err: any) => {
         return true;
     }
     return false;
+};
+
+// Helper to normalize rank to Title Case to match Enum
+const normalizeRank = (rank: string): InvestorRank => {
+    if (!rank) return InvestorRank.Bronze;
+    // Convert "bronze" -> "Bronze", "GOLD" -> "Gold"
+    const titleCase = rank.charAt(0).toUpperCase() + rank.slice(1).toLowerCase();
+    
+    if (Object.values(InvestorRank).includes(titleCase as InvestorRank)) {
+        return titleCase as InvestorRank;
+    }
+    return InvestorRank.Bronze;
 };
 
 export const checkSupabaseConnection = async () => {
@@ -93,12 +106,15 @@ export const fetchUsersFromSupabase = async () => {
         if (!data) return { data: [], error: null };
 
         const mappedUsers: User[] = data.map((u: any) => {
+            // ROBUST MAPPING: Handles potential null/undefined values safely
             const extra = u.additional_data || {};
             
             // Ensure address has all required fields by merging with default
             const defaultAddress = { 
                 cep: '', street: '', number: '', neighborhood: '', city: '', state: '', complement: '' 
             };
+            // Safe merge: (extra.address could be null if JSON is malformed)
+            // Also handle case where u.address column might exist in future, currently preferring additional_data
             const address = { ...defaultAddress, ...(extra.address || {}) };
 
             // Ensure documents has all required fields
@@ -119,7 +135,7 @@ export const fetchUsersFromSupabase = async () => {
                 status: u.status || 'Pending',
                 rejectionReason: u.rejection_reason,
                 avatarUrl: u.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.full_name || 'User')}&background=00FF9C&color=000`,
-                rank: u.rank || 'Bronze',
+                rank: normalizeRank(u.rank),
                 plan: u.plan || 'Conservador',
                 lastPlanChangeDate: u.last_plan_change_date,
                 balanceUSD: Number(u.balance_usd || 0),
@@ -254,7 +270,7 @@ export const fetchNotificationsFromSupabase = async () => {
             userId: n.user_id,
             message: n.message,
             date: n.date,
-            isRead: n.is_read
+            isRead: n.is_read // Correct property name mapping
         }));
         return { data: mapped, error: null };
     } catch (e) {
@@ -286,7 +302,7 @@ export const syncUserToSupabase = async (user: User, password?: string): Promise
             last_plan_change_date: user.lastPlanChangeDate,
             referral_code: user.referralCode,
             referred_by_id: user.referredById || null,
-            transaction_pin: user.transaction_pin || null,
+            transaction_pin: user.transactionPin || null, // Correct property access
             support_status: user.supportStatus,
             additional_data: {
                 cpf: user.cpf,
@@ -424,7 +440,7 @@ export const syncNotificationsToSupabase = async (notifs: Notification[]) => {
             user_id: n.userId,
             message: n.message,
             date: n.date,
-            is_read: n.isRead
+            is_read: n.isRead // Changed from n.is_read to n.isRead
         }));
         
         const { error } = await supabase.from('notifications').upsert(dbNotifs, { onConflict: 'id' });
