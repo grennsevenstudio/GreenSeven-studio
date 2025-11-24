@@ -89,7 +89,7 @@ const BalanceEvolutionChart: React.FC<{ user: User; transactions: Transaction[] 
     const xStep = data.length > 1 ? width / (data.length - 1) : 0;
     const getX = (index: number) => index * xStep;
     const getY = (value: number) => {
-        if (isNaN(value)) return height - padding.bottom;
+        if (isNaN(value) || !isFinite(value)) return height - padding.bottom;
         return height - padding.bottom - ((value - minVal) / valRange) * chartHeight;
     };
 

@@ -96,28 +96,21 @@ export const fetchUsersFromSupabase = async () => {
             const extra = u.additional_data || {};
             
             // Ensure address has all required fields by merging with default
-            const address = {
-                cep: '', 
-                street: '', 
-                number: '', 
-                neighborhood: '', 
-                city: '', 
-                state: '', 
-                ...(extra.address || {})
+            const defaultAddress = { 
+                cep: '', street: '', number: '', neighborhood: '', city: '', state: '', complement: '' 
             };
+            const address = { ...defaultAddress, ...(extra.address || {}) };
 
             // Ensure documents has all required fields
-            const documents = {
-                idFrontUrl: '', 
-                idBackUrl: '', 
-                selfieUrl: '', 
-                ...(extra.documents || {})
+            const defaultDocs = { 
+                idFrontUrl: '', idBackUrl: '', selfieUrl: '' 
             };
+            const documents = { ...defaultDocs, ...(extra.documents || {}) };
 
             return {
                 id: u.id,
                 name: u.full_name || u.email?.split('@')[0] || 'Sem Nome',
-                email: u.email,
+                email: u.email || '',
                 password: u.password, 
                 cpf: extra.cpf || '',
                 phone: extra.phone || '',
@@ -125,7 +118,7 @@ export const fetchUsersFromSupabase = async () => {
                 documents: documents,
                 status: u.status || 'Pending',
                 rejectionReason: u.rejection_reason,
-                avatarUrl: u.avatar_url || 'https://via.placeholder.com/150',
+                avatarUrl: u.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.full_name || 'User')}&background=00FF9C&color=000`,
                 rank: u.rank || 'Bronze',
                 plan: u.plan || 'Conservador',
                 lastPlanChangeDate: u.last_plan_change_date,
@@ -134,9 +127,8 @@ export const fetchUsersFromSupabase = async () => {
                 monthlyProfitUSD: Number(u.monthly_profit_usd || 0),
                 dailyWithdrawableUSD: Number(u.daily_withdrawable_usd || 0),
                 lastProfitUpdate: extra.lastProfitUpdate || u.created_at || new Date().toISOString(),
-                isAdmin: u.is_admin || false,
+                isAdmin: u.is_admin === true,
                 joinedDate: u.created_at ? new Date(u.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-                // Map explicit columns back to object properties with explicit checks
                 referralCode: u.referral_code || extra.referralCode || '',
                 referredById: u.referred_by_id || extra.referredById,
                 transactionPin: u.transaction_pin || extra.transactionPin,
@@ -294,7 +286,7 @@ export const syncUserToSupabase = async (user: User, password?: string): Promise
             last_plan_change_date: user.lastPlanChangeDate,
             referral_code: user.referralCode,
             referred_by_id: user.referredById || null,
-            transaction_pin: user.transactionPin || null,
+            transaction_pin: user.transaction_pin || null,
             support_status: user.supportStatus,
             additional_data: {
                 cpf: user.cpf,
@@ -432,7 +424,7 @@ export const syncNotificationsToSupabase = async (notifs: Notification[]) => {
             user_id: n.userId,
             message: n.message,
             date: n.date,
-            is_read: n.is_read
+            is_read: n.isRead
         }));
         
         const { error } = await supabase.from('notifications').upsert(dbNotifs, { onConflict: 'id' });
