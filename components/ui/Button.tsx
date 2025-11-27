@@ -1,3 +1,4 @@
+
 import React from 'react';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -12,7 +13,8 @@ const Button: React.FC<ButtonProps> = ({ children, variant = 'primary', fullWidt
   
   const variantStyles = {
     primary: 'bg-gradient-to-r from-brand-green to-brand-blue text-brand-black shadow-lg shadow-brand-green/20 hover:shadow-xl hover:shadow-brand-green/30 hover:-translate-y-0.5 focus:ring-brand-green',
-    secondary: 'bg-white/10 backdrop-blur-sm border border-white/20 text-white hover:bg-white/20 hover:border-white/30 focus:ring-brand-blue',
+    // Updated secondary to darker style
+    secondary: 'bg-gray-800 border border-gray-700 text-white hover:bg-gray-700 hover:border-gray-600 focus:ring-brand-blue',
     ghost: 'text-gray-400 hover:text-brand-green hover:bg-brand-gray',
   };
 

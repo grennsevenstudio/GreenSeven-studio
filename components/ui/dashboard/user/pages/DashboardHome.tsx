@@ -34,7 +34,6 @@ const BalanceEvolutionChart: React.FC<{ user: User; transactions: Transaction[] 
         let currentBal = user.balanceUSD || 0;
         const now = new Date();
 
-        // Helper to normalize date string to YYYY-MM-DD for comparison
         const toDateStr = (d: Date) => d.toISOString().split('T')[0];
 
         for (let i = 0; i < days; i++) {
@@ -42,7 +41,6 @@ const BalanceEvolutionChart: React.FC<{ user: User; transactions: Transaction[] 
             date.setDate(date.getDate() - i);
             const dateStr = toDateStr(date);
 
-            // Safety check for NaN
             const safeValue = isNaN(currentBal) ? 0 : Math.max(0, currentBal);
 
             history.push({
@@ -51,11 +49,6 @@ const BalanceEvolutionChart: React.FC<{ user: User; transactions: Transaction[] 
                 value: safeValue
             });
 
-            // Calculate previous day's end balance by reversing today's transactions
-            // Formula: PrevBalance = CurrentBalance - (Incoming) + (Outgoing)
-            // Note: In our DB, Withdrawals are negative amountUSD, Deposits/Bonus are positive.
-            // So simply: PrevBalance = CurrentBalance - (Sum of Amounts on that day)
-            
             const daysTransactions = transactions.filter(
                 t => t.date === dateStr && t.status === TransactionStatus.Completed
             );
@@ -66,7 +59,6 @@ const BalanceEvolutionChart: React.FC<{ user: User; transactions: Transaction[] 
         return history.reverse();
     }, [user.balanceUSD, transactions]);
 
-    // 2. Handle Resize
     useEffect(() => {
         if (containerRef.current) {
             setWidth(containerRef.current.offsetWidth);
@@ -78,7 +70,6 @@ const BalanceEvolutionChart: React.FC<{ user: User; transactions: Transaction[] 
         return () => window.removeEventListener('resize', handleResize);
     }, []);
 
-    // 3. Chart Dimensions & Scaling
     const height = 220;
     const padding = { top: 20, bottom: 30, left: 0, right: 0 };
     const chartHeight = height - padding.top - padding.bottom;
@@ -86,7 +77,7 @@ const BalanceEvolutionChart: React.FC<{ user: User; transactions: Transaction[] 
     const values = data.map(d => d.value);
     const minVal = values.length ? Math.min(...values) * 0.95 : 0;
     const maxVal = values.length ? Math.max(...values) * 1.05 : 100;
-    const valRange = (maxVal - minVal) || 1; // Prevent division by zero if maxVal == minVal
+    const valRange = (maxVal - minVal) || 1;
 
     const xStep = data.length > 1 ? width / (data.length - 1) : 0;
     const getX = (index: number) => index * xStep;
@@ -95,7 +86,6 @@ const BalanceEvolutionChart: React.FC<{ user: User; transactions: Transaction[] 
         return height - padding.bottom - ((value - minVal) / valRange) * chartHeight;
     };
 
-    // 4. SVG Paths
     const points = data.map((d, i) => `${getX(i)},${getY(d.value)}`).join(' ');
     const areaPath = `${points} ${width},${height - padding.bottom} 0,${height - padding.bottom}`;
 
@@ -104,7 +94,6 @@ const BalanceEvolutionChart: React.FC<{ user: User; transactions: Transaction[] 
         const rect = containerRef.current.getBoundingClientRect();
         const x = e.clientX - rect.left;
         
-        // Find closest data point
         const index = Math.round(x / xStep);
         if (index >= 0 && index < data.length) {
             const pointX = getX(index);
@@ -151,7 +140,6 @@ const BalanceEvolutionChart: React.FC<{ user: User; transactions: Transaction[] 
                             </filter>
                         </defs>
 
-                        {/* Grid Lines */}
                         {[0, 0.25, 0.5, 0.75, 1].map(t => {
                             const y = height - padding.bottom - (t * chartHeight);
                             return (
@@ -168,10 +156,8 @@ const BalanceEvolutionChart: React.FC<{ user: User; transactions: Transaction[] 
                             );
                         })}
 
-                        {/* Area Fill */}
                         <polygon points={areaPath} fill="url(#chartGradient)" />
 
-                        {/* Line Stroke */}
                         <polyline 
                             points={points} 
                             fill="none" 
@@ -182,7 +168,6 @@ const BalanceEvolutionChart: React.FC<{ user: User; transactions: Transaction[] 
                             filter="url(#glow)"
                         />
 
-                        {/* X-Axis Labels */}
                         {data.map((d, i) => (
                             <text 
                                 key={i} 
@@ -197,7 +182,6 @@ const BalanceEvolutionChart: React.FC<{ user: User; transactions: Transaction[] 
                             </text>
                         ))}
 
-                        {/* Hover Interaction */}
                         {hoveredPoint && (
                             <g>
                                 <line 
@@ -223,7 +207,6 @@ const BalanceEvolutionChart: React.FC<{ user: User; transactions: Transaction[] 
                     </svg>
                 )}
 
-                {/* Tooltip Overlay */}
                 {hoveredPoint && (
                     <div 
                         className="absolute bg-gray-900/90 border border-brand-green/30 backdrop-blur-md p-2 rounded-lg shadow-xl pointer-events-none z-10 transform -translate-x-1/2 -translate-y-full"
@@ -250,29 +233,33 @@ const StatCard: React.FC<{ title: string; value: React.ReactNode; icon: React.Re
             : 'from-brand-blue/30 via-brand-gray to-brand-gray/30';
 
     const lockedIcon = locked ? (
-        <div className="absolute top-3 right-3">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
+        <div className="absolute top-4 right-10 text-gray-500">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
             </svg>
         </div>
     ) : null;
 
     return (
-        <div className={`relative p-[2px] rounded-2xl bg-gradient-to-br ${borderGradient} transition-all duration-300 hover:shadow-lg hover:shadow-brand-green/10 transform hover:-translate-y-1`}>
-            <div className="bg-brand-gray rounded-[14px] p-3 sm:p-6 h-full flex flex-col justify-between overflow-hidden group relative">
+        <div className={`relative p-[2px] rounded-2xl bg-gradient-to-br ${borderGradient} transition-all duration-300 hover:shadow-lg hover:shadow-brand-green/10 transform hover:-translate-y-1 h-full`}>
+            <div className="bg-brand-gray rounded-[14px] p-5 h-full flex flex-col relative overflow-hidden group">
                 {lockedIcon}
                 {highlight && <div className="absolute -top-1/4 -right-1/4 w-1/2 h-1/2 bg-brand-green/10 rounded-full blur-3xl opacity-50 group-hover:opacity-80 transition-opacity duration-500"></div>}
 
-                <div className="flex justify-between items-start">
-                    <p className="text-gray-300 font-medium text-sm sm:text-base">{title}</p>
+                <div className="flex justify-between items-start mb-4 relative z-10">
+                    <p className="font-medium text-gray-300 text-sm">{title}</p>
                     <div className={`transition-colors ${highlight ? 'text-brand-green' : 'text-gray-500 group-hover:text-brand-green'}`}>
-                        {React.cloneElement(icon as React.ReactElement<any>, { className: "h-5 w-5 sm:h-7 sm:w-7" })}
+                        {React.cloneElement(icon as React.ReactElement<any>, { className: "h-5 w-5 sm:h-6 sm:w-6" })}
                     </div>
                 </div>
                 
-                <div className="z-10">
-                    <div className="text-2xl sm:text-4xl font-black text-white leading-tight mt-2">{value}</div>
-                    {subValue && <div className="text-xs sm:text-sm text-gray-400 mt-1">{subValue}</div>}
+                <div className="z-10 mt-auto">
+                    <div className="text-3xl sm:text-4xl font-black text-white tracking-tight leading-none mb-1">{value}</div>
+                    {subValue && typeof subValue === 'string' ? (
+                        <div className="text-xs text-gray-500 font-medium">{subValue}</div>
+                    ) : (
+                        subValue
+                    )}
                 </div>
             </div>
         </div>
@@ -286,6 +273,7 @@ const TransactionRow: React.FC<{ tx: Transaction }> = ({ tx }) => {
         [TransactionStatus.Completed]: 'bg-green-500/20 text-green-400',
         [TransactionStatus.Pending]: 'bg-yellow-500/20 text-yellow-400',
         [TransactionStatus.Failed]: 'bg-red-500/20 text-red-400',
+        [TransactionStatus.Scheduled]: 'bg-blue-500/20 text-blue-400',
     };
 
     return (
@@ -467,7 +455,6 @@ const WithdrawModalContent: React.FC<{
     const amountToReceiveUSD = (parseFloat(amountUSD) || 0) - fee;
     const amountToReceiveBRL = amountToReceiveUSD * DOLLAR_RATE;
     
-    // Calculate available balance based on selection
     const availableBalance = withdrawalSource === 'yield' 
         ? (user.dailyWithdrawableUSD || 0) 
         : (user.bonusBalanceUSD || 0);
@@ -730,55 +717,47 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions = [], 
     const [showBalance, setShowBalance] = useState(false);
     const [stocks, setStocks] = useState<Stock[]>(MOCK_STOCKS);
     
-    // GPU OPTIMIZATION: Use Ref for direct DOM manipulation instead of State
     const earningsRef = useRef<HTMLSpanElement>(null);
     const requestRef = useRef<number>();
 
     const t = TRANSLATIONS[language];
-    const balanceBRL = (user.balanceUSD || 0) * DOLLAR_RATE;
     const maskedValue = '••••••••';
     
-    // Use accumulated value from User object
     const dailyAvailable = user.dailyWithdrawableUSD || 0;
     const bonusAvailable = user.bonusBalanceUSD || 0;
 
-    // NEW LOGIC
     const userPlan = INVESTMENT_PLANS.find(p => p.name === user.plan) || INVESTMENT_PLANS[0];
     const monthlyProfitUSD = user.capitalInvestedUSD * userPlan.returnRate;
     const accumulatedBRL = (user.capitalInvestedUSD + monthlyProfitUSD) * DOLLAR_RATE;
 
     const capitalSubValue = (
-        <div className="flex flex-col gap-1 mt-1 w-full">
-            <span className="text-xs sm:text-sm text-gray-400">{t.locked_capital}</span>
-            <div className="mt-2 pt-2 border-t border-gray-700/50 w-full space-y-1">
+        <div className="w-full mt-1">
+            <span className="text-xs text-gray-500 font-medium">Capital Bloqueado</span>
+            <div className="mt-3 pt-3 border-t border-gray-800 w-full space-y-1.5">
                 <div className="flex justify-between items-center w-full text-xs">
                     <span className="text-gray-400">Rendimento Mensal ({userPlan.name}):</span>
                     <span className="text-brand-green font-bold">+{formatCurrency(monthlyProfitUSD, 'USD')}</span>
                 </div>
                 <div className="flex justify-between items-center w-full text-xs">
-                    <span className="text-gray-400" title="Capital + Lucro em 30 dias">Acumulado 30d (BRL):</span>
-                    <span className="text-white font-medium">≈ {formatCurrency(accumulatedBRL, 'BRL')}</span>
+                    <span className="text-gray-400">Acumulado 30d (BRL):</span>
+                    <span className="text-gray-300 font-medium">≈ {formatCurrency(accumulatedBRL, 'BRL')}</span>
                 </div>
             </div>
         </div>
     );
-    // END NEW LOGIC
 
     useEffect(() => {
         const totalDailyProfit = (user.monthlyProfitUSD || 0) / 30;
         const msInDay = 24 * 60 * 60 * 1000;
         const profitPerMs = totalDailyProfit / msInDay;
         
-        // Animation Loop using requestAnimationFrame
         const animate = () => {
             const now = new Date();
             const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
             const msElapsed = now.getTime() - startOfDay.getTime();
             const currentEarnings = Math.min(msElapsed * profitPerMs, totalDailyProfit);
             
-            // DIRECT DOM MANIPULATION:
             if (earningsRef.current) {
-                 // Use PT-BR formatting (commas for decimals)
                  earningsRef.current.textContent = new Intl.NumberFormat('pt-BR', {
                     style: 'currency',
                     currency: 'USD',
@@ -815,7 +794,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions = [], 
                     };
                 })
             );
-        }, 3000); // 3 seconds interval is safe for React state updates
+        }, 3000);
 
         return () => clearInterval(stockInterval);
     }, []);
@@ -894,10 +873,10 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions = [], 
                 </button>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-6">
-                {/* Locked Capital Card */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                {/* Locked Capital Card - Replicating screenshot */}
                 <StatCard 
-                    title={`${t.total_balance} (USD)`} 
+                    title="Capital Investido (USD)"
                     value={
                         <AnimatedBalance 
                             value={showBalance ? formatCurrency(user.capitalInvestedUSD || 0, 'USD') : `$ ${maskedValue}`}
@@ -906,37 +885,37 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions = [], 
                     }
                     subValue={capitalSubValue}
                     icon={ICONS.shield} 
-                    locked={true}
                 />
-                 {/* Daily Available Card */}
+                 {/* Daily Available Card - Replicating screenshot */}
                  <StatCard 
-                    title={t.available_withdraw} 
+                    title="Lucro Disponível (Diário)" 
                     value={
                         <AnimatedBalance 
                             value={showBalance ? formatCurrency(dailyAvailable, 'USD') : `$ ${maskedValue}`}
                             isShown={showBalance}
                         />
                     }
-                    subValue={t.daily_yields}
-                    icon={ICONS.withdraw}
+                    // Explicitly use the text from the screenshot
+                    subValue="Rendimentos liberados para saque"
+                    icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>}
                     highlight={true}
                 />
-                 {/* Bonus Available Card - NEW */}
+                 {/* Bonus Available Card - Replicating screenshot style */}
                  <StatCard 
-                    title={t.bonus_available} 
+                    title="Bônus Disponível" 
                     value={
                         <AnimatedBalance 
                             value={showBalance ? formatCurrency(bonusAvailable, 'USD') : `$ ${maskedValue}`}
                             isShown={showBalance}
                         />
                     }
-                    subValue={t.bonus_desc}
-                    icon={ICONS.dollar}
+                    subValue="Comissões por indicação"
+                    icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8V6m0 12v-2m0-10a9 9 0 110 18 9 9 0 010-18z" /></svg>}
                     highlight={true}
                 />
-                 {/* Live Earnings Card */}
+                 {/* Live Earnings Card - Replicating screenshot */}
                  <StatCard 
-                    title={t.earnings_today} 
+                    title="Rendimentos Hoje" 
                     value={
                         <div className="flex items-center gap-3">
                             <span className="live-ticker" ref={earningsRef}>

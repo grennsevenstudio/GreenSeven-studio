@@ -30,7 +30,8 @@ export interface ExtendedRegisterData {
         idFrontUrl: string;
         idBackUrl: string;
         selfieUrl: string;
-    }
+    };
+    kycAnalysis?: string;
 }
 
 interface RegisterPageProps {

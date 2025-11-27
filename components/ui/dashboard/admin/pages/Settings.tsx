@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect } from 'react';
 import type { PlatformSettings, User, Transaction } from '../../../../../types';
 import Card from '../../../../ui/Card';
@@ -64,23 +63,22 @@ const Settings: React.FC<SettingsProps> = ({ platformSettings, onUpdateSettings,
         setTimeout(() => setToast(null), 3000);
     };
 
-    // SQL Code Definition
-    const sqlCode = `-- SCRIPT SQL COMPLETO - GreennSeven Invest
--- ⚠️ IMPORTANTE: Execute este script no 'SQL Editor' do Supabase para corrigir o erro "column does not exist".
--- Ele criará as tabelas e adicionará as colunas faltantes sem apagar seus dados existentes.
+    // SQL Code Definition - THE GOLDEN SOURCE OF TRUTH FOR DB SCHEMA
+    const sqlCode = `-- SCRIPT SQL DE CONFIGURAÇÃO TOTAL (AUTOCORREÇÃO)
+-- Copie e cole este script no SQL Editor do Supabase e clique em "Run".
+-- Ele criará as tabelas se não existirem e adicionará colunas faltantes sem apagar dados.
 
 -- 1. HABILITAR UUID
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- 2. TABELA DE USUÁRIOS (Estrutura Base)
+-- 2. TABELA DE USUÁRIOS E SUAS COLUNAS
 CREATE TABLE IF NOT EXISTS public.users (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   email TEXT UNIQUE NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
 
--- ⚠️ MIGRATIONS (Correções de Esquema): 
--- Estas linhas garantem que as colunas existam. Se já existirem, nada acontece.
+-- Migrations para garantir que todas as colunas existam
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS password TEXT;
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS full_name TEXT;
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS avatar_url TEXT;
@@ -93,9 +91,9 @@ ALTER TABLE public.users ADD COLUMN IF NOT EXISTS balance_usd NUMERIC DEFAULT 0;
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS capital_invested_usd NUMERIC DEFAULT 0;
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS monthly_profit_usd NUMERIC DEFAULT 0;
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS daily_withdrawable_usd NUMERIC DEFAULT 0;
-ALTER TABLE public.users ADD COLUMN IF NOT EXISTS bonus_balance_usd NUMERIC DEFAULT 0; -- Nova coluna para bonus
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS bonus_balance_usd NUMERIC DEFAULT 0;
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS last_plan_change_date TEXT;
-ALTER TABLE public.users ADD COLUMN IF NOT EXISTS referral_code TEXT; -- Correção para erro 42703
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS referral_code TEXT;
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS referred_by_id UUID;
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS transaction_pin TEXT;
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS support_status TEXT DEFAULT 'open';
@@ -114,10 +112,11 @@ CREATE TABLE IF NOT EXISTS public.transactions (
   referral_level NUMERIC,
   source_user_id UUID,
   bonus_payout_handled BOOLEAN DEFAULT false,
-  wallet_source TEXT, -- Nova coluna para origem do saque (yield/bonus)
+  wallet_source TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
 
+-- Indices para performance
 CREATE INDEX IF NOT EXISTS idx_transactions_user_id ON public.transactions(user_id);
 CREATE INDEX IF NOT EXISTS idx_transactions_status ON public.transactions(status);
 
@@ -140,12 +139,12 @@ CREATE TABLE IF NOT EXISTS public.career_plan_config (
 );
 
 INSERT INTO public.career_plan_config (level, percentage) VALUES
-(1, 0.05), -- 5%
-(2, 0.03), -- 3%
-(3, 0.01)  -- 1%
+(1, 0.05),
+(2, 0.03),
+(3, 0.01)
 ON CONFLICT (level) DO UPDATE SET percentage = EXCLUDED.percentage;
 
--- 6. TABELA DE CONFIGURAÇÕES DA PLATAFORMA
+-- 6. CONFIGURAÇÕES DA PLATAFORMA
 CREATE TABLE IF NOT EXISTS public.platform_settings (
     id INTEGER PRIMARY KEY DEFAULT 1,
     dollar_rate NUMERIC,
@@ -158,7 +157,7 @@ CREATE TABLE IF NOT EXISTS public.platform_settings (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
 
--- 7. TABELA DE LOGS ADMINISTRATIVOS
+-- 7. LOGS DE ADMINISTRAÇÃO
 CREATE TABLE IF NOT EXISTS public.admin_logs (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     timestamp TEXT,
@@ -170,7 +169,7 @@ CREATE TABLE IF NOT EXISTS public.admin_logs (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
 
--- 8. TABELA DE NOTIFICAÇÕES
+-- 8. NOTIFICAÇÕES
 CREATE TABLE IF NOT EXISTS public.notifications (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
@@ -180,7 +179,27 @@ CREATE TABLE IF NOT EXISTS public.notifications (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
 
--- 9. POLÍTICAS DE SEGURANÇA (RLS)
+-- 9. PLANOS DE INVESTIMENTO
+CREATE TABLE IF NOT EXISTS public.investment_plans (
+    plan_id TEXT PRIMARY KEY,
+    name TEXT,
+    monthly_return TEXT,
+    return_rate NUMERIC,
+    min_deposit_usd NUMERIC,
+    color TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+);
+
+-- Seed Inicial dos Planos (só insere se não existir)
+INSERT INTO public.investment_plans (plan_id, name, monthly_return, return_rate, min_deposit_usd, color) VALUES
+('1', 'Conservador', '1% a 5%', 0.05, 10, 'text-brand-blue'),
+('2', 'Moderado', 'até 10%', 0.10, 50, 'text-green-400'),
+('3', 'Agressivo', 'até 15%', 0.15, 100, 'text-yellow-400'),
+('4', 'Select', 'até 25%', 0.25, 200, 'text-red-500')
+ON CONFLICT (plan_id) DO NOTHING;
+
+-- 10. PERMISSÕES (RLS)
+-- Habilita RLS para segurança
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
@@ -188,6 +207,7 @@ ALTER TABLE public.career_plan_config ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.platform_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.admin_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.investment_plans ENABLE ROW LEVEL SECURITY;
 
 -- Remove políticas antigas para evitar conflitos
 DROP POLICY IF EXISTS "Public Access Users" ON public.users;
@@ -197,8 +217,9 @@ DROP POLICY IF EXISTS "Public Access Career" ON public.career_plan_config;
 DROP POLICY IF EXISTS "Public Access Settings" ON public.platform_settings;
 DROP POLICY IF EXISTS "Public Access Logs" ON public.admin_logs;
 DROP POLICY IF EXISTS "Public Access Notifications" ON public.notifications;
+DROP POLICY IF EXISTS "Public Access Plans" ON public.investment_plans;
 
--- Cria políticas públicas (Apenas para desenvolvimento/MVP)
+-- Cria políticas permissivas (ajustar para produção se necessário)
 CREATE POLICY "Public Access Users" ON public.users FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Public Access Transactions" ON public.transactions FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Public Access Messages" ON public.messages FOR ALL USING (true) WITH CHECK (true);
@@ -206,16 +227,11 @@ CREATE POLICY "Public Access Career" ON public.career_plan_config FOR ALL USING 
 CREATE POLICY "Public Access Settings" ON public.platform_settings FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Public Access Logs" ON public.admin_logs FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Public Access Notifications" ON public.notifications FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Public Access Plans" ON public.investment_plans FOR ALL USING (true) WITH CHECK (true);
 
-GRANT ALL ON TABLE public.users TO anon, authenticated, service_role;
-GRANT ALL ON TABLE public.transactions TO anon, authenticated, service_role;
-GRANT ALL ON TABLE public.messages TO anon, authenticated, service_role;
-GRANT ALL ON TABLE public.career_plan_config TO anon, authenticated, service_role;
-GRANT ALL ON TABLE public.platform_settings TO anon, authenticated, service_role;
-GRANT ALL ON TABLE public.admin_logs TO anon, authenticated, service_role;
-GRANT ALL ON TABLE public.notifications TO anon, authenticated, service_role;
+GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated, service_role;
 
--- 10. USUÁRIO ADMIN PADRÃO (Opcional - Se não existir)
+-- 11. CRIAR USUÁRIO ADMIN (Se não houver)
 INSERT INTO public.users (
     email, password, full_name, is_admin, status, rank, balance_usd, plan, referral_code, additional_data
 ) VALUES (
@@ -423,12 +439,12 @@ INSERT INTO public.users (
                                 <div className="mt-4 bg-red-500/10 border border-red-500/30 rounded p-3">
                                     <p className="text-white text-xs font-bold mb-1">⚠️ AÇÃO NECESSÁRIA:</p>
                                     <p className="text-gray-300 text-xs">
-                                        O erro "column does not exist" indica que seu banco de dados precisa ser atualizado.
+                                        O banco de dados precisa ser configurado ou atualizado no painel do Supabase.
                                     </p>
                                     <ol className="list-decimal pl-4 mt-2 text-gray-400 text-xs space-y-1">
-                                        <li>Copie o script SQL abaixo.</li>
+                                        <li>Clique em "Copiar SQL".</li>
                                         <li>Vá ao Painel do Supabase {'>'} SQL Editor.</li>
-                                        <li>Cole e execute o script para adicionar as colunas faltantes.</li>
+                                        <li>Cole e execute o script. Isso criará as tabelas e adicionará as colunas faltantes.</li>
                                     </ol>
                                 </div>
                             </div>
@@ -442,7 +458,7 @@ INSERT INTO public.users (
                                 value={sqlCode}
                                 onClick={(e) => e.currentTarget.select()} 
                              />
-                             <p className="text-[10px] text-gray-500 mt-1">Este script contém comandos `ALTER TABLE` que corrigem automaticamente seu banco de dados.</p>
+                             <p className="text-[10px] text-gray-500 mt-1">Este script contém comandos `ALTER TABLE` para corrigir automaticamente seu banco de dados sem perder dados.</p>
                         </div>
 
                         <div className="mt-6 pt-4 border-t border-gray-700">

@@ -1,5 +1,3 @@
-
-
 import { faker } from '@faker-js/faker';
 import {
   type User,
@@ -10,8 +8,9 @@ import {
   InvestorRank,
   UserStatus,
   type AdminActionLog,
+  type InvestmentPlan,
 } from '../types';
-import { DOLLAR_RATE } from '../constants';
+import { DOLLAR_RATE, INVESTMENT_PLANS } from '../constants';
 
 // The structure of our "database" in localStorage
 export interface AppDB {
@@ -21,9 +20,11 @@ export interface AppDB {
   notifications: Notification[];
   platformSettings: PlatformSettings;
   adminActionLogs: AdminActionLog[];
+  investmentPlans: InvestmentPlan[];
 }
 
 const DB_KEY = 'greennseven_db';
+const SESSION_KEY = 'greennseven_session';
 
 // Function to seed the database if it doesn't exist
 export const initializeDB = () => {
@@ -55,6 +56,12 @@ export const initializeDB = () => {
   }
 
   if (!shouldSeed) {
+    // Check if plans exist in local data, if not, verify migration
+    const data = JSON.parse(localStorage.getItem(DB_KEY)!);
+    if (!data.investmentPlans) {
+        data.investmentPlans = INVESTMENT_PLANS;
+        localStorage.setItem(DB_KEY, JSON.stringify(data));
+    }
     return;
   }
 
@@ -113,7 +120,8 @@ export const initializeDB = () => {
     chatMessages: [],
     notifications: [],
     platformSettings: MOCK_PLATFORM_SETTINGS,
-    adminActionLogs: []
+    adminActionLogs: [],
+    investmentPlans: INVESTMENT_PLANS
   };
 
   saveAllData(initialDB);
@@ -125,59 +133,49 @@ export const getAllData = (): AppDB => {
   try {
     const data = localStorage.getItem(DB_KEY);
     if (!data) {
-      initializeDB();
-      return JSON.parse(localStorage.getItem(DB_KEY)!) as AppDB;
+        // Should ideally be handled by initializeDB, but as a fallback:
+        return { 
+            users: [], 
+            transactions: [], 
+            chatMessages: [], 
+            notifications: [], 
+            platformSettings: {} as any, 
+            adminActionLogs: [],
+            investmentPlans: INVESTMENT_PLANS 
+        };
     }
-    return JSON.parse(data) as AppDB;
-  } catch (error) {
-    console.warn("Failed to parse DB from localStorage, re-initializing.", error);
-    localStorage.removeItem(DB_KEY);
-    initializeDB();
-    const data = localStorage.getItem(DB_KEY);
-    return data ? JSON.parse(data) as AppDB : { users: [], transactions: [], chatMessages: [], notifications: [], adminActionLogs: [], platformSettings: {} as any };
+    return JSON.parse(data);
+  } catch (e) {
+    console.error("Error reading from DB", e);
+    return { 
+        users: [], 
+        transactions: [], 
+        chatMessages: [], 
+        notifications: [], 
+        platformSettings: {} as any, 
+        adminActionLogs: [],
+        investmentPlans: INVESTMENT_PLANS
+    };
   }
 };
 
 // Function to save all data to the database
-export const saveAllData = (db: AppDB) => {
+export const saveAllData = (data: AppDB) => {
   try {
-      localStorage.setItem(DB_KEY, JSON.stringify(db));
-  } catch (e: any) {
-      // Handle Quota Exceeded
-      if (
-        e.name === 'QuotaExceededError' || 
-        e.name === 'NS_ERROR_DOM_QUOTA_REACHED' || 
-        e.code === 22 || 
-        e.code === 1014
-      ) {
-          console.warn("LocalStorage quota exceeded. Attempting to save without heavy assets.");
-          
-          // Create a lightweight version of DB by removing large Base64 strings
-          // We rely on Supabase for data persistence, LocalStorage is just a cache/fallback
-          const lightweightDB = {
-              ...db,
-              users: db.users.map(u => ({
-                  ...u,
-                  documents: { 
-                    idFrontUrl: '', 
-                    idBackUrl: '', 
-                    selfieUrl: '' 
-                  } 
-              })),
-              chatMessages: db.chatMessages.map(m => ({
-                  ...m,
-                  attachment: m.attachment ? { ...m.attachment, fileUrl: '' } : undefined
-              }))
-          };
-          
-          try {
-              localStorage.setItem(DB_KEY, JSON.stringify(lightweightDB));
-              console.log("Database saved in lightweight mode.");
-          } catch (retryError) {
-              console.error("Failed to save even lightweight DB. LocalStorage is completely full.", retryError);
-          }
-      } else {
-          console.error("Failed to save DB", e);
-      }
+    localStorage.setItem(DB_KEY, JSON.stringify(data));
+  } catch (e) {
+    console.error("Error saving to DB", e);
   }
+};
+
+export const getSessionUser = (): string | null => {
+  return localStorage.getItem(SESSION_KEY);
+};
+
+export const setSessionUser = (userId: string) => {
+  localStorage.setItem(SESSION_KEY, userId);
+};
+
+export const clearSessionUser = () => {
+  localStorage.removeItem(SESSION_KEY);
 };

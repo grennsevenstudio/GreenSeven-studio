@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import Card from '../../../../ui/Card';
 import type { Transaction } from '../../../../../types';
@@ -21,6 +20,7 @@ const TransactionRow: React.FC<TransactionRowProps> = ({ tx, isExpanded, onToggl
         [TransactionStatus.Completed]: 'bg-green-500/20 text-green-400',
         [TransactionStatus.Pending]: 'bg-yellow-500/20 text-yellow-400',
         [TransactionStatus.Failed]: 'bg-red-500/20 text-red-400',
+        [TransactionStatus.Scheduled]: 'bg-blue-500/20 text-blue-400',
     };
 
     return (

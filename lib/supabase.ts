@@ -1,5 +1,6 @@
+
 import { createClient } from '@supabase/supabase-js';
-import type { User, Transaction, ChatMessage, PlatformSettings, AdminActionLog, Notification } from '../types';
+import type { User, Transaction, ChatMessage, PlatformSettings, AdminActionLog, Notification, InvestmentPlan } from '../types';
 import { InvestorRank } from '../types';
 
 // ============================================================================
@@ -59,9 +60,9 @@ export const checkSupabaseConnection = async () => {
                  return { success: false, message: "Offline / Erro de Conexão" };
              }
              if (error.code === '42P01' || error.code === 'PGRST205') {
-                 return { success: false, message: "Tabelas não criadas" };
+                 return { success: false, message: "Tabelas não criadas. Use o script SQL." };
              }
-             return { success: false, message: error.message };
+             return { success: false, message: `Erro: ${error.message}` };
         }
         return { success: true, count: count || 0 };
     } catch (e: any) {
@@ -90,13 +91,38 @@ export const fetchCareerPlanConfig = async () => {
     }
 }
 
+export const fetchInvestmentPlansFromSupabase = async () => {
+    try {
+        const { data, error } = await supabase.from('investment_plans').select('*').order('min_deposit_usd', { ascending: true });
+        
+        if (error) {
+            return { data: null, error };
+        }
+        
+        if (!data) return { data: [], error: null };
+
+        const mapped: InvestmentPlan[] = data.map((p: any) => ({
+            id: p.plan_id || p.id,
+            name: p.name,
+            monthlyReturn: p.monthly_return,
+            returnRate: Number(p.return_rate),
+            minDepositUSD: Number(p.min_deposit_usd),
+            color: p.color
+        }));
+
+        return { data: mapped, error: null };
+    } catch (e) {
+        return { data: null, error: e };
+    }
+};
+
 export const fetchUsersFromSupabase = async () => {
     try {
         const { data, error } = await supabase.from('users').select('*');
         
         if (error) {
             if (isNetworkError(error) || error.code === '42P01' || error.code === 'PGRST205') {
-                console.warn("Supabase unreachable... Using local data.");
+                console.warn("Supabase unreachable or tables missing.");
                 return { data: null, error: error }; 
             }
             console.error("Erro ao buscar usuários:", JSON.stringify(error, null, 2));
@@ -113,8 +139,6 @@ export const fetchUsersFromSupabase = async () => {
             const defaultAddress = { 
                 cep: '', street: '', number: '', neighborhood: '', city: '', state: '', complement: '' 
             };
-            // Safe merge: (extra.address could be null if JSON is malformed)
-            // Also handle case where u.address column might exist in future, currently preferring additional_data
             const address = { ...defaultAddress, ...(extra.address || {}) };
 
             // Ensure documents has all required fields
@@ -132,6 +156,7 @@ export const fetchUsersFromSupabase = async () => {
                 phone: extra.phone || '',
                 address: address,
                 documents: documents,
+                kycAnalysis: u.kyc_analysis || extra.kycAnalysis,
                 status: u.status || 'Pending',
                 rejectionReason: u.rejection_reason,
                 avatarUrl: u.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.full_name || 'User')}&background=00FF9C&color=000`,
@@ -142,7 +167,7 @@ export const fetchUsersFromSupabase = async () => {
                 capitalInvestedUSD: Number(u.capital_invested_usd || 0),
                 monthlyProfitUSD: Number(u.monthly_profit_usd || 0),
                 dailyWithdrawableUSD: Number(u.daily_withdrawable_usd || 0),
-                bonusBalanceUSD: Number(u.bonus_balance_usd || 0), // Mapped from new column
+                bonusBalanceUSD: Number(u.bonus_balance_usd || 0),
                 lastProfitUpdate: extra.lastProfitUpdate || u.created_at || new Date().toISOString(),
                 isAdmin: u.is_admin === true,
                 joinedDate: u.created_at ? new Date(u.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
@@ -155,7 +180,7 @@ export const fetchUsersFromSupabase = async () => {
 
         return { data: mappedUsers, error: null };
     } catch (e) {
-        console.warn("Exceção ao buscar usuários (Offline):", e);
+        console.warn("Exceção ao buscar usuários:", e);
         return { data: null, error: e };
     }
 };
@@ -164,29 +189,28 @@ export const fetchTransactionsFromSupabase = async () => {
     try {
         const { data, error } = await supabase.from('transactions').select('*');
         if (error) {
-            if (isNetworkError(error) || error.code === '42P01' || error.code === 'PGRST205') {
-                 console.warn("Supabase unreachable... Using local transactions.");
+            if (isNetworkError(error) || error.code === '42P01') {
                  return { data: null, error };
             }
-            console.error("Erro ao buscar transações:", JSON.stringify(error, null, 2));
             return { data: null, error };
         }
         if (!data) return { data: [], error: null };
 
         const mappedTxs: Transaction[] = data.map((t: any) => ({
             id: t.id,
-            user_id: t.user_id, // Keep user_id available for mapping if needed
-            userId: t.user_id, // Map to types.ts standard
+            user_id: t.user_id, 
+            userId: t.user_id, 
             type: t.type,
             amountUSD: Number(t.amount_usd),
             amountBRL: Number(t.amount_brl),
             status: t.status,
             date: t.date ? new Date(t.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+            scheduledDate: t.scheduled_date,
             withdrawalDetails: t.withdrawal_details,
             referralLevel: t.referral_level,
             sourceUserId: t.source_user_id,
             bonusPayoutHandled: t.bonus_payout_handled,
-            walletSource: t.wallet_source // Map new column
+            walletSource: t.wallet_source 
         }));
 
         return { data: mappedTxs, error: null };
@@ -222,7 +246,6 @@ export const fetchSettingsFromSupabase = async () => {
     try {
         const { data, error } = await supabase.from('platform_settings').select('*').single();
         if (error) {
-            // If table doesn't exist or is empty, return null to use local defaults
             return { data: null, error };
         }
         
@@ -272,7 +295,7 @@ export const fetchNotificationsFromSupabase = async () => {
             userId: n.user_id,
             message: n.message,
             date: n.date,
-            isRead: n.is_read // Correct property name mapping
+            isRead: n.is_read 
         }));
         return { data: mapped, error: null };
     } catch (e) {
@@ -301,11 +324,11 @@ export const syncUserToSupabase = async (user: User, password?: string): Promise
             capital_invested_usd: user.capitalInvestedUSD,
             monthly_profit_usd: user.monthlyProfitUSD,
             daily_withdrawable_usd: user.dailyWithdrawableUSD,
-            bonus_balance_usd: user.bonusBalanceUSD, // Sync new column
+            bonus_balance_usd: user.bonusBalanceUSD,
             last_plan_change_date: user.lastPlanChangeDate,
             referral_code: user.referralCode,
             referred_by_id: user.referredById || null,
-            transaction_pin: user.transactionPin || null, // Correct property access
+            transaction_pin: user.transactionPin || null,
             support_status: user.supportStatus,
             additional_data: {
                 cpf: user.cpf,
@@ -313,14 +336,14 @@ export const syncUserToSupabase = async (user: User, password?: string): Promise
                 address: user.address,
                 documents: user.documents,
                 lastProfitUpdate: user.lastProfitUpdate,
+                kycAnalysis: user.kycAnalysis
             }
         };
 
         const { error } = await supabase.from('users').upsert(dbUser, { onConflict: 'id' });
         
         if (error) {
-            // Handle unique constraint on email
-            if (error.code === '23505') {
+            if (error.code === '23505') { // Unique violation
                 const { data: existingUser, error: fetchError } = await supabase
                     .from('users')
                     .select('id')
@@ -349,11 +372,14 @@ export const syncTransactionToSupabase = async (tx: Transaction) => {
             amount_brl: tx.amountBRL,
             status: tx.status,
             date: tx.date,
+            // Use scheduled_date column if we add it, or store in JSON if simplified
+            // For now, let's assume we might need to add scheduled_date column in SQL
+            scheduled_date: (tx as any).scheduledDate, 
             withdrawal_details: tx.withdrawalDetails,
             referral_level: tx.referralLevel,
             source_user_id: tx.sourceUserId,
             bonus_payout_handled: tx.bonusPayoutHandled,
-            wallet_source: tx.walletSource // Sync new column
+            wallet_source: tx.walletSource
         };
         const { error } = await supabase.from('transactions').upsert(dbTx, { onConflict: 'id' });
         if (error) return { error };
@@ -444,10 +470,27 @@ export const syncNotificationsToSupabase = async (notifs: Notification[]) => {
             user_id: n.userId,
             message: n.message,
             date: n.date,
-            is_read: n.isRead // Changed from n.is_read to n.isRead
+            is_read: n.isRead 
         }));
         
         const { error } = await supabase.from('notifications').upsert(dbNotifs, { onConflict: 'id' });
+        return { error };
+    } catch (e) {
+        return { error: e };
+    }
+};
+
+export const syncInvestmentPlanToSupabase = async (plan: InvestmentPlan) => {
+    try {
+        const dbPlan = {
+            plan_id: plan.id, 
+            name: plan.name,
+            monthly_return: plan.monthlyReturn,
+            return_rate: plan.returnRate,
+            min_deposit_usd: plan.minDepositUSD,
+            color: plan.color
+        };
+        const { error } = await supabase.from('investment_plans').upsert(dbPlan, { onConflict: 'plan_id' });
         return { error };
     } catch (e) {
         return { error: e };

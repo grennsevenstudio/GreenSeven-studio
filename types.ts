@@ -66,6 +66,7 @@ export interface User {
   referredById?: string;
   transactionPin?: string; // 4-digit PIN for withdrawals
   supportStatus?: SupportStatus; // Status of the support ticket
+  kycAnalysis?: string;
 }
 
 export interface InvestmentPlan {
@@ -93,6 +94,7 @@ export enum TransactionStatus {
   Completed = 'Completed',
   Pending = 'Pending',
   Failed = 'Failed',
+  Scheduled = 'Scheduled',
 }
 
 export interface WithdrawalDetails {
@@ -115,6 +117,7 @@ export interface Transaction {
   sourceUserId?: string;
   bonusPayoutHandled?: boolean;
   walletSource?: 'yield' | 'bonus'; // Indicates which wallet to deduct from (for withdrawals)
+  scheduledDate?: string;
 }
 
 export interface Stock {
@@ -165,6 +168,7 @@ export enum AdminActionType {
     BonusPayout = 'BonusPayout',
     UserBalanceEdit = 'UserBalanceEdit',
     SettingsUpdate = 'SettingsUpdate',
+    PaymentScheduled = 'PaymentScheduled',
 }
 
 export interface AdminActionLog {
