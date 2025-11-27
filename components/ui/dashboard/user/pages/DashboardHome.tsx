@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import type { User, Transaction, WithdrawalDetails, Stock, Language } from '../../../../../types';
 import { TransactionType, TransactionStatus } from '../../../../../types';
@@ -22,209 +21,6 @@ interface DashboardHomeProps {
 
 // --- COMPONENTS ---
 
-const BalanceEvolutionChart: React.FC<{ user: User; transactions: Transaction[] }> = ({ user, transactions = [] }) => {
-    const [hoveredPoint, setHoveredPoint] = useState<{ x: number; y: number; value: number; date: string } | null>(null);
-    const containerRef = useRef<HTMLDivElement>(null);
-    const [width, setWidth] = useState(0);
-    
-    // 1. Prepare Data (Last 7 Days)
-    const data = useMemo(() => {
-        const days = 7;
-        const history = [];
-        let currentBal = user.balanceUSD || 0;
-        const now = new Date();
-
-        const toDateStr = (d: Date) => d.toISOString().split('T')[0];
-
-        for (let i = 0; i < days; i++) {
-            const date = new Date(now);
-            date.setDate(date.getDate() - i);
-            const dateStr = toDateStr(date);
-
-            const safeValue = isNaN(currentBal) ? 0 : Math.max(0, currentBal);
-
-            history.push({
-                date: date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
-                fullDate: dateStr,
-                value: safeValue
-            });
-
-            const daysTransactions = transactions.filter(
-                t => t.date === dateStr && t.status === TransactionStatus.Completed
-            );
-            
-            const netChange = daysTransactions.reduce((acc, tx) => acc + (tx.amountUSD || 0), 0);
-            currentBal -= netChange;
-        }
-        return history.reverse();
-    }, [user.balanceUSD, transactions]);
-
-    useEffect(() => {
-        if (containerRef.current) {
-            setWidth(containerRef.current.offsetWidth);
-        }
-        const handleResize = () => {
-            if (containerRef.current) setWidth(containerRef.current.offsetWidth);
-        };
-        window.addEventListener('resize', handleResize);
-        return () => window.removeEventListener('resize', handleResize);
-    }, []);
-
-    const height = 220;
-    const padding = { top: 20, bottom: 30, left: 0, right: 0 };
-    const chartHeight = height - padding.top - padding.bottom;
-    
-    const values = data.map(d => d.value);
-    const minVal = values.length ? Math.min(...values) * 0.95 : 0;
-    const maxVal = values.length ? Math.max(...values) * 1.05 : 100;
-    const valRange = (maxVal - minVal) || 1;
-
-    const xStep = data.length > 1 ? width / (data.length - 1) : 0;
-    const getX = (index: number) => index * xStep;
-    const getY = (value: number) => {
-        if (isNaN(value) || !isFinite(value)) return height - padding.bottom;
-        return height - padding.bottom - ((value - minVal) / valRange) * chartHeight;
-    };
-
-    const points = data.map((d, i) => `${getX(i)},${getY(d.value)}`).join(' ');
-    const areaPath = `${points} ${width},${height - padding.bottom} 0,${height - padding.bottom}`;
-
-    const handleMouseMove = (e: React.MouseEvent) => {
-        if (!containerRef.current || width === 0) return;
-        const rect = containerRef.current.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        
-        const index = Math.round(x / xStep);
-        if (index >= 0 && index < data.length) {
-            const pointX = getX(index);
-            const pointY = getY(data[index].value);
-            setHoveredPoint({
-                x: pointX,
-                y: pointY,
-                value: data[index].value,
-                date: data[index].date
-            });
-        }
-    };
-
-    return (
-        <Card className="w-full overflow-hidden relative select-none group">
-            <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg font-bold text-white">Evolução Patrimonial (7 Dias)</h2>
-                {data.length > 0 && (
-                    <span className="text-xs font-medium text-brand-green bg-brand-green/10 px-2 py-1 rounded">
-                        +{((data[data.length-1].value - data[0].value) / (data[0].value || 1) * 100).toFixed(2)}%
-                    </span>
-                )}
-            </div>
-            
-            <div 
-                ref={containerRef} 
-                className="h-[220px] w-full cursor-crosshair relative"
-                onMouseMove={handleMouseMove}
-                onMouseLeave={() => setHoveredPoint(null)}
-            >
-                {width > 0 && data.length > 0 && (
-                    <svg width={width} height={height} className="overflow-visible">
-                        <defs>
-                            <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="0%" stopColor="#00FF9C" stopOpacity="0.3" />
-                                <stop offset="100%" stopColor="#00FF9C" stopOpacity="0" />
-                            </linearGradient>
-                            <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
-                                <feGaussianBlur stdDeviation="3" result="coloredBlur" />
-                                <feMerge>
-                                    <feMergeNode in="coloredBlur" />
-                                    <feMergeNode in="SourceGraphic" />
-                                </feMerge>
-                            </filter>
-                        </defs>
-
-                        {[0, 0.25, 0.5, 0.75, 1].map(t => {
-                            const y = height - padding.bottom - (t * chartHeight);
-                            return (
-                                <line 
-                                    key={t} 
-                                    x1="0" 
-                                    y1={y} 
-                                    x2={width} 
-                                    y2={y} 
-                                    stroke="#333" 
-                                    strokeDasharray="4 4" 
-                                    strokeWidth="1" 
-                                />
-                            );
-                        })}
-
-                        <polygon points={areaPath} fill="url(#chartGradient)" />
-
-                        <polyline 
-                            points={points} 
-                            fill="none" 
-                            stroke="#00FF9C" 
-                            strokeWidth="3" 
-                            strokeLinecap="round" 
-                            strokeLinejoin="round"
-                            filter="url(#glow)"
-                        />
-
-                        {data.map((d, i) => (
-                            <text 
-                                key={i} 
-                                x={getX(i)} 
-                                y={height - 5} 
-                                textAnchor="middle" 
-                                fill="#666" 
-                                fontSize="10"
-                                className="font-medium"
-                            >
-                                {d.date}
-                            </text>
-                        ))}
-
-                        {hoveredPoint && (
-                            <g>
-                                <line 
-                                    x1={hoveredPoint.x} 
-                                    y1={padding.top} 
-                                    x2={hoveredPoint.x} 
-                                    y2={height - padding.bottom} 
-                                    stroke="#00FF9C" 
-                                    strokeWidth="1" 
-                                    strokeDasharray="4 4"
-                                    opacity="0.5"
-                                />
-                                <circle 
-                                    cx={hoveredPoint.x} 
-                                    cy={hoveredPoint.y} 
-                                    r="6" 
-                                    fill="#00FF9C" 
-                                    stroke="black" 
-                                    strokeWidth="2" 
-                                />
-                            </g>
-                        )}
-                    </svg>
-                )}
-
-                {hoveredPoint && (
-                    <div 
-                        className="absolute bg-gray-900/90 border border-brand-green/30 backdrop-blur-md p-2 rounded-lg shadow-xl pointer-events-none z-10 transform -translate-x-1/2 -translate-y-full"
-                        style={{ 
-                            left: hoveredPoint.x, 
-                            top: hoveredPoint.y - 15,
-                            minWidth: '120px'
-                        }}
-                    >
-                        <p className="text-xs text-gray-400 text-center mb-1">{hoveredPoint.date}</p>
-                        <p className="text-sm font-bold text-white text-center">{formatCurrency(hoveredPoint.value, 'USD')}</p>
-                    </div>
-                )}
-            </div>
-        </Card>
-    );
-};
-
 const StatCard: React.FC<{ title: string; value: React.ReactNode; icon: React.ReactNode; subValue?: React.ReactNode; highlight?: boolean; locked?: boolean }> = ({ title, value, icon, subValue, highlight = false, locked = false }) => {
     const borderGradient = highlight 
         ? 'from-brand-green via-brand-green/50 to-brand-gray' 
@@ -235,7 +31,7 @@ const StatCard: React.FC<{ title: string; value: React.ReactNode; icon: React.Re
     const lockedIcon = locked ? (
         <div className="absolute top-4 right-10 text-gray-500">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                <path fillRule="evenodd" d="M5 9V7a5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
             </svg>
         </div>
     ) : null;
@@ -244,7 +40,12 @@ const StatCard: React.FC<{ title: string; value: React.ReactNode; icon: React.Re
         <div className={`relative p-[2px] rounded-2xl bg-gradient-to-br ${borderGradient} transition-all duration-300 hover:shadow-lg hover:shadow-brand-green/10 transform hover:-translate-y-1 h-full`}>
             <div className="bg-brand-gray rounded-[14px] p-5 h-full flex flex-col relative overflow-hidden group">
                 {lockedIcon}
-                {highlight && <div className="absolute -top-1/4 -right-1/4 w-1/2 h-1/2 bg-brand-green/10 rounded-full blur-3xl opacity-50 group-hover:opacity-80 transition-opacity duration-500"></div>}
+                {highlight && (
+                    <>
+                        <div className="absolute -top-1/4 -right-1/4 w-1/2 h-1/2 bg-brand-green/10 rounded-full blur-3xl opacity-50 group-hover:opacity-80 transition-opacity duration-500"></div>
+                        <div className="absolute -top-10 -right-10 w-28 h-28 bg-black/20 rounded-full"></div>
+                    </>
+                )}
 
                 <div className="flex justify-between items-start mb-4 relative z-10">
                     <p className="font-medium text-gray-300 text-sm">{title}</p>
@@ -267,29 +68,76 @@ const StatCard: React.FC<{ title: string; value: React.ReactNode; icon: React.Re
 };
 
 const TransactionRow: React.FC<{ tx: Transaction }> = ({ tx }) => {
-    const isPositive = tx.type === TransactionType.Deposit || tx.type === TransactionType.Bonus || tx.type === TransactionType.Yield;
-    const amountColor = isPositive ? 'text-brand-green' : 'text-red-500';
-    const statusColors: {[key in TransactionStatus]: string} = {
-        [TransactionStatus.Completed]: 'bg-green-500/20 text-green-400',
-        [TransactionStatus.Pending]: 'bg-yellow-500/20 text-yellow-400',
-        [TransactionStatus.Failed]: 'bg-red-500/20 text-red-400',
-        [TransactionStatus.Scheduled]: 'bg-blue-500/20 text-blue-400',
+    // Determine icon and color based on type
+    let icon;
+    let colorClass;
+    let bgClass;
+    let label;
+
+    switch (tx.type) {
+        case TransactionType.Deposit:
+            icon = <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" /></svg>;
+            colorClass = 'text-brand-green';
+            bgClass = 'bg-brand-green/10';
+            label = 'Depósito';
+            break;
+        case TransactionType.Withdrawal:
+            icon = <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 10l7-7m0 0l7 7m-7-7v18" /></svg>;
+            colorClass = 'text-red-400';
+            bgClass = 'bg-red-400/10';
+            label = 'Saque';
+            break;
+        case TransactionType.Bonus:
+            icon = <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8V6m0 12v-2m0-10a9 9 0 110 18 9 9 0 010-18z" /></svg>;
+            colorClass = 'text-brand-blue';
+            bgClass = 'bg-brand-blue/10';
+            label = 'Bônus de Rede';
+            break;
+        case TransactionType.Yield:
+            icon = <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>;
+            colorClass = 'text-brand-green';
+            bgClass = 'bg-brand-green/10';
+            label = 'Rendimento';
+            break;
+        default:
+            icon = ICONS.history;
+            colorClass = 'text-gray-400';
+            bgClass = 'bg-gray-800';
+            label = tx.type;
+    }
+
+    const statusMap: {[key in TransactionStatus]: { text: string, color: string }} = {
+        [TransactionStatus.Completed]: { text: 'Concluído', color: 'bg-brand-green/20 text-brand-green' },
+        [TransactionStatus.Pending]: { text: 'Pendente', color: 'bg-yellow-500/20 text-yellow-400' },
+        [TransactionStatus.Failed]: { text: 'Falhou', color: 'bg-red-500/20 text-red-400' },
+        [TransactionStatus.Scheduled]: { text: 'Agendado', color: 'bg-brand-blue/20 text-brand-blue' },
     };
 
+    const statusInfo = statusMap[tx.status] || { text: tx.status, color: 'bg-gray-800/50 text-gray-400' };
+    const dateObj = new Date(tx.date);
+    // Safe date parsing and formatting for full date
+    const formattedDate = !isNaN(dateObj.getTime()) 
+        ? dateObj.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' }) 
+        : tx.date;
+
     return (
-        <div className="flex items-center justify-between p-3 hover:bg-brand-black rounded-lg">
-            <div className="flex items-center gap-3">
-                 <div className={`p-2 rounded-full ${isPositive ? 'bg-green-500/20' : 'bg-red-500/20'}`}>
-                    {isPositive ? ICONS.arrowUp : ICONS.arrowDown}
+        <div className="flex items-center justify-between p-4 border-b border-gray-800 last:border-0 hover:bg-gray-800 transition-colors">
+            <div className="flex items-center gap-4">
+                 <div className={`p-3 rounded-full ${bgClass} ${colorClass} shadow-lg shadow-black/20 transition-transform group-hover:scale-105`}>
+                    {icon}
                 </div>
-                <div>
-                    <p className="font-semibold text-white">{tx.type}</p>
-                    <p className="text-sm text-gray-500">{tx.date}</p>
+                <div className="flex flex-col">
+                    <span className="font-bold text-white text-sm">{label}</span>
+                    <span className="text-xs text-gray-500 mt-0.5">{formattedDate}</span>
                 </div>
             </div>
-            <div className="text-right">
-                <p className={`font-bold ${amountColor}`}>{isPositive ? '+' : ''} {formatCurrency(tx.amountUSD, 'USD')}</p>
-                <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${statusColors[tx.status]}`}>{tx.status}</span>
+            <div className="text-right flex flex-col items-end">
+                <p className={`font-bold text-sm ${tx.type === TransactionType.Withdrawal ? 'text-red-400' : 'text-brand-green'}`}>
+                    {tx.type === TransactionType.Withdrawal ? '-' : '+'} {formatCurrency(Math.abs(tx.amountUSD), 'USD')}
+                </p>
+                <span className={`mt-1 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider ${statusInfo.color}`}>
+                    {statusInfo.text}
+                </span>
             </div>
         </div>
     )
@@ -328,7 +176,7 @@ const DepositModalContent: React.FC<{
     const [isLoading, setIsLoading] = useState(false);
     
     const beneficiaryName = "D. S. LEAL";
-    const staticPixKey = "8d0c0ba9-df70-4910-a993-9ac514fc853d";
+    const staticPixKey = "40b383be-3df8-4bc2-88a5-be6c7b0a55a0";
 
     const handleGeneratePix = (e: React.FormEvent) => {
         e.preventDefault();
@@ -379,11 +227,16 @@ const DepositModalContent: React.FC<{
              <div>
                 <p className="text-center text-gray-400 mb-4">Use o QR Code ou a chave PIX abaixo para pagar.</p>
                 <div className="flex justify-center mb-4">
-                    <img 
-                        src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${staticPixKey}`} 
-                        alt="QR Code PIX" 
-                        className="bg-white p-2 rounded-lg" 
-                    />
+                    {/* Custom Border Container matching the screenshot: Blue top / Yellow bottom */}
+                    <div className="p-1.5 rounded-2xl bg-[linear-gradient(to_bottom,#3B82F6_50%,#F59E0B_50%)] inline-block shadow-xl">
+                        <div className="bg-white p-2 rounded-xl">
+                            <img 
+                                src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${staticPixKey}`} 
+                                alt="QR Code PIX" 
+                                className="w-48 h-48 block" 
+                            />
+                        </div>
+                    </div>
                 </div>
                 <p className="text-center text-lg font-bold mt-4">{formatCurrency(parseFloat(amountBRL), 'BRL')}</p>
                 
@@ -670,7 +523,7 @@ const WithdrawModalContent: React.FC<{
     );
 };
 
-const StockTickerCard: React.FC<{ stock: Stock }> = ({ stock }) => {
+const StockTickerItem: React.FC<{ stock: Stock }> = ({ stock }) => {
     const isPositive = stock.change > 0;
     const colorClass = isPositive ? 'text-brand-green' : 'text-red-500';
     const icon = isPositive ? ICONS.stockUp : ICONS.stockDown;
@@ -685,10 +538,11 @@ const StockTickerCard: React.FC<{ stock: Stock }> = ({ stock }) => {
     }, [stock.price]);
 
     return (
-        <Card className="p-3 bg-brand-black/50">
+        // Changed from Card to div with direct styling to match screenshot
+        <div className="p-3 bg-brand-black/50 rounded-xl border border-gray-800"> 
             <div className="flex justify-between items-center">
                 <div>
-                    <p className="text-base font-bold">{stock.symbol}</p>
+                    <p className="text-base font-bold text-white">{stock.symbol}</p>
                     <p className="text-xs text-gray-400 truncate w-20">{stock.name}</p>
                 </div>
                 <div className="text-right flex-shrink-0">
@@ -699,7 +553,7 @@ const StockTickerCard: React.FC<{ stock: Stock }> = ({ stock }) => {
                     </div>
                 </div>
             </div>
-        </Card>
+        </div>
     );
 };
 
@@ -747,7 +601,9 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions = [], 
     );
 
     useEffect(() => {
-        const totalDailyProfit = (user.monthlyProfitUSD || 0) / 30;
+        const userPlan = INVESTMENT_PLANS.find(p => p.name === user.plan) || INVESTMENT_PLANS[0];
+        const monthlyProfit = (user.capitalInvestedUSD || 0) * (userPlan?.returnRate || 0);
+        const totalDailyProfit = monthlyProfit / 30;
         const msInDay = 24 * 60 * 60 * 1000;
         const profitPerMs = totalDailyProfit / msInDay;
         
@@ -774,7 +630,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions = [], 
         return () => {
             if (requestRef.current) cancelAnimationFrame(requestRef.current);
         };
-    }, [user.monthlyProfitUSD]);
+    }, [user.capitalInvestedUSD, user.plan]);
     
     useEffect(() => {
         const initialPrices = MOCK_STOCKS.map(s => s.price);
@@ -859,11 +715,8 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions = [], 
         </Modal>
 
         <div className="space-y-4 md:space-y-8">
-            <div className="flex justify-between items-start">
-                <div>
-                    <h1 className="text-xl md:text-3xl font-bold">{t.financial_dashboard}</h1>
-                    <p className="text-gray-400 text-sm md:text-base">{t.dashboard_subtitle}</p>
-                </div>
+             <div className="flex justify-between items-center">
+                <p className="text-gray-300">{t.dashboard_subtitle}</p>
                 <button 
                     onClick={() => setShowBalance(!showBalance)}
                     className="p-2 text-gray-400 hover:text-white transition-colors"
@@ -948,14 +801,11 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions = [], 
                 </div>
             </Card>
 
-            {/* Balance Evolution Chart */}
-            <BalanceEvolutionChart user={user} transactions={transactions} />
-
             <Card>
                 <h2 className="text-lg md:text-xl font-bold mb-4">{t.market_title}</h2>
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
                     {stocks.map(stock => (
-                        <StockTickerCard key={stock.symbol} stock={stock} />
+                        <StockTickerItem key={stock.symbol} stock={stock} />
                     ))}
                 </div>
                 <div className="mt-6 text-center">
@@ -970,7 +820,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions = [], 
 
             <Card>
                 <h2 className="text-lg md:text-xl font-bold mb-4">{t.recent_transactions}</h2>
-                <div className="space-y-2">
+                <div>
                     {transactions.slice(0, 5).map(tx => (
                         <TransactionRow key={tx.id} tx={tx} />
                     ))}

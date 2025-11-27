@@ -45,10 +45,10 @@ const calculateRank = (balance: number): InvestorRank => {
   return InvestorRank.Bronze;
 };
 
-const calculateProfit = (balance: number, planName: string = 'Conservador', plans: InvestmentPlan[] = DEFAULT_PLANS): number => {
+const calculateProfit = (investedCapital: number, planName: string = 'Conservador', plans: InvestmentPlan[] = DEFAULT_PLANS): number => {
     if (!plans || plans.length === 0) plans = DEFAULT_PLANS;
     const plan = plans.find(p => p.name.toLowerCase() === (planName || '').toLowerCase()) || plans[0];
-    return balance * plan.returnRate;
+    return investedCapital * plan.returnRate;
 };
 
 const App: React.FC = () => {
@@ -221,7 +221,7 @@ const App: React.FC = () => {
   
   // Yield Accumulation Logic
   useEffect(() => {
-    if (!loggedUser) return;
+    if (!loggedUser || !dbState.investmentPlans) return;
     
     const processProfitAccumulation = () => {
         const lastUpdateStr = loggedUser.lastProfitUpdate || loggedUser.joinedDate;
@@ -236,7 +236,11 @@ const App: React.FC = () => {
         const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
         if (diffDays >= 1 && loggedUser.status === UserStatus.Approved) {
-            const dailyProfit = (loggedUser.monthlyProfitUSD || 0) / 30;
+            // Corrected: Always calculate daily profit based on invested capital, not stored monthlyProfitUSD
+            const userPlan = dbState.investmentPlans.find(p => p.name === loggedUser.plan) || dbState.investmentPlans[0];
+            const monthlyProfit = (loggedUser.capitalInvestedUSD || 0) * (userPlan?.returnRate || 0);
+            const dailyProfit = monthlyProfit / 30;
+
             const validDays = Math.min(diffDays, 60); 
             const profitToAdd = dailyProfit * validDays;
             const newAvailable = (loggedUser.dailyWithdrawableUSD || 0) + profitToAdd;
@@ -257,7 +261,7 @@ const App: React.FC = () => {
     processProfitAccumulation();
     const interval = setInterval(processProfitAccumulation, 60000); 
     return () => clearInterval(interval);
-  }, [loggedUser]); 
+  }, [loggedUser, dbState.investmentPlans]); 
 
   const refreshData = async () => {
       await loadRemoteData();
@@ -516,7 +520,7 @@ const App: React.FC = () => {
                 ...referrer, 
                 balanceUSD: newBalance,
                 bonusBalanceUSD: (referrer.bonusBalanceUSD || 0) + bonusAmount,
-                monthlyProfitUSD: calculateProfit(newBalance, referrer.plan, investmentPlans),
+                monthlyProfitUSD: calculateProfit(referrer.capitalInvestedUSD, referrer.plan, investmentPlans),
                 rank: calculateRank(newBalance)
             };
             syncUserToSupabase(updatedReferrer);
@@ -546,10 +550,12 @@ const App: React.FC = () => {
                 let newInvested = u.capitalInvestedUSD;
                 let newDailyWithdrawable = u.dailyWithdrawableUSD || 0;
                 let newBonusBalance = u.bonusBalanceUSD || 0;
+                let newMonthlyProfit = u.monthlyProfitUSD || 0;
 
                 if (tx.type === TransactionType.Deposit) {
                     newBalance += tx.amountUSD;
                     newInvested += tx.amountUSD;
+                    newMonthlyProfit = calculateProfit(newInvested, u.plan, investmentPlans);
                 } else if (tx.type === TransactionType.Withdrawal) {
                      newBalance += tx.amountUSD; 
                      if (tx.walletSource === 'bonus') {
@@ -558,6 +564,9 @@ const App: React.FC = () => {
                      } else {
                          newDailyWithdrawable += tx.amountUSD;
                          if (newDailyWithdrawable < 0) newDailyWithdrawable = 0;
+                         // Reduce monthly profit by the withdrawn daily profit amount
+                         newMonthlyProfit += tx.amountUSD;
+                         if (newMonthlyProfit < 0) newMonthlyProfit = 0;
                      }
                 }
                 
@@ -568,7 +577,7 @@ const App: React.FC = () => {
                     dailyWithdrawableUSD: newDailyWithdrawable,
                     bonusBalanceUSD: newBonusBalance,
                     rank: calculateRank(newBalance),
-                    monthlyProfitUSD: calculateProfit(newBalance, u.plan, investmentPlans)
+                    monthlyProfitUSD: newMonthlyProfit
                 };
                 syncUserToSupabase(updated);
                 return updated;
@@ -647,7 +656,7 @@ const App: React.FC = () => {
                    ...u, 
                    balanceUSD: newBalance, 
                    rank: calculateRank(newBalance),
-                   monthlyProfitUSD: calculateProfit(newBalance, u.plan, investmentPlans) 
+                   monthlyProfitUSD: calculateProfit(u.capitalInvestedUSD, u.plan, investmentPlans) 
                 };
                syncUserToSupabase(updated);
                return updated;

@@ -1,4 +1,5 @@
 
+
 import React from 'react';
 import { type InvestmentPlan, InvestorRank, type Stock } from './types';
 
@@ -14,10 +15,10 @@ export const INVESTMENT_PLANS: InvestmentPlan[] = [
 ];
 
 export const MOCK_STOCKS: Stock[] = [
-    { symbol: 'AAPL', name: 'Apple Inc.', price: 195.89, change: 1.25, changePercent: 0.64 },
-    { symbol: 'GOOGL', name: 'Alphabet Inc.', price: 177.85, change: -1.45, changePercent: -0.81 },
-    { symbol: 'MSFT', name: 'Microsoft Corp.', price: 442.57, change: 2.11, changePercent: 0.48 },
-    { symbol: 'TSLA', name: 'Tesla, Inc.', price: 183.01, change: -1.99, changePercent: -1.08 },
+    { symbol: 'AAPL', name: 'Apple Inc.', price: 194.81, change: -1.06, changePercent: -0.54 },
+    { symbol: 'GOOGL', name: 'Alphabet Inc.', price: 175.92, change: -1.93, changePercent: -1.09 },
+    { symbol: 'MSFT', name: 'Microsoft Corp.', price: 447.55, change: 4.98, changePercent: 1.12 },
+    { symbol: 'TSLA', name: 'Tesla, Inc.', price: 183.23, change: 0.22, changePercent: 0.12 },
 ];
 
 export const RANK_COLORS: { [key in InvestorRank]: string } = {

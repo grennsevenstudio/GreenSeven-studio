@@ -1,4 +1,5 @@
 
+
 import React from 'react';
 import Card from '../../../../ui/Card';
 import Button from '../../../../ui/Button';
@@ -16,8 +17,8 @@ const PlanCard: React.FC<{
     
     const handleChangePlan = () => {
         // 1. Check Balance
-        if (user.balanceUSD < plan.minDepositUSD) {
-            alert(`Saldo insuficiente! Para migrar para o plano ${plan.name}, você precisa de um saldo mínimo de US$ ${plan.minDepositUSD}. Seu saldo atual é US$ ${user.balanceUSD.toFixed(2)}.`);
+        if (user.capitalInvestedUSD < plan.minDepositUSD) {
+            alert(`Capital investido insuficiente! Para migrar para o plano ${plan.name}, você precisa de um capital investido mínimo de US$ ${plan.minDepositUSD}. Seu capital atual é US$ ${user.capitalInvestedUSD.toFixed(2)}.`);
             return;
         }
 
@@ -36,10 +37,10 @@ const PlanCard: React.FC<{
         }
 
         // 3. Confirm Change
-        if (confirm(`Você tem certeza que deseja mudar para o plano ${plan.name}? A rentabilidade de ${plan.monthlyReturn} será aplicada ao seu saldo atual.`)) {
+        if (confirm(`Você tem certeza que deseja mudar para o plano ${plan.name}? A rentabilidade de ${plan.monthlyReturn} será aplicada ao seu capital investido.`)) {
             
-            // Recalcula o lucro mensal baseado no novo plano
-            const newProfit = user.balanceUSD * plan.returnRate;
+            // Recalcula o lucro mensal baseado no novo plano e no capital investido
+            const newProfit = user.capitalInvestedUSD * plan.returnRate;
             
             onUpdateUser({
                 ...user,
