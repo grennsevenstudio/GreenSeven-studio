@@ -83,8 +83,8 @@ const TransactionRow: React.FC<{ tx: Transaction }> = ({ tx }) => {
             break;
         case TransactionType.Withdrawal:
             icon = <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 10l7-7m0 0l7 7m-7-7v18" /></svg>;
-            colorClass = 'text-red-400';
-            bgClass = 'bg-red-400/10';
+            colorClass = 'text-white';
+            bgClass = 'bg-gray-700';
             label = 'Saque';
             break;
         case TransactionType.Bonus:
@@ -107,37 +107,40 @@ const TransactionRow: React.FC<{ tx: Transaction }> = ({ tx }) => {
     }
 
     const statusMap: {[key in TransactionStatus]: { text: string, color: string }} = {
-        [TransactionStatus.Completed]: { text: 'Concluído', color: 'bg-brand-green/20 text-brand-green' },
-        [TransactionStatus.Pending]: { text: 'Pendente', color: 'bg-yellow-500/20 text-yellow-400' },
-        [TransactionStatus.Failed]: { text: 'Falhou', color: 'bg-red-500/20 text-red-400' },
-        [TransactionStatus.Scheduled]: { text: 'Agendado', color: 'bg-brand-blue/20 text-brand-blue' },
+        [TransactionStatus.Completed]: { text: 'Concluído', color: 'text-brand-green' },
+        [TransactionStatus.Pending]: { text: 'Pendente', color: 'text-yellow-500' },
+        [TransactionStatus.Failed]: { text: 'Falhou', color: 'text-red-500' },
+        [TransactionStatus.Scheduled]: { text: 'Agendado', color: 'text-brand-blue' },
     };
 
-    const statusInfo = statusMap[tx.status] || { text: tx.status, color: 'bg-gray-800/50 text-gray-400' };
+    const statusInfo = statusMap[tx.status] || { text: tx.status, color: 'text-gray-400' };
     const dateObj = new Date(tx.date);
-    // Safe date parsing and formatting for full date
+    // Safe date parsing
     const formattedDate = !isNaN(dateObj.getTime()) 
-        ? dateObj.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' }) 
+        ? dateObj.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }) 
         : tx.date;
 
     return (
-        <div className="flex items-center justify-between p-4 border-b border-gray-800 last:border-0 hover:bg-gray-800 transition-colors">
+        <div className="flex items-center justify-between p-4 border-b border-gray-800/50 last:border-0 hover:bg-white/5 transition-all group">
             <div className="flex items-center gap-4">
-                 <div className={`p-3 rounded-full ${bgClass} ${colorClass} shadow-lg shadow-black/20 transition-transform group-hover:scale-105`}>
+                 <div className={`p-3 rounded-2xl ${bgClass} ${colorClass} shadow-lg shadow-black/20 group-hover:scale-105 transition-transform`}>
                     {icon}
                 </div>
                 <div className="flex flex-col">
                     <span className="font-bold text-white text-sm">{label}</span>
-                    <span className="text-xs text-gray-500 mt-0.5">{formattedDate}</span>
+                    <span className="text-xs text-gray-500">{formattedDate}</span>
                 </div>
             </div>
-            <div className="text-right flex flex-col items-end">
-                <p className={`font-bold text-sm ${tx.type === TransactionType.Withdrawal ? 'text-red-400' : 'text-brand-green'}`}>
+            <div className="text-right">
+                <p className={`font-bold text-sm ${tx.type === TransactionType.Withdrawal ? 'text-white' : 'text-brand-green'}`}>
                     {tx.type === TransactionType.Withdrawal ? '-' : '+'} {formatCurrency(Math.abs(tx.amountUSD), 'USD')}
                 </p>
-                <span className={`mt-1 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider ${statusInfo.color}`}>
-                    {statusInfo.text}
-                </span>
+                <div className="flex items-center justify-end gap-1.5 mt-0.5">
+                    <div className={`w-1.5 h-1.5 rounded-full ${statusInfo.color.replace('text-', 'bg-')}`}></div>
+                    <span className={`text-[10px] uppercase tracking-wider font-semibold ${statusInfo.color} opacity-80`}>
+                        {statusInfo.text}
+                    </span>
+                </div>
             </div>
         </div>
     )
@@ -175,7 +178,9 @@ const DepositModalContent: React.FC<{
     const [pixKey, setPixKey] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     
-    const beneficiaryName = "D. S. LEAL";
+    // Updated beneficiary info
+    const beneficiaryName = "Greennseven";
+    const institutionName = "Recarga Pay";
     const staticPixKey = "40b383be-3df8-4bc2-88a5-be6c7b0a55a0";
 
     const handleGeneratePix = (e: React.FormEvent) => {
@@ -228,7 +233,7 @@ const DepositModalContent: React.FC<{
                 <p className="text-center text-gray-400 mb-4">Use o QR Code ou a chave PIX abaixo para pagar.</p>
                 <div className="flex justify-center mb-4">
                     {/* Custom Border Container matching the screenshot: Blue top / Yellow bottom */}
-                    <div className="p-1.5 rounded-2xl bg-[linear-gradient(to_bottom,#3B82F6_50%,#F59E0B_50%)] inline-block shadow-xl">
+                    <div className="p-1 rounded-2xl bg-[linear-gradient(to_bottom,#3B82F6_50%,#F59E0B_50%)] inline-block shadow-xl">
                         <div className="bg-white p-2 rounded-xl">
                             <img 
                                 src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${staticPixKey}`} 
@@ -240,6 +245,7 @@ const DepositModalContent: React.FC<{
                 </div>
                 <p className="text-center text-lg font-bold mt-4">{formatCurrency(parseFloat(amountBRL), 'BRL')}</p>
                 
+                {/* Receiver Info Block */}
                 <div className="bg-brand-black p-4 rounded-lg mt-4 border border-gray-800">
                     <p className="text-xs text-gray-500 uppercase font-bold mb-2">Dados do Recebedor</p>
                     <div className="flex justify-between text-sm">
@@ -248,7 +254,7 @@ const DepositModalContent: React.FC<{
                     </div>
                     <div className="flex justify-between text-sm mt-1">
                         <span className="text-gray-400">Instituição:</span>
-                        <span className="text-white font-medium">Itaú Empresas</span>
+                        <span className="text-white font-medium">{institutionName}</span>
                     </div>
                 </div>
 
@@ -538,7 +544,6 @@ const StockTickerItem: React.FC<{ stock: Stock }> = ({ stock }) => {
     }, [stock.price]);
 
     return (
-        // Changed from Card to div with direct styling to match screenshot
         <div className="p-3 bg-brand-black/50 rounded-xl border border-gray-800"> 
             <div className="flex justify-between items-center">
                 <div>
