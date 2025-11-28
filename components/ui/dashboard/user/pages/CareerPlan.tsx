@@ -103,13 +103,7 @@ const RankProgress: React.FC<{ user: User }> = ({ user }) => {
 const CareerPlan: React.FC<CareerPlanProps> = ({ user, allUsers = [], allTransactions = [], language }) => {
     const [referralCode] = useState(user.referralCode);
     const [prevBonusCount, setPrevBonusCount] = useState(0);
-    
-    // SAFE FALLBACK for translations
-    const currentLanguage = language || 'pt';
-    const t = TRANSLATIONS[currentLanguage] || TRANSLATIONS['pt'];
-
-    // If translations aren't loaded, prevent render
-    if (!t) return null;
+    const t = TRANSLATIONS[language] || TRANSLATIONS['pt'];
     
     // Calculate total referrals count
     const referralsCount = useMemo(() => {
@@ -143,6 +137,7 @@ const CareerPlan: React.FC<CareerPlanProps> = ({ user, allUsers = [], allTransac
     // Effect to detect new bonuses and animate
     useEffect(() => {
         if (bonusHistory.length > prevBonusCount) {
+            // In a real app, we might show a confetti or specific toast here
             setPrevBonusCount(bonusHistory.length);
         }
     }, [bonusHistory.length, prevBonusCount]);
@@ -172,11 +167,11 @@ const CareerPlan: React.FC<CareerPlanProps> = ({ user, allUsers = [], allTransac
             
             <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold">{t.career_title || "Plano de Carreira"}</h1>
-                    <p className="text-gray-400 mt-1">{t.career_subtitle || "Expanda sua rede e maximize seus ganhos com o sistema de afiliados."}</p>
+                    <h1 className="text-3xl font-bold">{t.career_title}</h1>
+                    <p className="text-gray-400 mt-1">{t.career_subtitle}</p>
                 </div>
                 <div className="px-4 py-2 bg-brand-green/10 border border-brand-green/30 rounded-lg">
-                    <span className="text-brand-green font-bold text-sm uppercase tracking-wider">{t.unilevel_system || "Sistema Unilevel"}</span>
+                    <span className="text-brand-green font-bold text-sm uppercase tracking-wider">{t.unilevel_system}</span>
                 </div>
             </div>
 
@@ -188,45 +183,18 @@ const CareerPlan: React.FC<CareerPlanProps> = ({ user, allUsers = [], allTransac
                     {/* Stats */}
                     <div className="flex flex-col sm:flex-row gap-4">
                         <StatCard 
-                            title={t.direct_referrals || "Indicações Diretas"}
+                            title={t.direct_referrals} 
                             value={referralsCount.toString()} 
                             icon={ICONS.adminUsers} 
                             color="text-brand-blue"
                         />
                         <StatCard 
-                            title={t.total_bonus || "Total em Bônus"} 
+                            title={t.total_bonus} 
                             value={formatCurrency(totalBonus, 'USD')} 
                             icon={ICONS.dollar}
                             color="text-brand-green"
                         />
                     </div>
-
-                    {/* Infinite Width Visual */}
-                    <Card className="bg-gradient-to-r from-brand-black to-brand-gray border border-gray-800">
-                        <div className="flex items-center gap-4 mb-4">
-                            <div className="p-2 bg-gray-800 rounded-lg text-brand-green">
-                                {React.cloneElement(ICONS.career as React.ReactElement<any>, { className: "h-6 w-6" })}
-                            </div>
-                            <h3 className="text-lg font-bold text-white">{t.infinite_width_title || "Lateralidade Infinita"}</h3>
-                        </div>
-                        <p className="text-gray-400 text-sm leading-relaxed mb-6">
-                           {t.infinite_width_desc || "Não há limites para o seu crescimento. Indique quantas pessoas quiser no seu primeiro nível e aumente exponencialmente seus ganhos residuais."}
-                        </p>
-                        
-                        <div className="flex justify-center items-end h-24 gap-1 relative border-b border-gray-700 pb-4">
-                            {/* Connector Lines */}
-                            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 w-px h-16 bg-gray-700"></div>
-                            <div className="absolute bottom-4 left-[20%] right-[20%] h-px bg-gray-700"></div>
-
-                            {/* Nodes */}
-                            <div className="w-8 h-8 rounded-full bg-gray-800 border border-gray-600 flex items-center justify-center text-[10px] text-gray-400 z-10">1</div>
-                            <div className="w-8 h-8 rounded-full bg-gray-800 border border-gray-600 flex items-center justify-center text-[10px] text-gray-400 z-10">2</div>
-                            <div className="w-12 h-12 rounded-full bg-brand-green border-4 border-brand-black flex items-center justify-center text-brand-black font-bold z-20 -mb-2 shadow-lg shadow-brand-green/30">VC</div>
-                            <div className="w-8 h-8 rounded-full bg-gray-800 border border-gray-600 flex items-center justify-center text-[10px] text-gray-400 z-10">3</div>
-                            <div className="w-8 h-8 rounded-full bg-gray-800 border border-dashed border-gray-500 flex items-center justify-center text-xs text-gray-400 z-10">∞</div>
-                        </div>
-                        <p className="text-center text-xs text-gray-500 mt-2 uppercase tracking-widest font-semibold">Infinitos Diretos</p>
-                    </Card>
                 </div>
 
                 <div className="space-y-6">
@@ -236,12 +204,12 @@ const CareerPlan: React.FC<CareerPlanProps> = ({ user, allUsers = [], allTransac
                             <div className="absolute -left-3 top-1/2 -translate-y-1/2 w-6 h-6 bg-brand-green rounded-full"></div>
                             <div className="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 bg-brand-green rounded-full"></div>
                             
-                            <p className="text-center text-gray-400 text-xs font-bold uppercase tracking-widest mb-4">{t.share_code_title || "Seu Código de Acesso"}</p>
+                            <p className="text-center text-gray-400 text-xs font-bold uppercase tracking-widest mb-4">{t.share_code_title}</p>
                             <div className="bg-gray-900/80 p-4 rounded-lg border border-gray-700 text-center mb-4">
                                 <p className="text-3xl font-mono font-black text-brand-green tracking-widest">{referralCode}</p>
                             </div>
                             <Button onClick={copyCode} fullWidth variant="primary">
-                                {ICONS.copy} {t.copy_code || "Copiar Código"}
+                                {ICONS.copy} {t.copy_code}
                             </Button>
                         </div>
                     </div>
@@ -252,19 +220,19 @@ const CareerPlan: React.FC<CareerPlanProps> = ({ user, allUsers = [], allTransac
                             level={1} 
                             percentage={5} 
                             color="bg-brand-green text-brand-black" 
-                            description={t.level_1_desc || "Comissão direta no 1º Depósito."}
+                            description={t.level_1_desc}
                         />
                         <LevelCard 
                             level={2} 
                             percentage={3} 
                             color="bg-brand-blue text-brand-black" 
-                            description={t.level_2_desc || "Indicações dos seus amigos."}
+                            description={t.level_2_desc}
                         />
                         <LevelCard 
                             level={3} 
                             percentage={1} 
                             color="bg-purple-500 text-white" 
-                            description={t.level_3_desc || "Expansão da rede nível 3."}
+                            description={t.level_3_desc}
                         />
                     </div>
                 </div>
@@ -276,17 +244,17 @@ const CareerPlan: React.FC<CareerPlanProps> = ({ user, allUsers = [], allTransac
                     <div className="p-2 bg-brand-green/10 rounded-lg text-brand-green">
                         {ICONS.history}
                     </div>
-                    <h2 className="text-xl font-bold">{t.bonus_history_title || "Extrato de Bônus"}</h2>
+                    <h2 className="text-xl font-bold">{t.bonus_history_title}</h2>
                 </div>
                 
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                         <thead className="bg-brand-black text-gray-400 uppercase text-xs">
                             <tr>
-                                <th className="p-4 rounded-tl-lg">{t.bonus_date || "Data"}</th>
-                                <th className="p-4">{t.bonus_origin || "Origem"}</th>
-                                <th className="p-4">{t.bonus_level || "Nível"}</th>
-                                <th className="p-4 rounded-tr-lg text-right">{t.bonus_value || "Valor Recebido"}</th>
+                                <th className="p-4 rounded-tl-lg">{t.bonus_date}</th>
+                                <th className="p-4">{t.bonus_origin}</th>
+                                <th className="p-4">{t.bonus_level}</th>
+                                <th className="p-4 rounded-tr-lg text-right">{t.bonus_value}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -322,8 +290,8 @@ const CareerPlan: React.FC<CareerPlanProps> = ({ user, allUsers = [], allTransac
                                             <div className="p-4 bg-gray-800 rounded-full opacity-50">
                                                 {React.cloneElement(ICONS.adminUsers as React.ReactElement<any>, { className: "w-8 h-8" })}
                                             </div>
-                                            <p className="italic">{t.no_bonus || "Você ainda não recebeu bônus de indicação."}</p>
-                                            <p className="text-sm text-gray-600">{t.share_to_earn || "Compartilhe seu código para começar a ganhar!"}</p>
+                                            <p className="italic">{t.no_bonus}</p>
+                                            <p className="text-sm text-gray-600">{t.share_to_earn}</p>
                                         </div>
                                     </td>
                                 </tr>
