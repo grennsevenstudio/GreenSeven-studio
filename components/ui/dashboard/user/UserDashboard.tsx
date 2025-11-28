@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import type { User, Transaction, Notification, ChatMessage, Language } from '../../../../types';
 import Sidebar from '../../../layout/Sidebar';
@@ -36,6 +35,7 @@ interface UserDashboardProps {
   language: Language;
   setLanguage: (lang: Language) => void;
   onRefreshData?: () => void;
+  investmentPlans?: any[];
 }
 
 const MOTIVATIONAL_QUOTES = [
@@ -86,7 +86,7 @@ const UserDashboard: React.FC<UserDashboardProps> = (props) => {
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
   const [dailyQuote, setDailyQuote] = useState({ text: "", author: "" });
 
-  const t = TRANSLATIONS[language];
+  const t = TRANSLATIONS[language] || TRANSLATIONS['pt'];
 
   const sidebarNavItems = [
     { label: t.dashboard, icon: ICONS.dashboard, view: 'dashboard' },
@@ -139,9 +139,9 @@ const UserDashboard: React.FC<UserDashboardProps> = (props) => {
                     language={language}
                 />;
       case 'plans':
-        return <Plans user={user} onUpdateUser={onUpdateUser} />;
+        return <Plans user={user} onUpdateUser={onUpdateUser} language={language} />;
       case 'career':
-        return <CareerPlan user={user} allUsers={allUsers} allTransactions={allTransactions} />;
+        return <CareerPlan user={user} allUsers={allUsers} allTransactions={allTransactions} language={language} />;
       case 'transactions':
         return <Transactions transactions={transactions} />;
       case 'profile':

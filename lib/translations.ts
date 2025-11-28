@@ -1,8 +1,3 @@
-
-
-
-
-
 import { Language } from '../types';
 
 export const TRANSLATIONS = {
@@ -42,6 +37,82 @@ export const TRANSLATIONS = {
     theme_light: 'Ativar modo claro',
     theme_dark: 'Ativar modo escuro',
     close: 'Fechar',
+    career_title: 'Plano de Carreira',
+    career_subtitle: 'Expanda sua rede e maximize seus ganhos com o sistema de afiliados.',
+    unilevel_system: 'Sistema Unilevel',
+    direct_referrals: 'Indicações Diretas',
+    total_bonus: 'Total em Bônus',
+    infinite_width_title: 'Lateralidade Infinita',
+    infinite_width_desc: 'Não há limites para o seu crescimento. Indique quantas pessoas quiser no seu primeiro nível e aumente exponencialmente seus ganhos residuais.',
+    share_code_title: 'Seu Código de Acesso',
+    copy_code: 'Copiar Código',
+    level_1_desc: 'Comissão direta no 1º Depósito.',
+    level_2_desc: 'Indicações dos seus amigos.',
+    level_3_desc: 'Expansão da rede nível 3.',
+    bonus_history_title: 'Extrato de Bônus',
+    bonus_date: 'Data',
+    bonus_origin: 'Origem',
+    bonus_level: 'Nível',
+    bonus_value: 'Valor Recebido',
+    no_bonus: 'Você ainda não recebeu bônus de indicação.',
+    share_to_earn: 'Compartilhe seu código para começar a ganhar!',
+    
+    planDetails: {
+      risk_warning: "Atenção: Todo investimento envolve riscos. Invista apenas valores que não comprometerão sua estabilidade financeira em caso de perda.",
+      risk_level_label: "Nível de Risco:",
+      requirements_label: "Requisitos:",
+      min_deposit: "Mínimo de",
+      locked_days: "Bloqueado por",
+      days: "dias",
+      conservador: {
+        riskLevel: "Baixo",
+        advantages: [
+          "Estabilidade e segurança priorizadas.",
+          "Ideal para preservação de patrimônio.",
+          "Baixa exposição à volatilidade do mercado."
+        ],
+        risks: [
+          "Retornos menores em comparação a planos arrojados.",
+          "Pode não superar picos inflacionários agressivos no curto prazo."
+        ]
+      },
+      moderado: {
+        riskLevel: "Médio",
+        advantages: [
+          "Equilíbrio ideal entre segurança e crescimento.",
+          "Diversificação inteligente de ativos.",
+          "Retornos consistentes a médio prazo."
+        ],
+        risks: [
+          "Exposição moderada a flutuações de mercado.",
+          "Pequeñas variações de rendimento mensal são possíveis."
+        ]
+      },
+      agressivo: {
+        riskLevel: "Alto",
+        advantages: [
+          "Potencial de alta rentabilidade.",
+          "Crescimento acelerado de capital.",
+          "Aproveitamento de oportunidades de mercado voláteis."
+        ],
+        risks: [
+          "Maior volatilidade diária.",
+          "Risco de correções de mercado de curto prazo."
+        ]
+      },
+      select: {
+        riskLevel: "Muito Alto",
+        advantages: [
+          "Máxima rentabilidade disponível.",
+          "Gestão prioritária e estratégias exclusivas.",
+          "Acesso a oportunidades premium de mercado."
+        ],
+        risks: [
+          "Alta exposição a ativos complexos.",
+          "Requer maior tolerância a oscilações de mercado para ganhos expressivos."
+        ]
+      }
+    },
 
     auth: {
         email_label: 'Email',
@@ -92,7 +163,6 @@ export const TRANSLATIONS = {
         pass_strength: 'Força da senha',
         pass_min: 'Mín. 8 caracteres, maiúscula, número e símbolo.',
     },
-
     landing: {
         nav_home: 'INÍCIO',
         nav_features: 'VANTAGENS',
@@ -173,6 +243,25 @@ export const TRANSLATIONS = {
     dashboard: 'Dashboard',
     plans: 'Plans',
     career: 'Career Plan',
+    career_title: 'Career Plan',
+    career_subtitle: 'Expand your network and maximize your earnings with our affiliate system.',
+    unilevel_system: 'Unilevel System',
+    direct_referrals: 'Direct Referrals',
+    total_bonus: 'Total Bonus',
+    infinite_width_title: 'Infinite Width',
+    infinite_width_desc: 'There are no limits to your growth. Refer as many people as you want at your first level and exponentially increase your residual income.',
+    share_code_title: 'Your Access Code',
+    copy_code: 'Copy Code',
+    level_1_desc: 'Direct commission on 1st Deposit.',
+    level_2_desc: 'Referrals from your friends.',
+    level_3_desc: 'Level 3 network expansion.',
+    bonus_history_title: 'Bonus History',
+    bonus_date: 'Date',
+    bonus_origin: 'Source',
+    bonus_level: 'Level',
+    bonus_value: 'Amount Received',
+    no_bonus: 'You haven\'t received any referral bonuses yet.',
+    share_to_earn: 'Share your code to start earning!',
     transactions: 'Transactions',
     profile: 'My Profile',
     support: 'Support',
@@ -205,7 +294,34 @@ export const TRANSLATIONS = {
     theme_light: 'Enable light mode',
     theme_dark: 'Enable dark mode',
     close: 'Close',
-
+    planDetails: {
+      risk_warning: "Warning: All investment involves risk. Invest only amounts that will not compromise your financial stability in case of loss.",
+      risk_level_label: "Risk Level:",
+      requirements_label: "Requirements:",
+      min_deposit: "Minimum of",
+      locked_days: "Locked for",
+      days: "days",
+      conservador: {
+        riskLevel: "Low",
+        advantages: ["Stability prioritized.", "Ideal for preservation.", "Low volatility."],
+        risks: ["Lower returns compared to aggressive plans.", "May not beat aggressive inflation."]
+      },
+      moderado: {
+        riskLevel: "Medium",
+        advantages: ["Balance of safety and growth.", "Smart diversification.", "Consistent medium-term returns."],
+        risks: ["Moderate market exposure.", "Small monthly yield variations possible."]
+      },
+      agressivo: {
+        riskLevel: "High",
+        advantages: ["High profit potential.", "Fast capital growth.", "Leverages volatility."],
+        risks: ["Higher daily volatility.", "Risk of short-term corrections."]
+      },
+      select: {
+        riskLevel: "Very High",
+        advantages: ["Maximum profitability.", "Exclusive strategies.", "Premium market access."],
+        risks: ["High exposure to complex assets.", "Requires high tolerance for volatility."]
+      }
+    },
     auth: {
         email_label: 'Email',
         password_label: 'Password',
@@ -255,7 +371,6 @@ export const TRANSLATIONS = {
         pass_strength: 'Password strength',
         pass_min: 'Min. 8 chars, uppercase, number and symbol.',
     },
-
     landing: {
         nav_home: 'HOME',
         nav_features: 'FEATURES',
@@ -336,6 +451,25 @@ export const TRANSLATIONS = {
     dashboard: 'Panel',
     plans: 'Planes',
     career: 'Plan de Carrera',
+    career_title: 'Plan de Carrera',
+    career_subtitle: 'Expande tu red y maximiza tus ganancias con nuestro sistema de afiliados.',
+    unilevel_system: 'Sistema Unilevel',
+    direct_referrals: 'Referidos Directos',
+    total_bonus: 'Bono Total',
+    infinite_width_title: 'Lateralidad Infinita',
+    infinite_width_desc: 'No hay límites para tu crecimiento. Refiere a tantas personas como quieras en tu primer nivel y aumenta exponencialmente tus ingresos residuales.',
+    share_code_title: 'Tu Código de Acceso',
+    copy_code: 'Copiar Código',
+    level_1_desc: 'Comisión directa en el 1er Depósito.',
+    level_2_desc: 'Referidos de tus amigos.',
+    level_3_desc: 'Expansión de red nivel 3.',
+    bonus_history_title: 'Historial de Bonos',
+    bonus_date: 'Fecha',
+    bonus_origin: 'Origen',
+    bonus_level: 'Nivel',
+    bonus_value: 'Monto Recibido',
+    no_bonus: 'Aún no has recibido bonos por referidos.',
+    share_to_earn: '¡Comparte tu código para empezar a ganar!',
     transactions: 'Transacciones',
     profile: 'Mi Perfil',
     support: 'Soporte',
@@ -368,7 +502,34 @@ export const TRANSLATIONS = {
     theme_light: 'Activar modo claro',
     theme_dark: 'Activar modo oscuro',
     close: 'Cerrar',
-
+    planDetails: {
+      risk_warning: "Advertencia: Toda inversión conlleva riesgos. Invierta solo cantidades que no comprometan su estabilidad financiera en caso de pérdida.",
+      risk_level_label: "Nivel de Riesgo:",
+      requirements_label: "Requisitos:",
+      min_deposit: "Mínimo de",
+      locked_days: "Bloqueado por",
+      days: "días",
+      conservador: {
+        riskLevel: "Bajo",
+        advantages: ["Estabilidad priorizada.", "Ideal para preservación.", "Baja volatilidad."],
+        risks: ["Retornos menores en comparación a planes agresivos.", "Puede no superar picos inflacionarios agresivos en el corto plazo."]
+      },
+      moderado: {
+        riskLevel: "Medio",
+        advantages: ["Equilibrio ideal entre seguridad y crecimiento.", "Diversificación inteligente.", "Retornos consistentes a medio plazo."],
+        risks: ["Exposición moderada a fluctuaciones del mercado.", "Pequeñas variaciones de rendimiento mensual son posibles."]
+      },
+      agressivo: {
+        riskLevel: "Alto",
+        advantages: ["Potencial de alta rentabilidad.", "Crecimiento acelerado de capital.", "Aprovechamiento de oportunidades de mercado volátiles."],
+        risks: ["Mayor volatilidad diaria.", "Riesgo de correcciones de mercado a corto plazo."]
+      },
+      select: {
+        riskLevel: "Muy Alto",
+        advantages: ["Máxima rentabilidad disponible.", "Gestión prioritaria y estrategias exclusivas.", "Acceso a oportunidades premium de mercado."],
+        risks: ["Alta exposición a activos complejos.", "Requiere mayor tolerancia a oscilaciones de mercado para ganancias expresivas."]
+      }
+    },
     auth: {
         email_label: 'Correo electrónico',
         password_label: 'Contraseña',
@@ -418,7 +579,6 @@ export const TRANSLATIONS = {
         pass_strength: 'Fortaleza de contraseña',
         pass_min: 'Mín. 8 caracteres, mayúscula, número y símbolo.',
     },
-
     landing: {
         nav_home: 'INICIO',
         nav_features: 'VENTAJAS',
@@ -499,6 +659,25 @@ export const TRANSLATIONS = {
     dashboard: 'Tableau de Bord',
     plans: 'Plans',
     career: 'Plan de Carrière',
+    career_title: 'Plan de Carrière',
+    career_subtitle: 'Développez votre réseau et maximisez vos gains avec notre système d\'affiliation.',
+    unilevel_system: 'Système Unilevel',
+    direct_referrals: 'Parrainages Directs',
+    total_bonus: 'Bonus Total',
+    infinite_width_title: 'Largeur Infinie',
+    infinite_width_desc: 'Il n\'y a pas de limites à votre croissance. Parrainez autant de personnes que vous le souhaitez à votre premier niveau et augmentez exponentiellement vos revenus résiduels.',
+    share_code_title: 'Votre Code d\'Accès',
+    copy_code: 'Copier le Code',
+    level_1_desc: 'Commission directe sur le 1er Dépôt.',
+    level_2_desc: 'Parrainages de vos amis.',
+    level_3_desc: 'Expansion du réseau niveau 3.',
+    bonus_history_title: 'Historique des Bonus',
+    bonus_date: 'Date',
+    bonus_origin: 'Source',
+    bonus_level: 'Niveau',
+    bonus_value: 'Montant Reçu',
+    no_bonus: 'Vous n\'avez pas encore reçu de bonus de parrainage.',
+    share_to_earn: 'Partagez votre code pour commencer à gagner !',
     transactions: 'Transactions',
     profile: 'Mon Profil',
     support: 'Support',
@@ -531,7 +710,34 @@ export const TRANSLATIONS = {
     theme_light: 'Activer le mode clair',
     theme_dark: 'Activer le mode sombre',
     close: 'Fermer',
-
+    planDetails: {
+      risk_warning: "Avertissement : Tout investissement comporte des risques. N'investissez que des montants qui ne compromettent pas votre stabilité financière en cas de perte.",
+      risk_level_label: "Niveau de Risque :",
+      requirements_label: "Exigences :",
+      min_deposit: "Minimum de",
+      locked_days: "Bloqué pour",
+      days: "jours",
+      conservador: {
+        riskLevel: "Faible",
+        advantages: ["Stabilité priorisée.", "Idéal pour la préservation.", "Faible volatilité."],
+        risks: ["Rendements plus faibles.", "Peut ne pas battre l'inflation agressive."]
+      },
+      moderado: {
+        riskLevel: "Moyen",
+        advantages: ["Équilibre sécurité/croissance.", "Diversification intelligente.", "Rendements constants."],
+        risks: ["Exposition modérée.", "Variations mensuelles possibles."]
+      },
+      agressivo: {
+        riskLevel: "Élevé",
+        advantages: ["Potentiel de rentabilité élevé.", "Croissance rapide.", "Exploitation de la volatilité."],
+        risks: ["Volatilité quotidienne plus élevée.", "Risque de corrections à court terme."]
+      },
+      select: {
+        riskLevel: "Très Élevé",
+        advantages: ["Rentabilité maximale.", "Stratégies exclusives.", "Accès premium."],
+        risks: ["Forte exposition aux actifs complexes.", "Nécessite une tolérance élevée."]
+      }
+    },
     auth: {
         email_label: 'Email',
         password_label: 'Mot de passe',
@@ -581,7 +787,6 @@ export const TRANSLATIONS = {
         pass_strength: 'Force du mot de passe',
         pass_min: 'Min. 8 car., majuscule, chiffre et symbole.',
     },
-
     landing: {
         nav_home: 'ACCUEIL',
         nav_features: 'AVANTAGES',
@@ -662,6 +867,25 @@ export const TRANSLATIONS = {
     dashboard: 'Dashboard',
     plans: 'Pläne',
     career: 'Karriereplan',
+    career_title: 'Karriereplan',
+    career_subtitle: 'Erweitern Sie Ihr Netzwerk und maximieren Sie Ihre Einnahmen mit unserem Affiliate-System.',
+    unilevel_system: 'Unilevel-System',
+    direct_referrals: 'Direkte Empfehlungen',
+    total_bonus: 'Gesamtbonus',
+    infinite_width_title: 'Unendliche Breite',
+    infinite_width_desc: 'Es gibt keine Grenzen für Ihr Wachstum. Empfehlen Sie so viele Personen wie Sie möchten auf Ihrer ersten Ebene und steigern Sie Ihr Residualeinkommen exponentiell.',
+    share_code_title: 'Ihr Zugangscode',
+    copy_code: 'Code Kopieren',
+    level_1_desc: 'Direkte Provision auf die 1. Einzahlung.',
+    level_2_desc: 'Empfehlungen von Ihren Freunden.',
+    level_3_desc: 'Netzwerkerweiterung Level 3.',
+    bonus_history_title: 'Bonusverlauf',
+    bonus_date: 'Datum',
+    bonus_origin: 'Quelle',
+    bonus_level: 'Level',
+    bonus_value: 'Erhaltener Betrag',
+    no_bonus: 'Sie haben noch keine Empfehlungsboni erhalten.',
+    share_to_earn: 'Teilen Sie Ihren Code, um zu verdienen!',
     transactions: 'Transaktionen',
     profile: 'Mein Profil',
     support: 'Support',
@@ -694,7 +918,34 @@ export const TRANSLATIONS = {
     theme_light: 'Hellen Modus aktivieren',
     theme_dark: 'Dunklen Modus aktivieren',
     close: 'Schließen',
-
+    planDetails: {
+      risk_warning: "Warnung: Jede Investition birgt Risiken. Investieren Sie nur Beträge, die Ihre finanzielle Stabilität im Verlustfall nicht gefährden.",
+      risk_level_label: "Risikostufe:",
+      requirements_label: "Anforderungen:",
+      min_deposit: "Mindestbetrag",
+      locked_days: "Gesperrt für",
+      days: "Tage",
+      conservador: {
+        riskLevel: "Niedrig",
+        advantages: ["Stabilität priorisiert.", "Ideal zur Kapitalerhaltung.", "Geringe Volatilität."],
+        risks: ["Geringere Renditen.", "Schlägt aggressive Inflation evtl. nicht."]
+      },
+      moderado: {
+        riskLevel: "Mittel",
+        advantages: ["Gleichgewicht Sicherheit/Wachstum.", "Smarte Diversifikation.", "Konsistente Renditen."],
+        risks: ["Moderate Marktexposition.", "Kleine Renditeschwankungen möglich."]
+      },
+      agressivo: {
+        riskLevel: "Hoch",
+        advantages: ["Hohes Potenzial.", "Schnelles Wachstum.", "Nutzt Volatilität."],
+        risks: ["Höhere tägliche Volatilität.", "Risiko kurzfristiger Korrekturen."]
+      },
+      select: {
+        riskLevel: "Sehr Hoch",
+        advantages: ["Maximale Rentabilität.", "Exklusive Strategien.", "Premium-Zugang."],
+        risks: ["Hohe Exposition.", "Erfordert hohe Toleranz."]
+      }
+    },
     auth: {
         email_label: 'E-Mail',
         password_label: 'Passwort',
@@ -744,7 +995,6 @@ export const TRANSLATIONS = {
         pass_strength: 'Passwortstärke',
         pass_min: 'Min. 8 Zeichen, Großbuchstabe, Zahl und Symbol.',
     },
-
     landing: {
         nav_home: 'START',
         nav_features: 'VORTEILE',
