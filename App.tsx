@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import type { User, Transaction, Notification, ChatMessage, PlatformSettings, AdminActionLog, Language, InvestmentPlan } from './types';
+import type { User, Transaction, Notification, ChatMessage, PlatformSettings, AdminActionLog, Language, InvestmentPlan, SyncStatus } from './types';
 import { View, TransactionStatus, TransactionType, AdminActionType, UserStatus, InvestorRank } from './types';
 import { REFERRAL_BONUS_RATES, INVESTMENT_PLANS as DEFAULT_PLANS } from './constants';
 import { initializeDB, getAllData, saveAllData, type AppDB, getSessionUser, setSessionUser, clearSessionUser } from './lib/db';
@@ -63,6 +63,7 @@ const App: React.FC = () => {
 
   const [loggedUser, setLoggedUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>('idle');
 
   // View State
   const [view, setView] = useState<View>(() => {
@@ -140,6 +141,7 @@ const App: React.FC = () => {
 
   // Data Loading from Supabase
   const loadRemoteData = async () => {
+    setSyncStatus('syncing');
     try {
         const [
             { data: remoteUsers, error: usersError },
@@ -161,10 +163,15 @@ const App: React.FC = () => {
             fetchInvestmentPlansFromSupabase()
         ]);
 
+        if (usersError || txsError || msgError || settingsError || logsError || notifError || careerError || plansError) {
+             setSyncStatus('error');
+        } else {
+             setSyncStatus('online');
+        }
+
         if (usersError) console.error("Supabase fetch user error:", usersError.message);
         if (txsError) console.error("Supabase fetch txs error:", txsError.message);
-        // Add more error logs if needed...
-
+        
         if (remoteCareerPlan && Object.keys(remoteCareerPlan).length > 0) {
             setReferralRates(remoteCareerPlan);
         }
@@ -202,6 +209,7 @@ const App: React.FC = () => {
     } catch (e) {
         console.error("Error loading remote data", e);
         setIsLoading(false);
+        setSyncStatus('error');
         return false;
     }
   };
@@ -225,7 +233,7 @@ const App: React.FC = () => {
       // 2. Initial fetch from remote
       loadRemoteData();
       
-      // 3. Subscribe to REALTIME changes. POLLING REMOVED to fix timeout errors.
+      // 3. Subscribe to REALTIME changes.
       const channel = supabase.channel('global-changes')
           .on('postgres_changes', { event: '*', schema: 'public' }, (payload) => {
               console.log('Realtime change received! Syncing data...', payload);
@@ -497,7 +505,7 @@ const App: React.FC = () => {
       syncUserToSupabase(updatedUsers.find(u => u.id === userId)!);
       
       const notification: Notification = { id: faker.string.uuid(), userId: userId, message: newStatus === UserStatus.Approved ? "Sua conta foi APROVADA." : `Sua conta foi REJEITADA. Motivo: ${reason}`, date: new Date().toISOString(), isRead: false };
-      setDbState(prev => ({ ...prev, users: updatedUsers, notifications: [...prev.notifications, notification] }));
+      setDbState(prev => ({ ...prev, users: [...prev.users, notification], notifications: [...prev.notifications, notification] }));
       syncNotificationToSupabase(notification);
   };
   const handleAdminUpdateUserBalance = (userId: string, newBalance: number) => {
@@ -550,9 +558,8 @@ const App: React.FC = () => {
   else if (view === View.Login) content = <LoginPage setView={setView} onLogin={handleLogin} language={language} setLanguage={handleSetLanguage} />;
   else if (view === View.Register) content = <RegisterPage setView={setView} onRegister={handleRegister} language={language} setLanguage={handleSetLanguage} />;
   else if (view === View.ForgotPassword) content = <ForgotPasswordPage setView={setView} language={language} setLanguage={handleSetLanguage} />;
-  else if (view === View.UserDashboard && loggedUser) content = <UserDashboard user={loggedUser} adminUser={adminUser} transactions={transactions.filter(t => t.userId === loggedUser.id)} allUsers={users} allTransactions={transactions} notifications={notifications.filter(n => n.userId === loggedUser.id)} chatMessages={chatMessages} onLogout={handleLogout} onAddTransaction={handleAddTransaction} onMarkAllNotificationsAsRead={handleMarkAllNotificationsAsRead} onSendMessage={handleSendMessage} onUpdateUser={handleUpdateUser} onUpdatePassword={handleUpdatePassword} isDarkMode={isDarkMode} toggleTheme={toggleTheme} language={language} setLanguage={handleSetLanguage} onRefreshData={refreshData} investmentPlans={investmentPlans} />;
-  // FIX: Pass investmentPlans to AdminDashboard
-  else if (view === View.AdminDashboard && loggedUser?.isAdmin) content = <AdminDashboard user={loggedUser} allUsers={users} allTransactions={transactions} chatMessages={chatMessages} platformSettings={platformSettings} adminActionLogs={adminActionLogs} notifications={notifications.filter(n => n.userId === loggedUser.id)} onLogout={handleLogout} onUpdateTransaction={handleUpdateTransactionStatus} onUpdateUserStatus={handleUpdateUserStatus} onPayoutBonus={handlePayoutBonus} onSendMessage={handleSendMessage} onUpdateSettings={handleUpdateSettings} onAdminUpdateUserBalance={handleAdminUpdateUserBalance} onUpdateUser={handleUpdateUser} onMarkAllNotificationsAsRead={handleMarkAllNotificationsAsRead} isDarkMode={isDarkMode} toggleTheme={toggleTheme} language={language} setLanguage={handleSetLanguage} onRefreshData={refreshData} onBroadcastNotification={handleBroadcastNotification} referralRates={referralRates} onUpdatePlan={handleUpdatePlan} investmentPlans={investmentPlans} />;
+  else if (view === View.UserDashboard && loggedUser) content = <UserDashboard user={loggedUser} adminUser={adminUser} transactions={transactions.filter(t => t.userId === loggedUser.id)} allUsers={users} allTransactions={transactions} notifications={notifications.filter(n => n.userId === loggedUser.id)} chatMessages={chatMessages} onLogout={handleLogout} onAddTransaction={handleAddTransaction} onMarkAllNotificationsAsRead={handleMarkAllNotificationsAsRead} onSendMessage={handleSendMessage} onUpdateUser={handleUpdateUser} onUpdatePassword={handleUpdatePassword} isDarkMode={isDarkMode} toggleTheme={toggleTheme} language={language} setLanguage={handleSetLanguage} onRefreshData={refreshData} investmentPlans={investmentPlans} syncStatus={syncStatus} />;
+  else if (view === View.AdminDashboard && loggedUser?.isAdmin) content = <AdminDashboard user={loggedUser} allUsers={users} allTransactions={transactions} chatMessages={chatMessages} platformSettings={platformSettings} adminActionLogs={adminActionLogs} notifications={notifications.filter(n => n.userId === loggedUser.id)} onLogout={handleLogout} onUpdateTransaction={handleUpdateTransactionStatus} onUpdateUserStatus={handleUpdateUserStatus} onPayoutBonus={handlePayoutBonus} onSendMessage={handleSendMessage} onUpdateSettings={handleUpdateSettings} onAdminUpdateUserBalance={handleAdminUpdateUserBalance} onUpdateUser={handleUpdateUser} onMarkAllNotificationsAsRead={handleMarkAllNotificationsAsRead} isDarkMode={isDarkMode} toggleTheme={toggleTheme} language={language} setLanguage={handleSetLanguage} onRefreshData={refreshData} onBroadcastNotification={handleBroadcastNotification} referralRates={referralRates} onUpdatePlan={handleUpdatePlan} investmentPlans={investmentPlans} syncStatus={syncStatus} />;
   else content = <HomePage setView={setView} language={language} setLanguage={handleSetLanguage} />;
 
   return (

@@ -672,7 +672,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions = [], 
 
         <div className="space-y-4 md:space-y-8">
              <div className="flex items-center justify-between">
-                <p className="text-gray-300">{t.dashboard_subtitle}</p>
+                <h1 className="text-xl md:text-2xl font-bold">{t.dashboard_subtitle}</h1>
                 <button onClick={() => setShowBalance(!showBalance)} className="text-gray-500 hover:text-white" title={showBalance ? "Ocultar saldos" : "Mostrar saldos"}>
                     {showBalance ? ICONS.eyeSlash : ICONS.eye}
                 </button>

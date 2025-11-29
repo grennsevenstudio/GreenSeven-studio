@@ -11,6 +11,8 @@ export enum View {
 
 export type Language = 'pt' | 'en' | 'es' | 'fr' | 'de';
 
+export type SyncStatus = 'idle' | 'syncing' | 'online' | 'error';
+
 export enum InvestorRank {
   Bronze = 'Bronze',
   Silver = 'Silver',

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import type { User, Transaction, Notification, ChatMessage, Language, InvestmentPlan } from '../../../../types';
+import type { User, Transaction, Notification, ChatMessage, Language, InvestmentPlan, SyncStatus } from '../../../../types';
 import Sidebar from '../../../layout/Sidebar';
 import Header from '../../../layout/Header';
 import BottomNavBar from '../../../layout/BottomNavBar';
@@ -9,7 +9,6 @@ import Button from '../../../ui/Button';
 import { TRANSLATIONS } from '../../../../lib/translations';
 
 // Import pages
-// FIX: Changed to a default import to match the export from DashboardHome.
 import DashboardHome from './pages/DashboardHome';
 import Plans from './pages/Plans';
 import Transactions from './pages/Transactions';
@@ -37,6 +36,7 @@ interface UserDashboardProps {
   setLanguage: (lang: Language) => void;
   onRefreshData?: () => void;
   investmentPlans?: InvestmentPlan[];
+  syncStatus: SyncStatus;
 }
 
 const MOTIVATIONAL_QUOTES = [
@@ -78,7 +78,7 @@ const DashboardSkeleton = () => (
 );
 
 const UserDashboard: React.FC<UserDashboardProps> = (props) => {
-  const { user, adminUser, transactions, allUsers, allTransactions, notifications, chatMessages, onLogout, onAddTransaction, onMarkAllNotificationsAsRead, onSendMessage, onUpdateUser, onUpdatePassword, isDarkMode, toggleTheme, language, setLanguage, onRefreshData, investmentPlans } = props;
+  const { user, adminUser, transactions, allUsers, allTransactions, notifications, chatMessages, onLogout, onAddTransaction, onMarkAllNotificationsAsRead, onSendMessage, onUpdateUser, onUpdatePassword, isDarkMode, toggleTheme, language, setLanguage, onRefreshData, investmentPlans, syncStatus } = props;
   const [activeView, setActiveView] = useState('dashboard');
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -224,6 +224,7 @@ const UserDashboard: React.FC<UserDashboardProps> = (props) => {
             language={language}
             setLanguage={setLanguage}
             onRefreshData={onRefreshData}
+            syncStatus={syncStatus}
         />
         <main className="p-2 sm:p-6 lg:p-8">
           {isLoading ? <DashboardSkeleton /> : renderContent()}

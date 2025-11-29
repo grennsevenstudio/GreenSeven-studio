@@ -1,6 +1,5 @@
-
 import React, { useState, useRef, useEffect } from 'react';
-import type { User, Notification, Language } from '../../types';
+import type { User, Notification, Language, SyncStatus } from '../../types';
 import { ICONS, RANK_COLORS } from '../../constants';
 import { TRANSLATIONS } from '../../lib/translations';
 
@@ -56,6 +55,23 @@ const Toast = ({ message }: { message: string }) => (
     </div>
 );
 
+const SyncIndicator: React.FC<{ status: SyncStatus }> = ({ status }) => {
+    const statusMap = {
+        idle: { text: 'Iniciando', color: 'bg-gray-500', pulse: false },
+        syncing: { text: 'Sincronizando...', color: 'bg-blue-500', pulse: true },
+        online: { text: 'Online', color: 'bg-green-500', pulse: false },
+        error: { text: 'Offline', color: 'bg-red-500', pulse: false },
+    };
+    const currentStatus = statusMap[status] || statusMap.idle;
+
+    return (
+        <div className="flex items-center gap-2 text-xs font-semibold text-gray-400">
+            <div className={`w-2 h-2 rounded-full ${currentStatus.color} ${currentStatus.pulse ? 'animate-pulse' : ''}`}></div>
+            <span>{currentStatus.text}</span>
+        </div>
+    );
+};
+
 interface HeaderProps {
   user: User;
   onLogout: () => void;
@@ -67,9 +83,10 @@ interface HeaderProps {
   language: Language;
   setLanguage: (lang: Language) => void;
   onRefreshData?: () => void;
+  syncStatus: SyncStatus;
 }
 
-const Header: React.FC<HeaderProps> = ({ user, onLogout, toggleSidebar, notifications = [], onMarkAllAsRead, isDarkMode, toggleTheme, language, setLanguage, onRefreshData }) => {
+const Header: React.FC<HeaderProps> = ({ user, onLogout, toggleSidebar, notifications = [], onMarkAllAsRead, isDarkMode, toggleTheme, language, setLanguage, onRefreshData, syncStatus }) => {
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isLangMenuOpen, setIsLangMenuOpen] = useState(false);
@@ -129,14 +146,13 @@ const Header: React.FC<HeaderProps> = ({ user, onLogout, toggleSidebar, notifica
         >
           {ICONS.menu}
         </button>
-        {/* Welcome Message - Visible on Mobile and Desktop (as per user screenshot) */}
         <div className="flex items-center gap-2">
             <span className="font-bold text-white truncate max-w-[200px]">{t.welcome}, {firstName}</span>
         </div>
       </div>
 
       <div className="flex items-center gap-5">
-         {/* Refresh Data Button (Hidden on small screens to match image minimalism, active on click) */}
+         <SyncIndicator status={syncStatus} />
          {onRefreshData && (
              <button 
                 onClick={handleRefresh} 
@@ -146,8 +162,6 @@ const Header: React.FC<HeaderProps> = ({ user, onLogout, toggleSidebar, notifica
                  {ICONS.refresh}
              </button>
          )}
-
-         {/* Language Selector (Flag + Arrow) */}
          <div className="relative" ref={langMenuRef}>
             <button 
                 onClick={() => setIsLangMenuOpen(!isLangMenuOpen)}
@@ -177,8 +191,6 @@ const Header: React.FC<HeaderProps> = ({ user, onLogout, toggleSidebar, notifica
                 </div>
             )}
          </div>
-
-        {/* Theme Toggle */}
         <button
           onClick={toggleTheme}
           className="text-gray-400 hover:text-white transition-colors"
@@ -186,8 +198,6 @@ const Header: React.FC<HeaderProps> = ({ user, onLogout, toggleSidebar, notifica
         >
           {isDarkMode ? ICONS.sun : ICONS.moon}
         </button>
-
-        {/* Notifications */}
         <div className="relative" ref={notificationRef}>
           <button
             className="text-gray-400 hover:text-white relative flex items-center"
@@ -231,8 +241,6 @@ const Header: React.FC<HeaderProps> = ({ user, onLogout, toggleSidebar, notifica
             </div>
           )}
         </div>
-
-        {/* User Profile Dropdown (Image Only) */}
         <div className="relative" ref={profileRef}>
             <button 
                 className="flex items-center focus:outline-none"
