@@ -47,7 +47,7 @@ const StatCard: React.FC<{ title: string; value: React.ReactNode; icon: React.Re
                 </div>
                 
                 <div className="z-10 mt-auto">
-                    <div className="text-3xl sm:text-4xl font-black text-white tracking-tight leading-none mb-1">{value}</div>
+                    <div className="text-2xl sm:text-3xl lg:text-4xl font-black text-white tracking-tight leading-none mb-1">{value}</div>
                     {subValue && typeof subValue === 'string' ? (
                         <div className="text-xs text-gray-500 font-medium">{subValue}</div>
                     ) : (
@@ -516,14 +516,14 @@ const StockTickerItem: React.FC<{ stock: Stock }> = ({ stock }) => {
     }, [stock.price]);
 
     return (
-        <div className="p-3 bg-brand-black/50 rounded-xl border border-gray-800"> 
+        <div className="p-2 sm:p-3 bg-brand-black/50 rounded-xl border border-gray-800"> 
             <div className="flex justify-between items-center gap-2">
                 <div className="min-w-0">
-                    <p className="text-sm font-bold text-white">{stock.symbol}</p>
+                    <p className="text-sm sm:text-base font-bold text-white">{stock.symbol}</p>
                     <p className="text-[10px] text-gray-400 truncate">{stock.name}</p>
                 </div>
                 <div className="text-right flex-shrink-0">
-                    <p ref={priceRef} className={`font-bold text-sm transition-colors duration-500 ${colorClass}`}>${stock.price.toFixed(2)}</p>
+                    <p ref={priceRef} className={`font-bold text-sm sm:text-base transition-colors duration-500 ${colorClass}`}>${stock.price.toFixed(2)}</p>
                     <div className={`flex items-center justify-end gap-1 text-[10px] font-semibold ${colorClass}`}>
                         {icon}
                         <span>{stock.change > 0 ? '+' : ''}{stock.change.toFixed(2)} ({stock.changePercent.toFixed(2)}%)</span>
@@ -577,11 +577,11 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions = [], 
         <div className="w-full mt-1">
             <span className="text-xs text-gray-500 font-medium">{t.locked_capital}</span>
             <div className="mt-3 pt-3 border-t border-gray-800 w-full space-y-1.5">
-                <div className="flex justify-between items-center w-full text-xs">
+                <div className="flex flex-col sm:flex-row justify-between sm:items-center w-full text-xs">
                     <span className="text-gray-400">Lucro Mensal (Projeção) ({userPlan.name}):</span>
                     <span className="text-brand-green font-bold">+{formatCurrency(monthlyProfitUSD, 'USD')}</span>
                 </div>
-                <div className="flex justify-between items-center w-full text-xs">
+                <div className="flex flex-col sm:flex-row justify-between sm:items-center w-full text-xs">
                     <span className="text-gray-400">Estimativa de ganho em 30 dias (BRL):</span>
                     <span className="text-gray-300 font-medium">≈ {formatCurrency(accumulatedBRL, 'BRL')}</span>
                 </div>

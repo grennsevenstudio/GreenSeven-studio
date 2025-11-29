@@ -403,9 +403,9 @@ const HomePage: React.FC<HomePageProps> = ({ setView, language, setLanguage }) =
                 </div>
             </header>
 
-            <main id="home" className="h-[calc(100vh-76px)] min-h-[600px] flex items-center justify-center text-center relative px-4">
+            <main id="home" className="h-[calc(100vh-76px)] min-h-[550px] flex items-center justify-center text-center relative px-4">
                 <div className="relative z-10 flex flex-col items-center">
-                    <h1 className="text-5xl md:text-7xl font-black leading-tight max-w-4xl text-white">
+                    <h1 className="text-4xl sm:text-5xl md:text-7xl font-black leading-tight max-w-4xl text-white">
                         <span>{t.landing.hero_title_1}</span>
                         <span className="block mt-2">{t.landing.hero_title_2}</span>
                         <span className="block mt-2 bg-gradient-to-r from-brand-green to-brand-blue text-transparent bg-clip-text animate-text-gradient bg-[200%_auto]">
@@ -432,11 +432,11 @@ const HomePage: React.FC<HomePageProps> = ({ setView, language, setLanguage }) =
                 </div>
             </main>
             
-            <section id="features" className="py-24 px-4 sm:px-6 lg:px-12 bg-brand-gray/50 relative z-10">
+            <section id="features" className="py-12 px-4 sm:py-16 sm:px-6 lg:px-12 bg-brand-gray/50 relative z-10">
                 <div className="max-w-6xl mx-auto text-center">
-                    <h2 className="text-4xl font-black text-white">{t.landing.features_title}</h2>
-                    <p className="mt-4 text-lg text-gray-400 max-w-3xl mx-auto">{t.landing.features_subtitle}</p>
-                    <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 mt-12 text-left">
+                    <h2 className="text-3xl md:text-4xl font-black text-white">{t.landing.features_title}</h2>
+                    <p className="mt-4 text-base md:text-lg text-gray-400 max-w-3xl mx-auto">{t.landing.features_subtitle}</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8 mt-12 text-left">
                         <FeatureCard icon={ICONS.featureProfit} title={t.landing.feature_profit_title}>
                             {t.landing.feature_profit_desc}
                         </FeatureCard>
@@ -453,10 +453,10 @@ const HomePage: React.FC<HomePageProps> = ({ setView, language, setLanguage }) =
                 </div>
             </section>
             
-            <section id="how-it-works" className="py-24 px-4 sm:px-6 lg:px-12 relative z-10">
+            <section id="how-it-works" className="py-12 px-4 sm:py-16 sm:px-6 lg:px-12 relative z-10">
                 <div className="max-w-6xl mx-auto text-center">
-                    <h2 className="text-4xl font-black text-white">{t.landing.how_title}</h2>
-                    <p className="mt-4 text-lg text-gray-400">{t.landing.how_subtitle}</p>
+                    <h2 className="text-3xl md:text-4xl font-black text-white">{t.landing.how_title}</h2>
+                    <p className="mt-4 text-base md:text-lg text-gray-400">{t.landing.how_subtitle}</p>
                     <div className="mt-16 flex flex-col-reverse md:flex-row justify-between items-center text-left gap-12">
                         <div className="w-full md:w-1/2 space-y-12">
                             <HowItWorksStep number="1" title={t.landing.step_1_title}>
@@ -474,11 +474,11 @@ const HomePage: React.FC<HomePageProps> = ({ setView, language, setLanguage }) =
                 </div>
             </section>
 
-            <section id="plans" className="py-24 px-4 sm:px-6 lg:px-12 bg-brand-gray/50 relative z-10">
+            <section id="plans" className="py-12 px-4 sm:py-16 sm:px-6 lg:px-12 bg-brand-gray/50 relative z-10">
                 <div className="max-w-6xl mx-auto text-center">
-                    <h2 className="text-4xl font-black text-white">{t.landing.plans_title}</h2>
-                    <p className="mt-4 text-lg text-gray-400 max-w-3xl mx-auto">{t.landing.plans_subtitle}</p>
-                    <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 mt-12">
+                    <h2 className="text-3xl md:text-4xl font-black text-white">{t.landing.plans_title}</h2>
+                    <p className="mt-4 text-base md:text-lg text-gray-400 max-w-3xl mx-auto">{t.landing.plans_subtitle}</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8 mt-12">
                         {INVESTMENT_PLANS.map(plan => (
                             <PlanPreviewCard 
                                 key={plan.id} 
@@ -491,10 +491,10 @@ const HomePage: React.FC<HomePageProps> = ({ setView, language, setLanguage }) =
                 </div>
             </section>
 
-            <section id="cta" className="py-20 px-4 sm:px-6 lg:px-12 relative z-10">
-                <div className="max-w-4xl mx-auto text-center bg-gradient-to-r from-brand-blue/80 to-brand-green/80 p-12 rounded-2xl">
-                    <h2 className="text-4xl font-black text-brand-black">{t.landing.cta_title}</h2>
-                    <p className="mt-4 text-lg text-brand-black/80 max-w-2xl mx-auto">{t.landing.cta_subtitle}</p>
+            <section id="cta" className="py-12 px-4 sm:py-16 sm:px-6 lg:px-12 relative z-10">
+                <div className="max-w-4xl mx-auto text-center bg-gradient-to-r from-brand-blue/80 to-brand-green/80 p-8 md:p-12 rounded-2xl">
+                    <h2 className="text-3xl md:text-4xl font-black text-brand-black">{t.landing.cta_title}</h2>
+                    <p className="mt-4 text-base md:text-lg text-brand-black/80 max-w-2xl mx-auto">{t.landing.cta_subtitle}</p>
                     <Button onClick={() => setView(View.Register)} variant="primary" className="px-8 py-4 text-lg mt-8">
                         {t.landing.cta_button}
                     </Button>
@@ -514,21 +514,23 @@ const HomePage: React.FC<HomePageProps> = ({ setView, language, setLanguage }) =
                         </div>
                         <p className="mt-4 text-gray-400">{t.landing.footer_desc}</p>
                     </div>
-                     <div>
-                        <h4 className="font-bold text-white tracking-wider">{t.landing.footer_company}</h4>
-                        <ul className="mt-4 space-y-2">
-                            <li><a href="#" onClick={(e) => {e.preventDefault(); openInfoModal('about')}} className="text-gray-400 hover:text-white">{t.landing.footer_about}</a></li>
-                            <li><a href="#" onClick={(e) => {e.preventDefault(); openInfoModal('contact')}} className="text-gray-400 hover:text-white">{t.landing.footer_contact}</a></li>
-                            <li><a href="#" onClick={(e) => {e.preventDefault(); openInfoModal('careers')}} className="text-gray-400 hover:text-white">{t.landing.footer_careers}</a></li>
-                        </ul>
-                    </div>
-                     <div>
-                        <h4 className="font-bold text-white tracking-wider">{t.landing.footer_legal}</h4>
-                        <ul className="mt-4 space-y-2">
-                            <li><a href="#" onClick={(e) => {e.preventDefault(); openInfoModal('terms')}} className="text-gray-400 hover:text-white">{t.landing.footer_terms}</a></li>
-                            <li><a href="#" onClick={(e) => {e.preventDefault(); openInfoModal('privacy')}} className="text-gray-400 hover:text-white">{t.landing.footer_privacy}</a></li>
-                            <li><a href="#" onClick={(e) => {e.preventDefault(); openInfoModal('security')}} className="text-gray-400 hover:text-white">{t.landing.footer_security}</a></li>
-                        </ul>
+                     <div className="grid grid-cols-2 gap-8 md:col-span-2 md:grid-cols-2">
+                         <div>
+                            <h4 className="font-bold text-white tracking-wider">{t.landing.footer_company}</h4>
+                            <ul className="mt-4 space-y-2">
+                                <li><a href="#" onClick={(e) => {e.preventDefault(); openInfoModal('about')}} className="text-gray-400 hover:text-white">{t.landing.footer_about}</a></li>
+                                <li><a href="#" onClick={(e) => {e.preventDefault(); openInfoModal('contact')}} className="text-gray-400 hover:text-white">{t.landing.footer_contact}</a></li>
+                                <li><a href="#" onClick={(e) => {e.preventDefault(); openInfoModal('careers')}} className="text-gray-400 hover:text-white">{t.landing.footer_careers}</a></li>
+                            </ul>
+                        </div>
+                         <div>
+                            <h4 className="font-bold text-white tracking-wider">{t.landing.footer_legal}</h4>
+                            <ul className="mt-4 space-y-2">
+                                <li><a href="#" onClick={(e) => {e.preventDefault(); openInfoModal('terms')}} className="text-gray-400 hover:text-white">{t.landing.footer_terms}</a></li>
+                                <li><a href="#" onClick={(e) => {e.preventDefault(); openInfoModal('privacy')}} className="text-gray-400 hover:text-white">{t.landing.footer_privacy}</a></li>
+                                <li><a href="#" onClick={(e) => {e.preventDefault(); openInfoModal('security')}} className="text-gray-400 hover:text-white">{t.landing.footer_security}</a></li>
+                            </ul>
+                        </div>
                     </div>
                 </div>
                 <div className="max-w-7xl mx-auto mt-12 pt-8 border-t border-gray-800 flex flex-col sm:flex-row justify-between items-center">
