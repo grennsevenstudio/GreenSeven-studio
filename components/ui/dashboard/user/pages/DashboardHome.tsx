@@ -218,7 +218,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions = [], 
 
         <div className="space-y-4 md:space-y-8">
              <div className="flex justify-between items-center">
-                <p className="text-gray-300">{t.dashboard_subtitle}</p>
+                <h1 className="text-3xl font-bold">{t.dashboard_subtitle}</h1>
                 <button 
                     onClick={() => setShowBalance(!showBalance)}
                     className="p-2 text-gray-400 hover:text-white transition-colors"
