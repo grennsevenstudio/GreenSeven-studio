@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import type { User, Transaction, WithdrawalDetails, Stock, Language, InvestmentPlan } from '../../../../../types';
+import type { User, Transaction, WithdrawalDetails, Stock, Language } from '../../../../../types';
 import { TransactionType, TransactionStatus } from '../../../../../types';
 import Card from '../../../../ui/Card';
 import Button from '../../../../ui/Button';
@@ -21,6 +21,52 @@ interface DashboardHomeProps {
 }
 
 // --- SUB-COMPONENTS ---
+
+const StatCard: React.FC<{ title: string; value: React.ReactNode; icon: React.ReactNode; subValue?: React.ReactNode; highlight?: boolean; locked?: boolean }> = ({ title, value, icon, subValue, highlight = false, locked = false }) => {
+    const borderGradient = highlight 
+        ? 'from-brand-green via-brand-green/50 to-brand-gray' 
+        : locked 
+            ? 'from-gray-700 via-gray-800 to-gray-900'
+            : 'from-brand-blue/30 via-brand-gray to-brand-gray/30';
+
+    return (
+        <div className={`relative p-[2px] rounded-2xl bg-gradient-to-br ${borderGradient} transition-all duration-300 hover:shadow-lg hover:shadow-brand-green/10 transform hover:-translate-y-1 h-full`}>
+            <div className="bg-brand-gray rounded-[14px] p-5 h-full flex flex-col relative overflow-hidden group">
+                {highlight && (
+                    <>
+                        <div className="absolute -top-1/4 -right-1/4 w-1/2 h-1/2 bg-brand-green/10 rounded-full blur-3xl opacity-50 group-hover:opacity-80 transition-opacity duration-500"></div>
+                        <div className="absolute -top-10 -right-10 w-28 h-28 bg-black/20 rounded-full"></div>
+                    </>
+                )}
+
+                <div className="flex justify-between items-start mb-4 relative z-10">
+                    <p className="font-medium text-gray-300 text-sm">{title}</p>
+                    <div className={`transition-colors ${highlight ? 'text-brand-green' : 'text-gray-500 group-hover:text-brand-green'}`}>
+                        {React.cloneElement(icon as React.ReactElement<any>, { className: "h-5 w-5 sm:h-6 sm:w-6" })}
+                    </div>
+                </div>
+                
+                <div className="z-10 mt-auto">
+                    <div className="text-3xl sm:text-4xl font-black text-white tracking-tight leading-none mb-1">{value}</div>
+                    {subValue && typeof subValue === 'string' ? (
+                        <div className="text-xs text-gray-500 font-medium">{subValue}</div>
+                    ) : (
+                        subValue
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const Toast: React.FC<{ message: string; isVisible: boolean }> = ({ message, isVisible }) => {
+  if (!isVisible) return null;
+  return (
+    <div className="fixed bottom-20 right-4 bg-brand-green text-brand-black px-4 py-2 rounded-lg shadow-lg z-50 animate-fade-in-up font-bold text-sm flex items-center gap-2">
+      <span>{message}</span>
+    </div>
+  );
+};
 
 const SuccessDisplay: React.FC<{ title: string; children: React.ReactNode; onClose: () => void; }> = ({ title, children, onClose }) => {
     return (
@@ -54,9 +100,7 @@ const DepositModalContent: React.FC<{
     const [pixKey, setPixKey] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     
-    // Updated beneficiary info
     const beneficiaryName = "GREENNSEVEN TECNOLOGIA LTDA";
-    const institutionName = "Recarga Pay";
     const cnpj = "40.840.653/0001-01";
     const staticPixKey = "00020126580014br.gov.bcb.pix013640b383be-3df8-4bc2-88a5-be6c7b0a55a05204000053039865802BR5925GREENNSEVEN TECNOLOGIA LTDA6009SAO PAULO62070503***6304B3A8";
 
@@ -393,36 +437,72 @@ const WithdrawModalContent: React.FC<{
     );
 };
 
-// ... (Rest of components: StockTickerItem, AnimatedBalance, etc.)
+const TransactionRow: React.FC<{ tx: Transaction }> = ({ tx }) => {
+    let icon, colorClass, bgClass, label;
+    switch (tx.type) {
+        case TransactionType.Deposit:
+            icon = <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" /></svg>;
+            colorClass = 'text-brand-green';
+            bgClass = 'bg-brand-green/10';
+            label = 'Depósito';
+            break;
+        case TransactionType.Withdrawal:
+            icon = <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 10l7-7m0 0l7 7m-7-7v18" /></svg>;
+            colorClass = 'text-red-400';
+            bgClass = 'bg-red-400/10';
+            label = 'Saque';
+            break;
+        case TransactionType.Bonus:
+            icon = ICONS.dollar;
+            colorClass = 'text-brand-blue';
+            bgClass = 'bg-brand-blue/10';
+            label = 'Bônus';
+            break;
+        case TransactionType.Yield:
+             icon = ICONS.arrowUp;
+             colorClass = 'text-brand-green';
+             bgClass = 'bg-brand-green/10';
+             label = 'Rendimento';
+             break;
+        default:
+            icon = ICONS.history;
+            colorClass = 'text-gray-400';
+            bgClass = 'bg-gray-800';
+            label = tx.type;
+    }
+    const statusMap: {[key in TransactionStatus]: { text: string, color: string }} = {
+        [TransactionStatus.Completed]: { text: 'Concluído', color: 'bg-brand-green/20 text-brand-green' },
+        [TransactionStatus.Pending]: { text: 'Pendente', color: 'bg-yellow-500/20 text-yellow-400' },
+        [TransactionStatus.Failed]: { text: 'Falhou', color: 'bg-red-500/20 text-red-400' },
+        [TransactionStatus.Scheduled]: { text: 'Agendado', color: 'bg-blue-500/20 text-brand-blue' },
+    };
+    const statusInfo = statusMap[tx.status] || { text: tx.status, color: 'bg-gray-800 text-gray-400' };
+    const dateObj = new Date(tx.date);
+    const formattedDate = !isNaN(dateObj.getTime()) ? dateObj.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' }) : tx.date;
 
-// FIX: Added StatCard component definition.
-interface StatCardProps {
-    title: string;
-    value: React.ReactNode;
-    subValue: React.ReactNode;
-    icon: React.ReactNode;
-    highlight?: boolean;
-}
-
-const StatCard: React.FC<StatCardProps> = ({ title, value, subValue, icon, highlight = false }) => (
-    <Card className={`flex flex-col justify-between ${highlight ? 'bg-brand-green/5 border-brand-green/30' : ''}`}>
-        <div className="flex justify-between items-start">
-            <div className="space-y-1">
-                <p className="text-sm text-gray-400 font-medium">{title}</p>
-                <div className={`text-3xl font-bold ${highlight ? 'text-brand-green' : 'text-white'}`}>
-                    {value}
+    return (
+        <div className="flex items-center justify-between p-4 border-b border-gray-800 last:border-0 hover:bg-gray-800 transition-colors">
+            <div className="flex items-center gap-4">
+                 <div className={`p-3 rounded-full ${bgClass} ${colorClass}`}>{icon}</div>
+                <div>
+                    <p className="font-bold text-white text-sm">{label}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">{formattedDate}</p>
                 </div>
             </div>
-            <div className={`p-3 rounded-lg ${highlight ? 'bg-brand-green/10 text-brand-green' : 'bg-brand-black text-gray-400'}`}>
-                {icon}
+            <div className="text-right">
+                <p className={`font-bold text-sm ${tx.type === TransactionType.Withdrawal ? 'text-red-400' : 'text-brand-green'}`}>
+                    {tx.type === TransactionType.Withdrawal ? '-' : '+'} {formatCurrency(Math.abs(tx.amountUSD), 'USD')}
+                </p>
+                <span className={`mt-1 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase ${statusInfo.color}`}>
+                    {statusInfo.text}
+                </span>
             </div>
         </div>
-        <div className="mt-4">{subValue}</div>
-    </Card>
-);
+    );
+};
 
 const StockTickerItem: React.FC<{ stock: Stock }> = ({ stock }) => {
-    const isPositive = stock.change >= 0;
+    const isPositive = stock.change > 0;
     const colorClass = isPositive ? 'text-brand-green' : 'text-red-500';
     const icon = isPositive ? ICONS.stockUp : ICONS.stockDown;
     const priceRef = useRef<HTMLParagraphElement>(null);
@@ -467,6 +547,8 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions = [], 
     const [isWithdrawModalOpen, setWithdrawModalOpen] = useState(false);
     const [showBalance, setShowBalance] = useState(true);
     const [stocks, setStocks] = useState<Stock[]>(MOCK_STOCKS);
+    const [isRefreshing, setIsRefreshing] = useState(false);
+    const [showToast, setShowToast] = useState(false);
     
     const earningsRef = useRef<HTMLSpanElement>(null);
     const requestRef = useRef<number>();
@@ -480,6 +562,16 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions = [], 
     const userPlan = INVESTMENT_PLANS.find(p => p.name === user.plan) || INVESTMENT_PLANS[0];
     const monthlyProfitUSD = user.capitalInvestedUSD * userPlan.returnRate;
     const accumulatedBRL = (user.capitalInvestedUSD + monthlyProfitUSD) * DOLLAR_RATE;
+
+    const handleRefresh = async () => {
+        if (onRefreshData) {
+            setIsRefreshing(true);
+            await onRefreshData();
+            setIsRefreshing(false);
+            setShowToast(true);
+            setTimeout(() => setShowToast(false), 3000);
+        }
+    };
 
     const capitalSubValue = (
         <div className="w-full mt-1">
@@ -538,12 +630,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions = [], 
                     const initialPrice = initialPrices[index];
                     const newChange = newPrice - initialPrice;
                     const newChangePercent = (newChange / initialPrice) * 100;
-                    return {
-                        ...stock,
-                        price: newPrice,
-                        change: newChange,
-                        changePercent: newChangePercent,
-                    };
+                    return { ...stock, price: newPrice, change: newChange, changePercent: newChangePercent };
                 })
             );
         }, 3000);
@@ -556,33 +643,36 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions = [], 
     return (
         <>
         <style>{`
-          /* ... (styles remain the same) ... */
+          @keyframes flash-green { color: #00FF99 !important; }
+          @keyframes flash-red { color: #EF4444 !important; }
+          @keyframes scale-in { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+          .animate-scale-in { animation: scale-in 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) both; }
+          @keyframes draw { to { stroke-dashoffset: 0; } }
+          .success-circle { stroke-dasharray: 264; stroke-dashoffset: 264; animation: draw 0.8s ease-out forwards; }
+          .success-check { stroke-dasharray: 50; stroke-dashoffset: 50; animation: draw 0.6s 0.3s ease-out forwards; }
+          @keyframes balance-fade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+          .balance-value-anim { animation: balance-fade 0.4s ease-out; }
+          .live-ticker { font-variant-numeric: tabular-nums; }
+          @keyframes pulse-green {
+            0% { box-shadow: 0 0 0 0 rgba(0, 255, 156, 0.4); }
+            70% { box-shadow: 0 0 0 6px rgba(0, 255, 156, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(0, 255, 156, 0); }
+          }
         `}</style>
         
-        <Modal 
-            isOpen={isDepositModalOpen} 
-            onClose={() => setDepositModalOpen(false)} 
-            title="Depositar via PIX"
-        >
+        <Toast message="Movimentações atualizadas!" isVisible={showToast} />
+
+        <Modal isOpen={isDepositModalOpen} onClose={() => setDepositModalOpen(false)} title="Depositar via PIX">
             <DepositModalContent user={user} onClose={() => setDepositModalOpen(false)} onAddTransaction={onAddTransaction} />
         </Modal>
 
-        <Modal 
-            isOpen={isWithdrawModalOpen} 
-            onClose={() => setWithdrawModalOpen(false)} 
-            title="Solicitar Saque"
-        >
-            <WithdrawModalContent 
-                user={user} 
-                onClose={() => setWithdrawModalOpen(false)} 
-                onAddTransaction={onAddTransaction} 
-                setActiveView={setActiveView}
-            />
+        <Modal isOpen={isWithdrawModalOpen} onClose={() => setWithdrawModalOpen(false)} title="Solicitar Saque">
+            <WithdrawModalContent user={user} onClose={() => setWithdrawModalOpen(false)} onAddTransaction={onAddTransaction} setActiveView={setActiveView} />
         </Modal>
 
         <div className="space-y-4 md:space-y-8">
              <div className="flex items-center justify-between">
-                <h1 className="text-3xl font-bold">{t.dashboard_subtitle}</h1>
+                <p className="text-gray-300">{t.dashboard_subtitle}</p>
                 <button onClick={() => setShowBalance(!showBalance)} className="text-gray-500 hover:text-white" title={showBalance ? "Ocultar saldos" : "Mostrar saldos"}>
                     {showBalance ? ICONS.eyeSlash : ICONS.eye}
                 </button>
@@ -590,59 +680,34 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions = [], 
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                 <StatCard 
-                    title={t.total_balance}
-                    value={
-                        <AnimatedBalance 
-                            value={showBalance ? formatCurrency(user.capitalInvestedUSD || 0, 'USD') : maskedValue}
-                            isShown={showBalance}
-                        />
-                    }
+                    title="Capital Investido"
+                    value={<AnimatedBalance value={showBalance ? formatCurrency(user.capitalInvestedUSD, 'USD') : maskedValue} isShown={showBalance} />}
                     subValue={capitalSubValue}
                     icon={ICONS.shield} 
                 />
-                 <StatCard 
-                    title={t.available_withdraw} 
-                    value={
-                        <AnimatedBalance 
-                            value={showBalance ? formatCurrency(dailyAvailable, 'USD') : maskedValue}
-                            isShown={showBalance}
-                        />
-                    }
-                    subValue={t.daily_yields}
+                <StatCard 
+                    title="Lucro Disponível (Diário)" 
+                    value={<AnimatedBalance value={showBalance ? formatCurrency(dailyAvailable, 'USD') : maskedValue} isShown={showBalance} />}
+                    subValue="Rendimentos liberados para saque"
                     icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>}
                     highlight={true}
                 />
-                 <StatCard 
-                    title={t.bonus_available} 
-                    value={
-                        <AnimatedBalance 
-                            value={showBalance ? formatCurrency(bonusAvailable, 'USD') : maskedValue}
-                            isShown={showBalance}
-                        />
-                    }
-                    subValue={t.bonus_desc}
+                <StatCard 
+                    title="Bônus Disponível" 
+                    value={<AnimatedBalance value={showBalance ? formatCurrency(bonusAvailable, 'USD') : maskedValue} isShown={showBalance} />}
+                    subValue="Comissões por indicação"
                     icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8V6m0 12v-2m0-10a9 9 0 110 18 9 9 0 010-18z" /></svg>}
                     highlight={true}
                 />
-                 <StatCard 
-                    title={t.earnings_today} 
+                <StatCard 
+                    title="Rendimentos Hoje" 
                     value={
                         <div className="flex items-center gap-3">
-                            <span className="live-ticker" ref={earningsRef}>
-                                $ 0,000000
-                            </span>
-                            <span className="flex h-3 w-3 relative">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                                <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
-                            </span>
+                            <span className="live-ticker" ref={earningsRef}>$ 0,000000</span>
+                            <span className="relative flex h-3 w-3"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span><span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span></span>
                         </div>
                     }
-                    subValue={
-                        <div className="flex items-center gap-1 text-brand-green font-semibold">
-                             <span className="text-xs">{t.live}</span>
-                             <span className="text-gray-400 font-normal ml-1">| {t.accumulating}</span>
-                        </div>
-                    }
+                    subValue={<div className="flex items-center gap-1 text-brand-green font-semibold"><span className="text-xs">{t.live}</span><span className="text-gray-400 font-normal ml-1">| {t.accumulating}</span></div>}
                     icon={ICONS.arrowUp}
                 />
             </div>
@@ -660,17 +725,24 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions = [], 
             <Card>
                 <h2 className="text-lg md:text-xl font-bold mb-4">{t.market_title}</h2>
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-                    {stocks.map(stock => (
-                        <StockTickerItem key={stock.symbol} stock={stock} />
-                    ))}
+                    {stocks.map(stock => ( <StockTickerItem key={stock.symbol} stock={stock} /> ))}
                 </div>
                 <div className="mt-6 text-center">
                     <a href="https://www.investing.com" target="_blank" rel="noopener noreferrer">
-                            <Button variant="secondary">
-                            {t.access_market}
-                            <span className="ml-2 flex items-center">{ICONS.externalLink}</span>
-                            </Button>
+                        <Button variant="secondary">{t.access_market}<span className="ml-2 flex items-center">{ICONS.externalLink}</span></Button>
                     </a>
+                </div>
+            </Card>
+            
+            <Card>
+                <div className="flex justify-between items-center mb-4">
+                    <h2 className="text-lg md:text-xl font-bold">{t.recent_transactions}</h2>
+                    <button onClick={handleRefresh} className={`text-gray-500 hover:text-brand-green ${isRefreshing ? 'animate-spin' : ''}`} title="Atualizar movimentações">
+                        {ICONS.refresh}
+                    </button>
+                </div>
+                <div>
+                    {transactions.slice(0, 5).map(tx => (<TransactionRow key={tx.id} tx={tx} />))}
                 </div>
             </Card>
         </div>
