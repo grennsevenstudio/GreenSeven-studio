@@ -163,6 +163,7 @@ export const TRANSLATIONS = {
         pass_strength: 'Força da senha',
         pass_min: 'Mín. 8 caracteres, maiúscula, número e símbolo.',
     },
+
     landing: {
         nav_home: 'INÍCIO',
         nav_features: 'VANTAGENS',
@@ -171,8 +172,9 @@ export const TRANSLATIONS = {
         nav_faq: 'FAQ',
         login: 'LOGIN',
         signup: 'ABRIR CONTA',
-        hero_title_1: 'Seu Futuro Financeiro',
-        hero_title_2: 'Dolarizado.',
+        hero_title_1: 'Seu Futuro',
+        hero_title_2: 'Financeiro',
+        hero_title_3: 'Dolarizado.',
         hero_subtitle: 'Proteja seu patrimônio da inflação e potencialize seus ganhos com a força da moeda mais sólida do mundo.',
         hero_cta: 'Começar Agora',
         hero_learn: 'Saiba Mais',
@@ -294,6 +296,7 @@ export const TRANSLATIONS = {
     theme_light: 'Enable light mode',
     theme_dark: 'Enable dark mode',
     close: 'Close',
+
     planDetails: {
       risk_warning: "Warning: All investment involves risk. Invest only amounts that will not compromise your financial stability in case of loss.",
       risk_level_label: "Risk Level:",
@@ -303,25 +306,26 @@ export const TRANSLATIONS = {
       days: "days",
       conservador: {
         riskLevel: "Low",
-        advantages: ["Stability prioritized.", "Ideal for preservation.", "Low volatility."],
-        risks: ["Lower returns compared to aggressive plans.", "May not beat aggressive inflation."]
+        advantages: ["Stability prioritized.", "Ideal for capital preservation.", "Low exposure to market volatility."],
+        risks: ["Lower returns compared to aggressive plans.", "May not outperform aggressive inflation spikes in the short term."]
       },
       moderado: {
         riskLevel: "Medium",
-        advantages: ["Balance of safety and growth.", "Smart diversification.", "Consistent medium-term returns."],
-        risks: ["Moderate market exposure.", "Small monthly yield variations possible."]
+        advantages: ["Ideal balance between safety and growth.", "Smart asset diversification.", "Consistent returns in the medium term."],
+        risks: ["Moderate exposure to market fluctuations.", "Small variations in monthly yield are possible."]
       },
       agressivo: {
         riskLevel: "High",
-        advantages: ["High profit potential.", "Fast capital growth.", "Leverages volatility."],
-        risks: ["Higher daily volatility.", "Risk of short-term corrections."]
+        advantages: ["Potential for high profitability.", "Accelerated capital growth.", "Leveraging volatile market opportunities."],
+        risks: ["Higher daily volatility.", "Risk of short-term market corrections."]
       },
       select: {
         riskLevel: "Very High",
-        advantages: ["Maximum profitability.", "Exclusive strategies.", "Premium market access."],
-        risks: ["High exposure to complex assets.", "Requires high tolerance for volatility."]
+        advantages: ["Maximum available profitability.", "Priority management and exclusive strategies.", "Access to premium market opportunities."],
+        risks: ["High exposure to complex assets.", "Requires higher tolerance to market swings for significant gains."]
       }
     },
+
     auth: {
         email_label: 'Email',
         password_label: 'Password',
@@ -371,6 +375,7 @@ export const TRANSLATIONS = {
         pass_strength: 'Password strength',
         pass_min: 'Min. 8 chars, uppercase, number and symbol.',
     },
+
     landing: {
         nav_home: 'HOME',
         nav_features: 'FEATURES',
@@ -379,8 +384,9 @@ export const TRANSLATIONS = {
         nav_faq: 'FAQ',
         login: 'LOGIN',
         signup: 'OPEN ACCOUNT',
-        hero_title_1: 'Your Financial Future',
-        hero_title_2: 'Dollarized.',
+        hero_title_1: 'Your Financial',
+        hero_title_2: 'Future',
+        hero_title_3: 'Dollarized.',
         hero_subtitle: 'Protect your assets from inflation and maximize your earnings with the strength of the world\'s strongest currency.',
         hero_cta: 'Start Now',
         hero_learn: 'Learn More',
@@ -502,6 +508,7 @@ export const TRANSLATIONS = {
     theme_light: 'Activar modo claro',
     theme_dark: 'Activar modo oscuro',
     close: 'Cerrar',
+
     planDetails: {
       risk_warning: "Advertencia: Toda inversión conlleva riesgos. Invierta solo cantidades que no comprometan su estabilidad financiera en caso de pérdida.",
       risk_level_label: "Nivel de Riesgo:",
@@ -511,12 +518,12 @@ export const TRANSLATIONS = {
       days: "días",
       conservador: {
         riskLevel: "Bajo",
-        advantages: ["Estabilidad priorizada.", "Ideal para preservación.", "Baja volatilidad."],
+        advantages: ["Estabilidad y seguridad priorizadas.", "Ideal para preservación de patrimonio.", "Baja exposición a la volatilidad del mercado."],
         risks: ["Retornos menores en comparación a planes agresivos.", "Puede no superar picos inflacionarios agresivos en el corto plazo."]
       },
       moderado: {
         riskLevel: "Medio",
-        advantages: ["Equilibrio ideal entre seguridad y crecimiento.", "Diversificación inteligente.", "Retornos consistentes a medio plazo."],
+        advantages: ["Equilibrio ideal entre seguridad y crecimiento.", "Diversificación inteligente de activos.", "Retornos consistentes a medio plazo."],
         risks: ["Exposición moderada a fluctuaciones del mercado.", "Pequeñas variaciones de rendimiento mensual son posibles."]
       },
       agressivo: {
@@ -530,6 +537,7 @@ export const TRANSLATIONS = {
         risks: ["Alta exposición a activos complejos.", "Requiere mayor tolerancia a oscilaciones de mercado para ganancias expresivas."]
       }
     },
+
     auth: {
         email_label: 'Correo electrónico',
         password_label: 'Contraseña',
@@ -579,6 +587,7 @@ export const TRANSLATIONS = {
         pass_strength: 'Fortaleza de contraseña',
         pass_min: 'Mín. 8 caracteres, mayúscula, número y símbolo.',
     },
+
     landing: {
         nav_home: 'INICIO',
         nav_features: 'VENTAJAS',
@@ -587,8 +596,9 @@ export const TRANSLATIONS = {
         nav_faq: 'FAQ',
         login: 'INICIAR SESIÓN',
         signup: 'ABRIR CUENTA',
-        hero_title_1: 'Tu Futuro Financiero',
-        hero_title_2: 'Dolarizado.',
+        hero_title_1: 'Tu Futuro',
+        hero_title_2: 'Financiero',
+        hero_title_3: 'Dolarizado.',
         hero_subtitle: 'Proteja tu patrimonio de la inflación y maximiza tus ganancias con la fuerza da moneda más sólida del mundo.',
         hero_cta: 'Empezar Ahora',
         hero_learn: 'Saber Más',
@@ -795,8 +805,9 @@ export const TRANSLATIONS = {
         nav_faq: 'FAQ',
         login: 'CONNEXION',
         signup: 'OUVRIR UN COMPTE',
-        hero_title_1: 'Votre Avenir Financier',
-        hero_title_2: 'Dollarisé.',
+        hero_title_1: 'Votre Avenir',
+        hero_title_2: 'Financier',
+        hero_title_3: 'Dollarisé.',
         hero_subtitle: 'Protégez votre patrimoine de l\'inflation et maximisez vos gains avec la force de la monnaie la plus solide au monde.',
         hero_cta: 'Commencer',
         hero_learn: 'En Savoir Plus',
@@ -1003,8 +1014,9 @@ export const TRANSLATIONS = {
         nav_faq: 'FAQ',
         login: 'ANMELDEN',
         signup: 'KONTO ERÖFFNEN',
-        hero_title_1: 'Ihre finanzielle Zukunft',
-        hero_title_2: 'Dollarisiert.',
+        hero_title_1: 'Ihre Finanzielle',
+        hero_title_2: 'Zukunft',
+        hero_title_3: 'Dollarisiert.',
         hero_subtitle: 'Schützen Sie Ihr Vermögen vor Inflation und maximieren Sie Ihre Gewinne mit der Stärke der weltweit stabilsten Währung.',
         hero_cta: 'Jetzt Starten',
         hero_learn: 'Mehr Erfahren',

@@ -15,10 +15,10 @@ export const INVESTMENT_PLANS: InvestmentPlan[] = [
 ];
 
 export const MOCK_STOCKS: Stock[] = [
-    { symbol: 'AAPL', name: 'Apple Inc.', price: 194.81, change: -1.06, changePercent: -0.54 },
-    { symbol: 'GOOGL', name: 'Alphabet Inc.', price: 175.92, change: -1.93, changePercent: -1.09 },
-    { symbol: 'MSFT', name: 'Microsoft Corp.', price: 447.55, change: 4.98, changePercent: 1.12 },
-    { symbol: 'TSLA', name: 'Tesla, Inc.', price: 183.23, change: 0.22, changePercent: 0.12 },
+    { symbol: 'AAPL', name: 'Apple Inc.', price: 195.14, change: 0.33, changePercent: 0.17 },
+    { symbol: 'GOOGL', name: 'Alphabet Inc.', price: 176.31, change: 0.39, changePercent: 0.22 },
+    { symbol: 'MSFT', name: 'Microsoft Corp.', price: 447.03, change: -0.52, changePercent: -0.12 },
+    { symbol: 'TSLA', name: 'Tesla, Inc.', price: 185.78, change: 2.55, changePercent: 1.39 },
 ];
 
 export const RANK_COLORS: { [key in InvestorRank]: string } = {

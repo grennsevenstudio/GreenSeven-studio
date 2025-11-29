@@ -1,4 +1,3 @@
-
 import { createClient } from '@supabase/supabase-js';
 import type { User, Transaction, ChatMessage, PlatformSettings, AdminActionLog, Notification, InvestmentPlan } from '../types';
 import { InvestorRank } from '../types';
@@ -11,10 +10,16 @@ import { InvestorRank } from '../types';
 const SUPABASE_URL = 'https://kcwbtbjngrthtxtojqus.supabase.co'; 
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtjd2J0YmpuZ3J0aHR4dG9qcXVzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM4NDc5MjUsImV4cCI6MjA3OTQyMzkyNX0.44rjV4beXn-MZwK9CXx1j8AgXqoSeHOfOh1X2pjaTrk';
 
-// Inicializa o cliente
+// Inicializa o cliente com headers explícitos para resolver erros de 'Failed to fetch'
 export const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
     auth: {
         persistSession: false 
+    },
+    global: {
+        headers: {
+            'apikey': SUPABASE_KEY,
+            'Authorization': `Bearer ${SUPABASE_KEY}`
+        }
     }
 });
 

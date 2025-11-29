@@ -1,7 +1,8 @@
 
 
+
 import React, { useState } from 'react';
-import type { User, Transaction, ChatMessage, PlatformSettings, AdminActionLog, Language, Notification } from '../../../../types';
+import type { User, Transaction, ChatMessage, PlatformSettings, AdminActionLog, Language, Notification, InvestmentPlan } from '../../../../types';
 import { TransactionStatus, UserStatus } from '../../../../types';
 import Sidebar from '../../../layout/Sidebar';
 import Header from '../../../layout/Header';
@@ -41,10 +42,12 @@ interface AdminDashboardProps {
   onRefreshData: () => void;
   onBroadcastNotification: (message: string) => void;
   referralRates?: {[key:number]: number};
+  onUpdatePlan: (updatedPlan: InvestmentPlan) => void;
+  investmentPlans: InvestmentPlan[];
 }
 
 const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
-  const { user, allUsers, allTransactions, chatMessages, platformSettings, adminActionLogs, notifications, onLogout, onUpdateTransaction, onUpdateUserStatus, onPayoutBonus, onSendMessage, onUpdateSettings, onAdminUpdateUserBalance, onUpdateUser, onMarkAllNotificationsAsRead, isDarkMode, toggleTheme, language, setLanguage, onRefreshData, onBroadcastNotification, referralRates } = props;
+  const { user, allUsers, allTransactions, chatMessages, platformSettings, adminActionLogs, notifications, onLogout, onUpdateTransaction, onUpdateUserStatus, onPayoutBonus, onSendMessage, onUpdateSettings, onAdminUpdateUserBalance, onUpdateUser, onMarkAllNotificationsAsRead, isDarkMode, toggleTheme, language, setLanguage, onRefreshData, onBroadcastNotification, referralRates, investmentPlans, onUpdatePlan } = props;
   const [activeView, setActiveView] = useState('dashboard');
   const [isSidebarOpen, setSidebarOpen] = useState(false);
 
@@ -73,7 +76,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
       case 'support':
         return <ManageSupport adminUser={user} allUsers={allUsers} allMessages={chatMessages} onSendMessage={onSendMessage} onUpdateUser={onUpdateUser} />;
       case 'plans':
-        return <ManagePlans />;
+        return <ManagePlans investmentPlans={investmentPlans} onUpdatePlan={onUpdatePlan} />;
       case 'settings':
         return <Settings platformSettings={platformSettings} onUpdateSettings={onUpdateSettings} allUsers={allUsers} />;
       default:

@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect, useRef } from 'react';
 import type { User, Transaction, Notification, ChatMessage, PlatformSettings, AdminActionLog, Language, InvestmentPlan } from './types';
 import { View, TransactionStatus, TransactionType, AdminActionType, UserStatus, InvestorRank } from './types';
@@ -143,14 +142,14 @@ const App: React.FC = () => {
   const loadRemoteData = async () => {
     try {
         const [
-            { data: remoteUsers },
-            { data: remoteTxs },
-            { data: remoteMessages },
-            { data: remoteSettings },
-            { data: remoteLogs },
-            { data: remoteNotifications },
-            { data: remoteCareerPlan },
-            { data: remotePlans }
+            { data: remoteUsers, error: usersError },
+            { data: remoteTxs, error: txsError },
+            { data: remoteMessages, error: msgError },
+            { data: remoteSettings, error: settingsError },
+            { data: remoteLogs, error: logsError },
+            { data: remoteNotifications, error: notifError },
+            { data: remoteCareerPlan, error: careerError },
+            { data: remotePlans, error: plansError }
         ] = await Promise.all([
             fetchUsersFromSupabase(),
             fetchTransactionsFromSupabase(),
@@ -158,24 +157,32 @@ const App: React.FC = () => {
             fetchSettingsFromSupabase(),
             fetchAdminLogsFromSupabase(),
             fetchNotificationsFromSupabase(),
-            typeof fetchCareerPlanConfig === 'function' ? fetchCareerPlanConfig() : Promise.resolve({ data: null }),
+            typeof fetchCareerPlanConfig === 'function' ? fetchCareerPlanConfig() : Promise.resolve({ data: null, error: null }),
             fetchInvestmentPlansFromSupabase()
         ]);
+
+        if (usersError) console.error("Supabase fetch user error:", usersError.message);
+        if (txsError) console.error("Supabase fetch txs error:", txsError.message);
+        // Add more error logs if needed...
 
         if (remoteCareerPlan && Object.keys(remoteCareerPlan).length > 0) {
             setReferralRates(remoteCareerPlan);
         }
 
+        const localData = getAllData();
+
         setDbState(prev => ({
             ...prev,
-            users: remoteUsers || [],
-            transactions: remoteTxs || [],
-            chatMessages: remoteMessages || [],
-            notifications: remoteNotifications || [],
-            adminActionLogs: remoteLogs || [],
-            platformSettings: remoteSettings || ({} as any),
-            investmentPlans: (remotePlans && remotePlans.length > 0) ? remotePlans : DEFAULT_PLANS
+            users: usersError ? localData.users : remoteUsers || [],
+            transactions: txsError ? localData.transactions : remoteTxs || [],
+            chatMessages: msgError ? localData.chatMessages : remoteMessages || [],
+            notifications: notifError ? localData.notifications : remoteNotifications || [],
+            adminActionLogs: logsError ? localData.adminActionLogs : remoteLogs || [],
+            platformSettings: settingsError ? localData.platformSettings : remoteSettings || ({} as any),
+            investmentPlans: plansError ? localData.investmentPlans : (remotePlans && remotePlans.length > 0) ? remotePlans : DEFAULT_PLANS
         }));
+        
+        saveAllData(dbState);
 
         // Session Restoration
         const storedUserId = getSessionUser();
@@ -200,23 +207,35 @@ const App: React.FC = () => {
   };
 
   useEffect(() => {
-    loadRemoteData();
-    
-    // Polling fallback
-    const interval = setInterval(loadRemoteData, 30000);
-    
-    // Realtime
-    const channel = supabase.channel('global-changes')
-        .on('postgres_changes', { event: '*', schema: 'public' }, () => {
-            console.log('Syncing data from Supabase...');
-            loadRemoteData();
-        })
-        .subscribe();
+      // 1. Load from cache immediately for instant UI
+      const localData = getAllData();
+      if (localData && localData.users && localData.users.length > 0) {
+          setDbState(localData);
+          const storedUserId = getSessionUser();
+          if (storedUserId) {
+              const user = localData.users.find((u: User) => u.id === storedUserId);
+              if (user) {
+                  setLoggedUser(user);
+                  setView(user.isAdmin ? View.AdminDashboard : View.UserDashboard);
+              }
+          }
+      }
+      setIsLoading(false); // Render immediately with cached or default data
 
-    return () => {
-        clearInterval(interval);
-        supabase.removeChannel(channel);
-    };
+      // 2. Initial fetch from remote
+      loadRemoteData();
+      
+      // 3. Subscribe to REALTIME changes. POLLING REMOVED to fix timeout errors.
+      const channel = supabase.channel('global-changes')
+          .on('postgres_changes', { event: '*', schema: 'public' }, (payload) => {
+              console.log('Realtime change received! Syncing data...', payload);
+              loadRemoteData();
+          })
+          .subscribe();
+
+      return () => {
+          supabase.removeChannel(channel);
+      };
   }, []);
   
   // Yield Accumulation Logic
@@ -236,7 +255,6 @@ const App: React.FC = () => {
         const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
         if (diffDays >= 1 && loggedUser.status === UserStatus.Approved) {
-            // Corrected: Always calculate daily profit based on invested capital, not stored monthlyProfitUSD
             const userPlan = dbState.investmentPlans.find(p => p.name === loggedUser.plan) || dbState.investmentPlans[0];
             const monthlyProfit = (loggedUser.capitalInvestedUSD || 0) * (userPlan?.returnRate || 0);
             const dailyProfit = monthlyProfit / 30;
@@ -269,17 +287,8 @@ const App: React.FC = () => {
 
   const { users = [], transactions = [], notifications = [], chatMessages = [], platformSettings, adminActionLogs, investmentPlans } = dbState || {};
   
-  // Fallback admin user logic for empty state
   const adminUser = users.find(u => u.isAdmin) || (users.length === 0 ? {
-      id: 'admin-fallback',
-      name: 'Admin System',
-      email: 'admin@greennseven.com',
-      cpf: '', phone: '', address: {} as any, documents: {} as any,
-      status: UserStatus.Approved,
-      avatarUrl: 'https://ui-avatars.com/api/?name=Admin',
-      rank: InvestorRank.Diamond,
-      balanceUSD: 0, capitalInvestedUSD: 0, monthlyProfitUSD: 0, dailyWithdrawableUSD: 0, bonusBalanceUSD: 0,
-      isAdmin: true, joinedDate: new Date().toISOString(), referralCode: 'ADMIN', plan: 'Select'
+      id: 'admin-fallback', name: 'Admin System', email: 'admin@greennseven.com', cpf: '', phone: '', address: {} as any, documents: {} as any, status: UserStatus.Approved, avatarUrl: 'https://ui-avatars.com/api/?name=Admin', rank: InvestorRank.Diamond, balanceUSD: 0, capitalInvestedUSD: 0, monthlyProfitUSD: 0, dailyWithdrawableUSD: 0, bonusBalanceUSD: 0, isAdmin: true, joinedDate: new Date().toISOString(), referralCode: 'ADMIN', plan: 'Select'
   } : users[0]);
 
   const handleLogin = (email: string, password?: string) => {
@@ -340,59 +349,21 @@ const App: React.FC = () => {
     }
 
     const newUser: User = {
-        id: faker.string.uuid(),
-        name: userData.name,
-        email: userData.email,
-        password: userData.password,
-        cpf: userData.cpf,
-        phone: userData.phone,
-        address: userData.address,
-        documents: userData.documents,
-        avatarUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(userData.name)}&background=00FF9C&color=000`,
-        rank: InvestorRank.Bronze,
-        balanceUSD: 0,
-        capitalInvestedUSD: 0,
-        monthlyProfitUSD: 0,
-        dailyWithdrawableUSD: 0,
-        bonusBalanceUSD: 0,
-        isAdmin: false,
-        joinedDate: new Date().toISOString().split('T')[0],
-        referralCode: `${userData.name.split(' ')[0].toUpperCase()}${faker.string.numeric(4)}`,
-        referredById: referredById,
-        status: UserStatus.Pending,
-        plan: 'Conservador',
-        kycAnalysis: userData.kycAnalysis 
+        id: faker.string.uuid(), name: userData.name, email: userData.email, password: userData.password, cpf: userData.cpf, phone: userData.phone, address: userData.address, documents: userData.documents, avatarUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(userData.name)}&background=00FF9C&color=000`, rank: InvestorRank.Bronze, balanceUSD: 0, capitalInvestedUSD: 0, monthlyProfitUSD: 0, dailyWithdrawableUSD: 0, bonusBalanceUSD: 0, isAdmin: false, joinedDate: new Date().toISOString().split('T')[0], referralCode: `${userData.name.split(' ')[0].toUpperCase()}${faker.string.numeric(4)}`, referredById: referredById, status: UserStatus.Pending, plan: 'Conservador', kycAnalysis: userData.kycAnalysis 
     };
     
     const adminNotification: Notification = {
-        id: faker.string.uuid(),
-        userId: adminUser.id,
-        message: `Novo usuário registrado: ${newUser.name}. Pendente de aprovação.`,
-        date: new Date().toISOString(),
-        isRead: false
+        id: faker.string.uuid(), userId: adminUser.id, message: `Novo usuário registrado: ${newUser.name}. Pendente de aprovação.`, date: new Date().toISOString(), isRead: false
     };
 
-    // Optimistic Update
-    setDbState(prev => ({
-        ...prev, 
-        users: [...prev.users, newUser],
-        notifications: [...prev.notifications, adminNotification]
-    }));
-
-    // Sync
+    setDbState(prev => ({ ...prev, users: [...prev.users, newUser], notifications: [...prev.notifications, adminNotification] }));
     await syncUserToSupabase(newUser, userData.password);
     await syncNotificationToSupabase(adminNotification);
   };
 
   const handleAddAdminLog = (adminUser: User, actionType: AdminActionType, description: string, targetId?: string) => {
     const newLog: AdminActionLog = {
-      id: faker.string.uuid(),
-      timestamp: new Date().toISOString(),
-      adminId: adminUser.id,
-      adminName: adminUser.name,
-      actionType,
-      description,
-      targetId,
+      id: faker.string.uuid(), timestamp: new Date().toISOString(), adminId: adminUser.id, adminName: adminUser.name, actionType, description, targetId,
     };
     setDbState(prev => ({ ...prev, adminActionLogs: [newLog, ...prev.adminActionLogs] }));
     syncAdminLogToSupabase(newLog);
@@ -400,14 +371,10 @@ const App: React.FC = () => {
 
   const handleAddTransaction = (newTransaction: Omit<Transaction, 'id' | 'date' | 'bonusPayoutHandled'>) => {
     const tx: Transaction = {
-        ...newTransaction,
-        id: faker.string.uuid(),
-        date: new Date().toISOString().split('T')[0],
-        bonusPayoutHandled: false,
+        ...newTransaction, id: faker.string.uuid(), date: new Date().toISOString().split('T')[0], bonusPayoutHandled: false,
     };
     
     if (tx.type === TransactionType.Withdrawal) {
-      const withdrawalAmount = Math.abs(tx.amountUSD);
       const now = new Date();
       const currentHour = now.getHours();
       if (currentHour < 8 || currentHour >= 18) {
@@ -417,10 +384,7 @@ const App: React.FC = () => {
       
       const today = tx.date;
       const hasWithdrawalToday = dbState.transactions.some(t => 
-          t.userId === loggedUser?.id && 
-          t.type === TransactionType.Withdrawal && 
-          t.date === today &&
-          t.status !== TransactionStatus.Failed
+          t.userId === loggedUser?.id && t.type === TransactionType.Withdrawal && t.date === today && t.status !== TransactionStatus.Failed
       );
 
       if (hasWithdrawalToday) {
@@ -430,66 +394,46 @@ const App: React.FC = () => {
     }
 
     const adminNotif: Notification = {
-        id: faker.string.uuid(),
-        userId: adminUser.id,
-        message: `Nova transação de ${tx.type} solicitada por ${users.find(u => u.id === tx.userId)?.name}.`,
-        date: new Date().toISOString(),
-        isRead: false
+        id: faker.string.uuid(), userId: adminUser.id, message: `Nova transação de ${tx.type} solicitada por ${users.find(u => u.id === tx.userId)?.name}.`, date: new Date().toISOString(), isRead: false
     };
 
     syncTransactionToSupabase(tx);
     syncNotificationToSupabase(adminNotif);
-    setDbState(prev => ({ 
-        ...prev, 
-        transactions: [...prev.transactions, tx],
-        notifications: [...prev.notifications, adminNotif]
-    }));
+    setDbState(prev => ({ ...prev, transactions: [...prev.transactions, tx], notifications: [...prev.notifications, adminNotif] }));
   };
 
   const handleUpdateTransactionStatus = (transactionId: string, newStatus: TransactionStatus, scheduledDate?: string) => {
     const tx = dbState.transactions.find(t => t.id === transactionId);
-    if (!tx) return;
+    if (!tx || (tx.status === newStatus && tx.status !== TransactionStatus.Scheduled) || (tx.status === TransactionStatus.Completed && newStatus !== TransactionStatus.Scheduled)) return;
     
-    if (tx.status === newStatus && tx.status !== TransactionStatus.Scheduled) return;
-    
-    if (tx.status === TransactionStatus.Completed && newStatus !== TransactionStatus.Scheduled) {
-        return; 
-    }
-
     const user = dbState.users.find(u => u.id === tx.userId);
     if (!user || !loggedUser?.isAdmin) return;
 
-    let actionType = AdminActionType.TransactionApprove;
-    let description = '';
+    let actionType: AdminActionType;
+    let description: string;
 
     if (newStatus === TransactionStatus.Completed) {
+        actionType = AdminActionType.TransactionApprove;
         description = `Aprovou transação de ${tx.type} para ${user.name}.`;
     } else if (newStatus === TransactionStatus.Failed) {
         actionType = AdminActionType.TransactionReject;
         description = `Rejeitou transação de ${tx.type} para ${user.name}.`;
-    } else if (newStatus === TransactionStatus.Scheduled) {
+    } else {
         actionType = AdminActionType.PaymentScheduled;
         description = `Agendou pagamento de ${tx.type} para ${user.name} em ${scheduledDate}.`;
     }
-
     handleAddAdminLog(loggedUser, actionType, description, transactionId);
 
     const notification: Notification = {
-        id: faker.string.uuid(),
-        userId: user.id,
-        message: `Sua transação de ${tx.type} foi atualizada para: ${newStatus === TransactionStatus.Scheduled ? 'AGENDADA' : newStatus === TransactionStatus.Completed ? 'APROVADA' : 'REJEITADA'}.`,
-        date: new Date().toISOString(),
-        isRead: false
+        id: faker.string.uuid(), userId: user.id, message: `Sua transação de ${tx.type} foi atualizada para: ${newStatus}.`, date: new Date().toISOString(), isRead: false
     };
 
     let bonusTransactions: Transaction[] = [];
     let referrersToUpdate: User[] = [];
-    let shouldPayBonus = false;
+    let shouldPayBonus = tx.type === TransactionType.Deposit && newStatus === TransactionStatus.Completed && !tx.bonusPayoutHandled;
 
-    if (tx.type === TransactionType.Deposit && newStatus === TransactionStatus.Completed && !tx.bonusPayoutHandled) {
-        shouldPayBonus = true;
+    if (shouldPayBonus) {
         let currentUser = user;
-        
         for (let level = 1; level <= 3 && currentUser?.referredById; level++) {
             const referrer = dbState.users.find(u => u.id === currentUser.referredById);
             if (!referrer) break;
@@ -498,228 +442,103 @@ const App: React.FC = () => {
             if (bonusRate === 0) continue;
             
             const bonusAmount = tx.amountUSD * bonusRate;
-
-            const bonusTx: Transaction = {
-                id: faker.string.uuid(),
-                userId: referrer.id,
-                date: new Date().toISOString().split('T')[0],
-                type: TransactionType.Bonus,
-                status: TransactionStatus.Completed,
-                amountUSD: bonusAmount,
-                referralLevel: level as 1 | 2 | 3,
-                sourceUserId: user.id,
-                bonusPayoutHandled: true,
-                walletSource: 'bonus'
-            };
-            
+            const bonusTx: Transaction = { id: faker.string.uuid(), userId: referrer.id, date: new Date().toISOString().split('T')[0], type: TransactionType.Bonus, status: TransactionStatus.Completed, amountUSD: bonusAmount, referralLevel: level as 1 | 2 | 3, sourceUserId: user.id, bonusPayoutHandled: true, walletSource: 'bonus' };
             bonusTransactions.push(bonusTx);
             syncTransactionToSupabase(bonusTx);
             
-            const newBalance = referrer.balanceUSD + bonusAmount;
-            const updatedReferrer = { 
-                ...referrer, 
-                balanceUSD: newBalance,
-                bonusBalanceUSD: (referrer.bonusBalanceUSD || 0) + bonusAmount,
-                monthlyProfitUSD: calculateProfit(referrer.capitalInvestedUSD, referrer.plan, investmentPlans),
-                rank: calculateRank(newBalance)
-            };
+            const updatedReferrer = { ...referrer, balanceUSD: referrer.balanceUSD + bonusAmount, bonusBalanceUSD: (referrer.bonusBalanceUSD || 0) + bonusAmount, rank: calculateRank(referrer.balanceUSD + bonusAmount), monthlyProfitUSD: calculateProfit(referrer.capitalInvestedUSD, referrer.plan, investmentPlans) };
             syncUserToSupabase(updatedReferrer);
             referrersToUpdate.push(updatedReferrer);
-
             currentUser = referrer;
         }
     }
     
-    const updatedTx = { 
-        ...tx, 
-        status: newStatus, 
-        scheduledDate: scheduledDate || tx.scheduledDate,
-        bonusPayoutHandled: shouldPayBonus ? true : tx.bonusPayoutHandled 
-    };
-    
+    const updatedTx = { ...tx, status: newStatus, scheduledDate: scheduledDate || tx.scheduledDate, bonusPayoutHandled: shouldPayBonus || tx.bonusPayoutHandled };
     syncTransactionToSupabase(updatedTx);
 
     const updatedTransactions = dbState.transactions.map(t => t.id === transactionId ? updatedTx : t);
 
-    let updatedUsers = [...dbState.users];
-    
-    updatedUsers = updatedUsers.map(u => {
-        if (u.id === user.id) {
-            if (newStatus === TransactionStatus.Completed) {
-                let newBalance = u.balanceUSD;
-                let newInvested = u.capitalInvestedUSD;
-                let newDailyWithdrawable = u.dailyWithdrawableUSD || 0;
-                let newBonusBalance = u.bonusBalanceUSD || 0;
-                let newMonthlyProfit = u.monthlyProfitUSD || 0;
+    let updatedUsers = dbState.users.map(u => {
+        if (u.id === user.id && newStatus === TransactionStatus.Completed) {
+            let newBalance = u.balanceUSD;
+            let newInvested = u.capitalInvestedUSD;
+            let newDailyWithdrawable = u.dailyWithdrawableUSD || 0;
+            let newBonusBalance = u.bonusBalanceUSD || 0;
+            let newMonthlyProfit = u.monthlyProfitUSD || 0;
 
-                if (tx.type === TransactionType.Deposit) {
-                    newBalance += tx.amountUSD;
-                    newInvested += tx.amountUSD;
-                    newMonthlyProfit = calculateProfit(newInvested, u.plan, investmentPlans);
-                } else if (tx.type === TransactionType.Withdrawal) {
-                     newBalance += tx.amountUSD; 
-                     if (tx.walletSource === 'bonus') {
-                         newBonusBalance += tx.amountUSD;
-                         if (newBonusBalance < 0) newBonusBalance = 0;
-                     } else {
-                         newDailyWithdrawable += tx.amountUSD;
-                         if (newDailyWithdrawable < 0) newDailyWithdrawable = 0;
-                         // Reduce monthly profit by the withdrawn daily profit amount
-                         newMonthlyProfit += tx.amountUSD;
-                         if (newMonthlyProfit < 0) newMonthlyProfit = 0;
-                     }
+            if (tx.type === TransactionType.Deposit) {
+                newBalance += tx.amountUSD;
+                newInvested += tx.amountUSD;
+                newMonthlyProfit = calculateProfit(newInvested, u.plan, investmentPlans);
+            } else if (tx.type === TransactionType.Withdrawal) {
+                newBalance += tx.amountUSD; 
+                if (tx.walletSource === 'bonus') newBonusBalance = Math.max(0, newBonusBalance + tx.amountUSD);
+                else {
+                    newDailyWithdrawable = Math.max(0, newDailyWithdrawable + tx.amountUSD);
+                    newMonthlyProfit = Math.max(0, newMonthlyProfit + tx.amountUSD);
                 }
-                
-                const updated = { 
-                    ...u, 
-                    balanceUSD: newBalance, 
-                    capitalInvestedUSD: newInvested,
-                    dailyWithdrawableUSD: newDailyWithdrawable,
-                    bonusBalanceUSD: newBonusBalance,
-                    rank: calculateRank(newBalance),
-                    monthlyProfitUSD: newMonthlyProfit
-                };
-                syncUserToSupabase(updated);
-                return updated;
             }
+            const updated = { ...u, balanceUSD: newBalance, capitalInvestedUSD: newInvested, dailyWithdrawableUSD: newDailyWithdrawable, bonusBalanceUSD: newBonusBalance, rank: calculateRank(newBalance), monthlyProfitUSD: newMonthlyProfit };
+            syncUserToSupabase(updated);
+            return updated;
         }
-        return u;
-    });
-
-    referrersToUpdate.forEach(ref => {
-        updatedUsers = updatedUsers.map(u => u.id === ref.id ? ref : u);
+        const referrerUpdate = referrersToUpdate.find(ref => ref.id === u.id);
+        return referrerUpdate || u;
     });
     
-    const newNotifications = [notification];
-    if (bonusTransactions.length > 0) {
-         bonusTransactions.forEach(btx => {
-             const refName = dbState.users.find(u => u.id === btx.sourceUserId)?.name || 'Indicado';
-             newNotifications.push({
-                id: faker.string.uuid(),
-                userId: btx.userId,
-                message: `Bônus de indicação recebido: ${formatCurrency(btx.amountUSD, 'USD')} (Origem: ${refName})`,
-                date: new Date().toISOString(),
-                isRead: false
-             });
-         });
-    }
-
-    setDbState(prev => ({
-        ...prev,
-        transactions: [...updatedTransactions, ...bonusTransactions],
-        users: updatedUsers,
-        notifications: [...prev.notifications, ...newNotifications]
-    }));
-    
+    const newNotifications = [notification, ...bonusTransactions.map(btx => ({ id: faker.string.uuid(), userId: btx.userId, message: `Bônus de indicação recebido: ${formatCurrency(btx.amountUSD, 'USD')}`, date: new Date().toISOString(), isRead: false }))];
+    setDbState(prev => ({ ...prev, transactions: [...updatedTransactions, ...bonusTransactions], users: updatedUsers, notifications: [...prev.notifications, ...newNotifications] }));
     syncNotificationsToSupabase(newNotifications);
   };
 
-  const handlePayoutBonus = (depositTx: Transaction) => {
-      alert("Função disponível via API.");
-  };
-
+  const handlePayoutBonus = (depositTx: Transaction) => { alert("Função disponível via API."); };
   const handleUpdateUserStatus = (userId: string, newStatus: UserStatus, reason?: string) => {
-      const updatedUsers = dbState.users.map(u => {
-          if (u.id === userId) {
-              const updated = { ...u, status: newStatus, rejectionReason: reason };
-              syncUserToSupabase(updated);
-              return updated;
-          }
-          return u;
-      });
+      const updatedUsers = dbState.users.map(u => u.id === userId ? { ...u, status: newStatus, rejectionReason: reason } : u);
+      syncUserToSupabase(updatedUsers.find(u => u.id === userId)!);
       
-      let notification: Notification | null = null;
-      if (newStatus !== UserStatus.Pending && loggedUser) {
-           notification = {
-               id: faker.string.uuid(),
-               userId: userId,
-               message: newStatus === UserStatus.Approved 
-                    ? "Parabéns! Sua conta foi APROVADA."
-                    : `Sua conta foi REJEITADA. Motivo: ${reason}`,
-               date: new Date().toISOString(),
-               isRead: false
-           };
-      }
-      
-      setDbState(prev => ({ 
-          ...prev, 
-          users: updatedUsers,
-          notifications: notification ? [...prev.notifications, notification] : prev.notifications
-      }));
-      if (notification) syncNotificationToSupabase(notification);
+      const notification: Notification = { id: faker.string.uuid(), userId: userId, message: newStatus === UserStatus.Approved ? "Sua conta foi APROVADA." : `Sua conta foi REJEITADA. Motivo: ${reason}`, date: new Date().toISOString(), isRead: false };
+      setDbState(prev => ({ ...prev, users: updatedUsers, notifications: [...prev.notifications, notification] }));
+      syncNotificationToSupabase(notification);
   };
-  
   const handleAdminUpdateUserBalance = (userId: string, newBalance: number) => {
-      const updatedUsers = dbState.users.map(u => {
-          if (u.id === userId) {
-               const updated = { 
-                   ...u, 
-                   balanceUSD: newBalance, 
-                   rank: calculateRank(newBalance),
-                   monthlyProfitUSD: calculateProfit(u.capitalInvestedUSD, u.plan, investmentPlans) 
-                };
-               syncUserToSupabase(updated);
-               return updated;
-          }
-          return u;
-      });
+      const updatedUsers = dbState.users.map(u => u.id === userId ? { ...u, balanceUSD: newBalance, rank: calculateRank(newBalance), monthlyProfitUSD: calculateProfit(u.capitalInvestedUSD, u.plan, investmentPlans) } : u);
+      syncUserToSupabase(updatedUsers.find(u => u.id === userId)!);
       setDbState(prev => ({ ...prev, users: updatedUsers }));
   };
-
   const handleBroadcastNotification = (message: string) => {
-      const newNotifications = users.filter(u => !u.isAdmin).map(u => ({
-          id: faker.string.uuid(), userId: u.id, message, date: new Date().toISOString(), isRead: false
-      }));
+      const newNotifications = users.filter(u => !u.isAdmin).map(u => ({ id: faker.string.uuid(), userId: u.id, message, date: new Date().toISOString(), isRead: false }));
       setDbState(prev => ({ ...prev, notifications: [...prev.notifications, ...newNotifications] }));
       syncNotificationsToSupabase(newNotifications);
   };
-
   const handleSendMessage = async (senderId: string, receiverId: string, text: string, attachment?: File) => {
-      let attachmentData = undefined;
-      if (attachment) {
-          attachmentData = { fileName: attachment.name, fileUrl: '', fileType: attachment.type }; 
-      }
-      const newMessage: ChatMessage = {
-          id: faker.string.uuid(), senderId, receiverId, text, timestamp: new Date().toISOString(), isRead: false, attachment: attachmentData
-      };
+      const newMessage: ChatMessage = { id: faker.string.uuid(), senderId, receiverId, text, timestamp: new Date().toISOString(), isRead: false, attachment: attachment ? { fileName: attachment.name, fileUrl: '', fileType: attachment.type } : undefined };
       syncMessageToSupabase(newMessage);
       setDbState(prev => ({ ...prev, chatMessages: [...prev.chatMessages, newMessage] }));
   };
-  
   const handleMarkAllNotificationsAsRead = () => {
       if (!loggedUser) return;
       const updated = dbState.notifications.map(n => n.userId === loggedUser.id ? { ...n, isRead: true } : n);
       setDbState(prev => ({ ...prev, notifications: updated }));
       syncNotificationsToSupabase(updated.filter(n => n.userId === loggedUser.id));
   };
-
   const handleUpdateSettings = (newSettings: PlatformSettings) => {
       if (!loggedUser?.isAdmin) return;
       setDbState(prev => ({ ...prev, platformSettings: newSettings }));
       handleAddAdminLog(loggedUser, AdminActionType.SettingsUpdate, "Atualizou as configurações da plataforma.");
       syncSettingsToSupabase(newSettings);
   };
-  
   const handleUpdateUser = (updatedUser: User) => {
-      setDbState(prev => ({
-          ...prev,
-          users: prev.users.map(u => u.id === updatedUser.id ? updatedUser : u)
-      }));
-      if (loggedUser?.id === updatedUser.id) {
-          setLoggedUser(updatedUser);
-      }
+      setDbState(prev => ({ ...prev, users: prev.users.map(u => u.id === updatedUser.id ? updatedUser : u) }));
+      if (loggedUser?.id === updatedUser.id) setLoggedUser(updatedUser);
       syncUserToSupabase(updatedUser);
   };
-
   const handleUpdatePassword = (userId: string, newPassword: string) => {
       const user = users.find(u => u.id === userId);
       if (user) {
-          const updatedUser = { ...user, password: newPassword };
-          handleUpdateUser(updatedUser);
-          syncUserToSupabase(updatedUser, newPassword);
+          handleUpdateUser({ ...user, password: newPassword });
+          syncUserToSupabase({ ...user, password: newPassword }, newPassword);
       }
   };
-
   const handleUpdatePlan = (updatedPlan: InvestmentPlan) => {
       const updatedPlans = investmentPlans.map(p => p.id === updatedPlan.id ? updatedPlan : p);
       setDbState(prev => ({ ...prev, investmentPlans: updatedPlans }));
@@ -727,67 +546,14 @@ const App: React.FC = () => {
   };
 
   let content;
-  if (view === View.Home) {
-      content = <HomePage setView={setView} language={language} setLanguage={handleSetLanguage} />;
-  } else if (view === View.Login) {
-      content = <LoginPage setView={setView} onLogin={handleLogin} language={language} setLanguage={handleSetLanguage} />;
-  } else if (view === View.Register) {
-      content = <RegisterPage setView={setView} onRegister={handleRegister} language={language} setLanguage={handleSetLanguage} />;
-  } else if (view === View.ForgotPassword) {
-      content = <ForgotPasswordPage setView={setView} language={language} setLanguage={handleSetLanguage} />;
-  } else if (view === View.UserDashboard && loggedUser) {
-      content = <UserDashboard 
-                    user={loggedUser} 
-                    adminUser={adminUser}
-                    transactions={transactions.filter(t => t.userId === loggedUser.id)}
-                    allUsers={users}
-                    allTransactions={transactions}
-                    notifications={notifications.filter(n => n.userId === loggedUser.id)}
-                    chatMessages={chatMessages}
-                    onLogout={handleLogout}
-                    onAddTransaction={handleAddTransaction}
-                    onMarkAllNotificationsAsRead={handleMarkAllNotificationsAsRead}
-                    onSendMessage={handleSendMessage}
-                    onUpdateUser={handleUpdateUser}
-                    onUpdatePassword={handleUpdatePassword}
-                    isDarkMode={isDarkMode}
-                    toggleTheme={toggleTheme}
-                    language={language}
-                    setLanguage={handleSetLanguage}
-                    onRefreshData={refreshData}
-                    investmentPlans={investmentPlans}
-                />;
-  } else if (view === View.AdminDashboard && loggedUser?.isAdmin) {
-      content = <AdminDashboard 
-                    user={loggedUser}
-                    allUsers={users}
-                    allTransactions={transactions}
-                    chatMessages={chatMessages}
-                    platformSettings={platformSettings}
-                    adminActionLogs={adminActionLogs}
-                    notifications={notifications.filter(n => n.userId === loggedUser.id)}
-                    onLogout={handleLogout}
-                    onUpdateTransaction={handleUpdateTransactionStatus}
-                    onUpdateUserStatus={handleUpdateUserStatus}
-                    onPayoutBonus={handlePayoutBonus}
-                    onSendMessage={handleSendMessage}
-                    onUpdateSettings={handleUpdateSettings}
-                    onAdminUpdateUserBalance={handleAdminUpdateUserBalance}
-                    onUpdateUser={handleUpdateUser}
-                    onMarkAllNotificationsAsRead={handleMarkAllNotificationsAsRead}
-                    isDarkMode={isDarkMode}
-                    toggleTheme={toggleTheme}
-                    language={language}
-                    setLanguage={handleSetLanguage}
-                    onRefreshData={refreshData}
-                    onBroadcastNotification={handleBroadcastNotification}
-                    referralRates={referralRates}
-                    investmentPlans={investmentPlans}
-                    onUpdatePlan={handleUpdatePlan}
-                />;
-  } else {
-      content = <HomePage setView={setView} language={language} setLanguage={handleSetLanguage} />;
-  }
+  if (view === View.Home) content = <HomePage setView={setView} language={language} setLanguage={handleSetLanguage} />;
+  else if (view === View.Login) content = <LoginPage setView={setView} onLogin={handleLogin} language={language} setLanguage={handleSetLanguage} />;
+  else if (view === View.Register) content = <RegisterPage setView={setView} onRegister={handleRegister} language={language} setLanguage={handleSetLanguage} />;
+  else if (view === View.ForgotPassword) content = <ForgotPasswordPage setView={setView} language={language} setLanguage={handleSetLanguage} />;
+  else if (view === View.UserDashboard && loggedUser) content = <UserDashboard user={loggedUser} adminUser={adminUser} transactions={transactions.filter(t => t.userId === loggedUser.id)} allUsers={users} allTransactions={transactions} notifications={notifications.filter(n => n.userId === loggedUser.id)} chatMessages={chatMessages} onLogout={handleLogout} onAddTransaction={handleAddTransaction} onMarkAllNotificationsAsRead={handleMarkAllNotificationsAsRead} onSendMessage={handleSendMessage} onUpdateUser={handleUpdateUser} onUpdatePassword={handleUpdatePassword} isDarkMode={isDarkMode} toggleTheme={toggleTheme} language={language} setLanguage={handleSetLanguage} onRefreshData={refreshData} investmentPlans={investmentPlans} />;
+  // FIX: Pass investmentPlans to AdminDashboard
+  else if (view === View.AdminDashboard && loggedUser?.isAdmin) content = <AdminDashboard user={loggedUser} allUsers={users} allTransactions={transactions} chatMessages={chatMessages} platformSettings={platformSettings} adminActionLogs={adminActionLogs} notifications={notifications.filter(n => n.userId === loggedUser.id)} onLogout={handleLogout} onUpdateTransaction={handleUpdateTransactionStatus} onUpdateUserStatus={handleUpdateUserStatus} onPayoutBonus={handlePayoutBonus} onSendMessage={handleSendMessage} onUpdateSettings={handleUpdateSettings} onAdminUpdateUserBalance={handleAdminUpdateUserBalance} onUpdateUser={handleUpdateUser} onMarkAllNotificationsAsRead={handleMarkAllNotificationsAsRead} isDarkMode={isDarkMode} toggleTheme={toggleTheme} language={language} setLanguage={handleSetLanguage} onRefreshData={refreshData} onBroadcastNotification={handleBroadcastNotification} referralRates={referralRates} onUpdatePlan={handleUpdatePlan} investmentPlans={investmentPlans} />;
+  else content = <HomePage setView={setView} language={language} setLanguage={handleSetLanguage} />;
 
   return (
     <div className={`min-h-screen w-full overflow-x-hidden ${isDarkMode ? 'dark' : ''} bg-gray-100 dark:bg-brand-black text-gray-900 dark:text-white`}>

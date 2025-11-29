@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import type { PlatformSettings, User, Transaction } from '../../../../../types';
 import Card from '../../../../ui/Card';
@@ -66,19 +65,20 @@ const Settings: React.FC<SettingsProps> = ({ platformSettings, onUpdateSettings,
     // SQL Code Definition - THE GOLDEN SOURCE OF TRUTH FOR DB SCHEMA
     const sqlCode = `-- SCRIPT SQL DE CONFIGURAÇÃO TOTAL (AUTOCORREÇÃO)
 -- Copie e cole este script no SQL Editor do Supabase e clique em "Run".
--- Ele criará as tabelas se não existirem e adicionará colunas faltantes sem apagar dados.
+-- É seguro rodar este script múltiplas vezes. Ele não apagará dados existentes.
 
--- 1. HABILITAR UUID
+-- 1. HABILITAR EXTENSÕES NECESSÁRIAS
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- 2. TABELA DE USUÁRIOS E SUAS COLUNAS
+-- 2. TABELA DE USUÁRIOS (users)
+-- Cria a tabela se ela não existir.
 CREATE TABLE IF NOT EXISTS public.users (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   email TEXT UNIQUE NOT NULL,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+  created_at TIMESTAMPTZ DEFAULT now()
 );
 
--- Migrations para garantir que todas as colunas existam
+-- Adiciona colunas faltantes de forma segura (idempotente).
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS password TEXT;
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS full_name TEXT;
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS avatar_url TEXT;
@@ -92,14 +92,15 @@ ALTER TABLE public.users ADD COLUMN IF NOT EXISTS capital_invested_usd NUMERIC D
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS monthly_profit_usd NUMERIC DEFAULT 0;
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS daily_withdrawable_usd NUMERIC DEFAULT 0;
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS bonus_balance_usd NUMERIC DEFAULT 0;
-ALTER TABLE public.users ADD COLUMN IF NOT EXISTS last_plan_change_date TEXT;
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS last_plan_change_date TIMESTAMPTZ;
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS referral_code TEXT;
-ALTER TABLE public.users ADD COLUMN IF NOT EXISTS referred_by_id UUID;
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS referred_by_id UUID REFERENCES public.users(id);
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS transaction_pin TEXT;
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS support_status TEXT DEFAULT 'open';
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS kyc_analysis TEXT; -- Coluna para análise KYC
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS additional_data JSONB DEFAULT '{}'::jsonb;
 
--- 3. TABELA DE TRANSAÇÕES
+-- 3. TABELA DE TRANSAÇÕES (transactions)
 CREATE TABLE IF NOT EXISTS public.transactions (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
@@ -107,44 +108,48 @@ CREATE TABLE IF NOT EXISTS public.transactions (
   amount_usd NUMERIC NOT NULL,
   amount_brl NUMERIC,
   status TEXT DEFAULT 'Pending', 
-  date TEXT,
+  date DATE,
+  scheduled_date DATE, -- Data para agendamento de saques
   withdrawal_details JSONB,
   referral_level NUMERIC,
   source_user_id UUID,
   bonus_payout_handled BOOLEAN DEFAULT false,
   wallet_source TEXT,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+  created_at TIMESTAMPTZ DEFAULT now()
 );
 
--- Indices para performance
+-- Adiciona colunas faltantes de forma segura
+ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS scheduled_date DATE;
+
+-- Cria índices para otimizar buscas.
 CREATE INDEX IF NOT EXISTS idx_transactions_user_id ON public.transactions(user_id);
 CREATE INDEX IF NOT EXISTS idx_transactions_status ON public.transactions(status);
+CREATE INDEX IF NOT EXISTS idx_transactions_type ON public.transactions(type);
 
--- 4. TABELA DE MENSAGENS (CHAT)
+-- 4. TABELA DE MENSAGENS DE CHAT (messages)
 CREATE TABLE IF NOT EXISTS public.messages (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   sender_id UUID REFERENCES public.users(id) ON DELETE SET NULL,
   receiver_id UUID REFERENCES public.users(id) ON DELETE SET NULL,
   text TEXT,
-  timestamp TEXT,
+  timestamp TIMESTAMPTZ,
   is_read BOOLEAN DEFAULT false,
   attachment JSONB,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+  created_at TIMESTAMPTZ DEFAULT now()
 );
 
--- 5. TABELA PLANO DE CARREIRA
+-- 5. TABELA DE CONFIGURAÇÃO DO PLANO DE CARREIRA (career_plan_config)
 CREATE TABLE IF NOT EXISTS public.career_plan_config (
     level INTEGER PRIMARY KEY,
     percentage NUMERIC NOT NULL
 );
 
+-- Insere ou atualiza os níveis de bônus.
 INSERT INTO public.career_plan_config (level, percentage) VALUES
-(1, 0.05),
-(2, 0.03),
-(3, 0.01)
+(1, 0.05), (2, 0.03), (3, 0.01)
 ON CONFLICT (level) DO UPDATE SET percentage = EXCLUDED.percentage;
 
--- 6. CONFIGURAÇÕES DA PLATAFORMA
+-- 6. TABELA DE CONFIGURAÇÕES DA PLATAFORMA (platform_settings)
 CREATE TABLE IF NOT EXISTS public.platform_settings (
     id INTEGER PRIMARY KEY DEFAULT 1,
     dollar_rate NUMERIC,
@@ -154,32 +159,33 @@ CREATE TABLE IF NOT EXISTS public.platform_settings (
     is_maintenance_mode BOOLEAN,
     allow_new_registrations BOOLEAN,
     logo_url TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+    updated_at TIMESTAMPTZ DEFAULT now()
 );
+ALTER TABLE public.platform_settings ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT now();
 
--- 7. LOGS DE ADMINISTRAÇÃO
+-- 7. TABELA DE LOGS DE ADMINISTRAÇÃO (admin_logs)
 CREATE TABLE IF NOT EXISTS public.admin_logs (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    timestamp TEXT,
+    timestamp TIMESTAMPTZ,
     admin_id UUID REFERENCES public.users(id) ON DELETE SET NULL,
     admin_name TEXT,
     action_type TEXT,
     description TEXT,
     target_id TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+    created_at TIMESTAMPTZ DEFAULT now()
 );
 
--- 8. NOTIFICAÇÕES
+-- 8. TABELA DE NOTIFICAÇÕES (notifications)
 CREATE TABLE IF NOT EXISTS public.notifications (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
   message TEXT NOT NULL,
-  date TEXT NOT NULL,
+  date DATE NOT NULL,
   is_read BOOLEAN DEFAULT false,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+  created_at TIMESTAMPTZ DEFAULT now()
 );
 
--- 9. PLANOS DE INVESTIMENTO
+-- 9. TABELA DE PLANOS DE INVESTIMENTO (investment_plans)
 CREATE TABLE IF NOT EXISTS public.investment_plans (
     plan_id TEXT PRIMARY KEY,
     name TEXT,
@@ -187,10 +193,10 @@ CREATE TABLE IF NOT EXISTS public.investment_plans (
     return_rate NUMERIC,
     min_deposit_usd NUMERIC,
     color TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+    created_at TIMESTAMPTZ DEFAULT now()
 );
 
--- Seed Inicial dos Planos (só insere se não existir)
+-- Insere os planos padrão se a tabela estiver vazia.
 INSERT INTO public.investment_plans (plan_id, name, monthly_return, return_rate, min_deposit_usd, color) VALUES
 ('1', 'Conservador', '1% a 5%', 0.05, 10, 'text-brand-blue'),
 ('2', 'Moderado', 'até 10%', 0.10, 50, 'text-green-400'),
@@ -198,8 +204,8 @@ INSERT INTO public.investment_plans (plan_id, name, monthly_return, return_rate,
 ('4', 'Select', 'até 25%', 0.25, 200, 'text-red-500')
 ON CONFLICT (plan_id) DO NOTHING;
 
--- 10. PERMISSÕES (RLS)
--- Habilita RLS para segurança
+-- 10. SEGURANÇA: HABILITA Row Level Security (RLS)
+-- Essencial para proteger os dados de cada usuário.
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
@@ -209,45 +215,42 @@ ALTER TABLE public.admin_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.investment_plans ENABLE ROW LEVEL SECURITY;
 
--- Remove políticas antigas para evitar conflitos
-DROP POLICY IF EXISTS "Public Access Users" ON public.users;
-DROP POLICY IF EXISTS "Public Access Transactions" ON public.transactions;
-DROP POLICY IF EXISTS "Public Access Messages" ON public.messages;
-DROP POLICY IF EXISTS "Public Access Career" ON public.career_plan_config;
-DROP POLICY IF EXISTS "Public Access Settings" ON public.platform_settings;
-DROP POLICY IF EXISTS "Public Access Logs" ON public.admin_logs;
-DROP POLICY IF EXISTS "Public Access Notifications" ON public.notifications;
-DROP POLICY IF EXISTS "Public Access Plans" ON public.investment_plans;
+-- Remove políticas antigas para evitar conflitos ao rodar novamente.
+DROP POLICY IF EXISTS "Public Access" ON public.users;
+DROP POLICY IF EXISTS "Public Access" ON public.transactions;
+DROP POLICY IF EXISTS "Public Access" ON public.messages;
+DROP POLICY IF EXISTS "Public Access" ON public.career_plan_config;
+DROP POLICY IF EXISTS "Public Access" ON public.platform_settings;
+DROP POLICY IF EXISTS "Public Access" ON public.admin_logs;
+DROP POLICY IF EXISTS "Public Access" ON public.notifications;
+DROP POLICY IF EXISTS "Public Access" ON public.investment_plans;
 
--- Cria políticas permissivas (ajustar para produção se necessário)
-CREATE POLICY "Public Access Users" ON public.users FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public Access Transactions" ON public.transactions FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public Access Messages" ON public.messages FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public Access Career" ON public.career_plan_config FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public Access Settings" ON public.platform_settings FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public Access Logs" ON public.admin_logs FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public Access Notifications" ON public.notifications FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public Access Plans" ON public.investment_plans FOR ALL USING (true) WITH CHECK (true);
+-- Cria políticas permissivas. Em produção, restrinja o acesso (ex: auth.uid() = user_id).
+CREATE POLICY "Public Access" ON public.users FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Public Access" ON public.transactions FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Public Access" ON public.messages FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Public Access" ON public.career_plan_config FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Public Access" ON public.platform_settings FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Public Access" ON public.admin_logs FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Public Access" ON public.notifications FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Public Access" ON public.investment_plans FOR ALL USING (true) WITH CHECK (true);
 
+-- Garante que os papéis padrões do Supabase tenham acesso.
 GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated, service_role;
 
--- 11. CRIAR USUÁRIO ADMIN (Se não houver)
+-- 11. DADOS INICIAIS: CRIA O USUÁRIO ADMIN
+-- Insere o usuário admin se ele não existir, ou atualiza para garantir que ele seja admin.
 INSERT INTO public.users (
     email, password, full_name, is_admin, status, rank, balance_usd, plan, referral_code, additional_data
 ) VALUES (
-    'admin@greennseven.com', 
-    'admin123', 
-    'Administrador Geral', 
-    true, 
-    'Approved', 
-    'Diamond', 
-    1000000, 
-    'Select', 
-    'ADMINPRO',
+    'admin@greennseven.com', 'admin123', 'Administrador Geral', true, 'Approved', 'Diamond', 1000000, 'Select', 'ADMINPRO',
     '{"cpf": "000.000.000-00", "address": {"city": "Sede", "state": "SP"}}'::jsonb
 ) ON CONFLICT (email) DO UPDATE SET 
     is_admin = true,
-    referral_code = EXCLUDED.referral_code;
+    status = 'Approved',
+    full_name = 'Administrador Geral';
+
+-- FIM DO SCRIPT --
 `;
 
     useEffect(() => {
@@ -477,6 +480,7 @@ INSERT INTO public.users (
                     </div>
                 </Card>
 
+                {/* Remaining settings cards... */}
                 <Card>
                     <h2 className="text-xl font-bold mb-4">Branding & Logo</h2>
                     <div className="grid md:grid-cols-2 gap-6 items-center">

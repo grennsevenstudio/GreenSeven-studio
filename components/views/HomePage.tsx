@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect, useRef } from 'react';
 import { View, type Stock, type InvestmentPlan, type Language } from '../../types';
 import Button from '../ui/Button';
@@ -340,9 +338,40 @@ const HomePage: React.FC<HomePageProps> = ({ setView, language, setLanguage }) =
 
             <header className="sticky top-0 bg-brand-black/80 backdrop-blur-md z-30 py-4 px-4 sm:px-6 lg:px-12 w-full border-b border-gray-900">
                 <div className="flex justify-between items-center">
-                    <div className="flex items-center gap-2 cursor-pointer" onClick={() => window.location.reload()}>
-                        {React.cloneElement(ICONS.career as React.ReactElement<any>, {className: "h-7 w-7 text-brand-green"})}
-                        <span className="text-2xl font-bold tracking-wider">GREENNSEVEN</span>
+                    <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-2 cursor-pointer" onClick={() => window.location.reload()}>
+                            {React.cloneElement(ICONS.career as React.ReactElement<any>, {className: "h-7 w-7 text-brand-green"})}
+                            <span className="text-xl md:text-2xl font-bold tracking-wider">GREENNSEVEN</span>
+                        </div>
+                        <div className="relative" ref={langMenuRef}>
+                            <button 
+                                onClick={() => setIsLangMenuOpen(!isLangMenuOpen)}
+                                className="flex items-center gap-1.5 focus:outline-none hover:opacity-80 transition-opacity p-2 rounded-md hover:bg-gray-800"
+                            >
+                                <span className="text-2xl leading-none">{LANGUAGE_OPTIONS.find(l => l.code === language)?.flag}</span>
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </button>
+                            
+                            {isLangMenuOpen && (
+                                <div className="absolute left-0 mt-2 w-36 bg-brand-gray border border-gray-700 rounded-lg shadow-xl py-1 animate-fade-in-up z-50">
+                                    {LANGUAGE_OPTIONS.map((option) => (
+                                        <button
+                                            key={option.code}
+                                            onClick={() => {
+                                                setLanguage(option.code);
+                                                setIsLangMenuOpen(false);
+                                            }}
+                                            className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-800 flex items-center gap-3 transition-colors ${language === option.code ? 'bg-gray-800/50 text-brand-green' : 'text-gray-300'}`}
+                                        >
+                                            <span className="text-lg">{option.flag}</span>
+                                            <span className="font-medium">{option.code.toUpperCase()}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
                     </div>
                     
                     <nav className="hidden md:flex items-center gap-8">
@@ -364,37 +393,6 @@ const HomePage: React.FC<HomePageProps> = ({ setView, language, setLanguage }) =
                     </nav>
 
                     <div className="flex items-center gap-3">
-                        {/* Language Selector in Navbar */}
-                        <div className="relative mr-2" ref={langMenuRef}>
-                            <button 
-                                onClick={() => setIsLangMenuOpen(!isLangMenuOpen)}
-                                className="flex items-center gap-1.5 focus:outline-none hover:opacity-80 transition-opacity p-2 rounded-md hover:bg-gray-800"
-                            >
-                                <span className="text-2xl leading-none">{LANGUAGE_OPTIONS.find(l => l.code === language)?.flag}</span>
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                                </svg>
-                            </button>
-                            
-                            {isLangMenuOpen && (
-                                <div className="absolute right-0 mt-2 w-36 bg-brand-gray border border-gray-700 rounded-lg shadow-xl py-1 animate-fade-in-up z-50">
-                                    {LANGUAGE_OPTIONS.map((option) => (
-                                        <button
-                                            key={option.code}
-                                            onClick={() => {
-                                                setLanguage(option.code);
-                                                setIsLangMenuOpen(false);
-                                            }}
-                                            className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-800 flex items-center gap-3 transition-colors ${language === option.code ? 'bg-gray-800/50 text-brand-green' : 'text-gray-300'}`}
-                                        >
-                                            <span className="text-lg">{option.flag}</span>
-                                            <span className="font-medium">{option.code.toUpperCase()}</span>
-                                        </button>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-
                          <Button onClick={() => setView(View.Login)} variant="secondary" className="px-5 py-2 !rounded-md">
                            {t.landing.login}
                          </Button>
@@ -405,15 +403,19 @@ const HomePage: React.FC<HomePageProps> = ({ setView, language, setLanguage }) =
                 </div>
             </header>
 
-            <main id="home" className="h-[calc(100vh-76px)] min-h-[600px] flex items-center justify-center text-center relative px-4 z-10">
+            <main id="home" className="h-[calc(100vh-76px)] min-h-[600px] flex items-center justify-center text-center relative px-4">
                 <div className="relative z-10 flex flex-col items-center">
-                    <h1 className="text-6xl md:text-8xl font-black leading-tight max-w-4xl">
-                        {t.landing.hero_title_1}
-                        <span className="block bg-gradient-to-r from-brand-blue to-brand-green text-transparent bg-clip-text mt-2 animate-gradient-x">
-                            {t.landing.hero_title_2}
+                    <h1 className="text-5xl md:text-7xl font-black leading-tight max-w-4xl text-white">
+                        <span>{t.landing.hero_title_1}</span>
+                        <span className="block mt-2">{t.landing.hero_title_2}</span>
+                        <span className="block mt-2 bg-gradient-to-r from-brand-green to-brand-blue text-transparent bg-clip-text animate-text-gradient bg-[200%_auto]">
+                            {t.landing.hero_title_3}
                         </span>
                     </h1>
-                    <p className="mt-6 text-lg text-gray-400 max-w-2xl mx-auto">
+
+                    <div className="my-8 h-2 md:h-3 w-48 md:w-64 rounded-full bg-gradient-to-r from-brand-blue to-brand-green"></div>
+
+                    <p className="text-base md:text-lg text-gray-400 max-w-xl mx-auto">
                         {t.landing.hero_subtitle}
                     </p>
                     <div className="mt-10 flex flex-col sm:flex-row justify-center items-center gap-4">
