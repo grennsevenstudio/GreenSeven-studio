@@ -1,6 +1,3 @@
-
-
-
 import React, { useState } from 'react';
 import type { User, Transaction, ChatMessage, PlatformSettings, AdminActionLog, Language, Notification, InvestmentPlan } from '../../../../types';
 import { TransactionStatus, UserStatus } from '../../../../types';
@@ -44,14 +41,15 @@ interface AdminDashboardProps {
   referralRates?: {[key:number]: number};
   onUpdatePlan: (updatedPlan: InvestmentPlan) => void;
   investmentPlans: InvestmentPlan[];
+  syncStatus: any;
 }
 
 const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
-  const { user, allUsers, allTransactions, chatMessages, platformSettings, adminActionLogs, notifications, onLogout, onUpdateTransaction, onUpdateUserStatus, onPayoutBonus, onSendMessage, onUpdateSettings, onAdminUpdateUserBalance, onUpdateUser, onMarkAllNotificationsAsRead, isDarkMode, toggleTheme, language, setLanguage, onRefreshData, onBroadcastNotification, referralRates, investmentPlans, onUpdatePlan } = props;
+  const { user, allUsers, allTransactions, chatMessages, platformSettings, adminActionLogs, notifications, onLogout, onUpdateTransaction, onUpdateUserStatus, onPayoutBonus, onSendMessage, onUpdateSettings, onAdminUpdateUserBalance, onUpdateUser, onMarkAllNotificationsAsRead, isDarkMode, toggleTheme, language, setLanguage, onRefreshData, onBroadcastNotification, referralRates, investmentPlans, onUpdatePlan, syncStatus } = props;
   const [activeView, setActiveView] = useState('dashboard');
   const [isSidebarOpen, setSidebarOpen] = useState(false);
 
-  const t = TRANSLATIONS[language];
+  const t = TRANSLATIONS[language] || TRANSLATIONS['pt'];
 
   const navItems = [
     { label: t.dashboard, icon: ICONS.dashboard, view: 'dashboard' },
@@ -107,9 +105,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
             language={language}
             setLanguage={setLanguage}
             onRefreshData={onRefreshData}
+            syncStatus={syncStatus}
         />
-        <main className="p-4 sm:p-6 lg:p-8">
-          {renderContent()}
+        <main className="w-full p-0 sm:p-6 lg:p-8">
+            {renderContent()}
         </main>
       </div>
     </div>

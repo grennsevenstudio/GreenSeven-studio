@@ -1,4 +1,3 @@
-
 import React, { useMemo, useState, useRef, useEffect } from 'react';
 import type { User, Transaction } from '../../../../../types';
 import { InvestorRank, TransactionStatus, TransactionType } from '../../../../../types';
@@ -217,7 +216,7 @@ const Profile: React.FC<ProfileProps> = ({ user, allTransactions, setActiveView,
     }, [user.id, allTransactions]);
 
     return (
-        <div className="space-y-8">
+        <div className="space-y-8 p-4 sm:p-0">
             {toast && <Toast message={toast.message} type={toast.type} />}
             <input
                 type="file"

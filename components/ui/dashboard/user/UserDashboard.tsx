@@ -53,7 +53,7 @@ const MOTIVATIONAL_QUOTES = [
 ];
 
 const DashboardSkeleton = () => (
-  <div className="space-y-8 animate-pulse max-w-7xl mx-auto">
+  <div className="space-y-8 animate-pulse w-full px-4 sm:px-0">
     <div className="space-y-3">
         <div className="h-8 w-1/3 bg-gray-300 dark:bg-gray-700 rounded-lg"></div>
         <div className="h-4 w-1/4 bg-gray-200 dark:bg-gray-800 rounded-lg"></div>
@@ -226,8 +226,8 @@ const UserDashboard: React.FC<UserDashboardProps> = (props) => {
             onRefreshData={onRefreshData}
             syncStatus={syncStatus}
         />
-        <main className="p-2 sm:p-6 lg:p-8">
-          {isLoading ? <DashboardSkeleton /> : renderContent()}
+        <main className="w-full p-0 sm:p-6 lg:p-8">
+            {isLoading ? <DashboardSkeleton /> : renderContent()}
         </main>
       </div>
        <BottomNavBar

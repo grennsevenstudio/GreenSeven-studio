@@ -202,7 +202,7 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions }) => {
     };
 
     return (
-        <div className="space-y-8 animate-fade-in">
+        <div className="space-y-8 animate-fade-in p-4 sm:p-0">
              <style>{`
                 @keyframes fade-in {
                     from { opacity: 0; }

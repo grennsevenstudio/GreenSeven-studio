@@ -203,7 +203,7 @@ const Plans: React.FC<PlansProps> = ({ user, onUpdateUser, language }) => {
     };
 
     return (
-        <div className="space-y-8 animate-fade-in">
+        <div className="space-y-8 animate-fade-in p-4 sm:p-0">
              <style>{`
                 @keyframes fade-in {
                     from { opacity: 0; }
@@ -231,7 +231,7 @@ const Plans: React.FC<PlansProps> = ({ user, onUpdateUser, language }) => {
                 </div>
             </div>
             
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
                 {INVESTMENT_PLANS.map(plan => (
                     <PlanCard 
                         key={plan.id} 

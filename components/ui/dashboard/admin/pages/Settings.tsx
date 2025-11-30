@@ -5,7 +5,8 @@ import Button from '../../../../ui/Button';
 import Input from '../../../../ui/Input';
 import ToggleSwitch from '../../../../ui/ToggleSwitch';
 import { ICONS } from '../../../../../constants';
-import { GoogleGenAI, Modality } from "@google/genai";
+// FIX: Removed unused `Modality` import
+import { GoogleGenAI } from "@google/genai";
 import { checkSupabaseConnection, syncUserToSupabase, syncTransactionToSupabase, syncSettingsToSupabase } from '../../../../../lib/supabase';
 
 interface SettingsProps {
@@ -318,7 +319,7 @@ INSERT INTO public.users (
         try {
             const ai = new GoogleGenAI({ apiKey });
             const prompt = "A modern and professional logo for a financial investment platform named 'GreennSeven'. The design must be a minimalist vector graphic with a white background, featuring an abstract symbol representing growth and security. Use a sleek color palette of brand green and professional blue. The text 'GreennSeven' should be elegantly integrated.";
-            // FIX: Removed `config.responseModalities` as it is not supported for image generation models.
+            
             const response = await ai.models.generateContent({
                 model: 'gemini-2.5-flash-image',
                 contents: { parts: [{ text: prompt }] },

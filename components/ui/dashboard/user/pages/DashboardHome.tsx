@@ -47,7 +47,7 @@ const StatCard: React.FC<{ title: string; value: React.ReactNode; icon: React.Re
                 </div>
                 
                 <div className="z-10 mt-auto">
-                    <div className="text-2xl sm:text-3xl lg:text-4xl font-black text-white tracking-tight leading-none mb-1">{value}</div>
+                    <div className="text-xl sm:text-2xl lg:text-3xl font-black text-white tracking-tight leading-none mb-1">{value}</div>
                     {subValue && typeof subValue === 'string' ? (
                         <div className="text-xs text-gray-500 font-medium">{subValue}</div>
                     ) : (
@@ -152,6 +152,7 @@ const DepositModalContent: React.FC<{
         return (
              <div>
                 <p className="text-center text-gray-400 mb-4">Utilize os dados abaixo para realizar o pagamento via PIX.</p>
+                
                 <p className="text-center text-lg font-bold mt-4">{formatCurrency(parseFloat(amountBRL), 'BRL')}</p>
                 
                 <div className="bg-brand-black p-4 rounded-lg mt-4 border border-gray-800">
@@ -554,7 +555,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions = [], 
     const requestRef = useRef<number>();
 
     const t = TRANSLATIONS[language] || TRANSLATIONS['pt'];
-    const maskedValue = '$ ••••••••';
+    const maskedValue = '$ ●●●●●●●●';
     
     const dailyAvailable = user.dailyWithdrawableUSD || 0;
     const bonusAvailable = user.bonusBalanceUSD || 0;
@@ -670,15 +671,15 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions = [], 
             <WithdrawModalContent user={user} onClose={() => setWithdrawModalOpen(false)} onAddTransaction={onAddTransaction} setActiveView={setActiveView} />
         </Modal>
 
-        <div className="space-y-4 md:space-y-8">
+        <div className="space-y-4 md:space-y-8 p-4 sm:p-0">
              <div className="flex items-center justify-between">
-                <h1 className="text-xl md:text-2xl font-bold">{t.dashboard_subtitle}</h1>
+                <h1 className="text-xl font-bold text-white">{t.dashboard_subtitle}</h1>
                 <button onClick={() => setShowBalance(!showBalance)} className="text-gray-500 hover:text-white" title={showBalance ? "Ocultar saldos" : "Mostrar saldos"}>
                     {showBalance ? ICONS.eyeSlash : ICONS.eye}
                 </button>
              </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+            <div className="grid grid-cols-2 gap-4 md:gap-6">
                 <StatCard 
                     title="Capital Investido"
                     value={<AnimatedBalance value={showBalance ? formatCurrency(user.capitalInvestedUSD, 'USD') : maskedValue} isShown={showBalance} />}
