@@ -1,4 +1,6 @@
 
+
+
 import React, { useState, useRef, useEffect } from 'react';
 import type { User, Notification, Language, SyncStatus } from '../../types';
 import { ICONS, RANK_COLORS } from '../../constants';
@@ -90,13 +92,11 @@ interface HeaderProps {
 const Header: React.FC<HeaderProps> = ({ user, onLogout, toggleSidebar, notifications = [], onMarkAllAsRead, isDarkMode, toggleTheme, language, setLanguage, onRefreshData, syncStatus }) => {
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [isLangMenuOpen, setIsLangMenuOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   
   const notificationRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
-  const langMenuRef = useRef<HTMLDivElement>(null);
 
   const unreadCount = notifications.filter(n => !n.isRead).length;
   const t = TRANSLATIONS[language];
@@ -110,9 +110,6 @@ const Header: React.FC<HeaderProps> = ({ user, onLogout, toggleSidebar, notifica
       }
       if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
         setIsProfileOpen(false);
-      }
-      if (langMenuRef.current && !langMenuRef.current.contains(event.target as Node)) {
-        setIsLangMenuOpen(false);
       }
     };
 
@@ -165,35 +162,7 @@ const Header: React.FC<HeaderProps> = ({ user, onLogout, toggleSidebar, notifica
                  {ICONS.refresh}
              </button>
          )}
-         <div className="relative hidden sm:block" ref={langMenuRef}>
-            <button 
-                onClick={() => setIsLangMenuOpen(!isLangMenuOpen)}
-                className="flex items-center gap-1.5 focus:outline-none hover:opacity-80 transition-opacity"
-            >
-                <span className="text-2xl leading-none">{LANGUAGE_OPTIONS.find(l => l.code === language)?.flag}</span>
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                </svg>
-            </button>
-            
-            {isLangMenuOpen && (
-                <div className="absolute right-0 mt-2 w-36 bg-brand-gray border border-gray-700 rounded-lg shadow-xl py-1 animate-fade-in-up z-50">
-                    {LANGUAGE_OPTIONS.map((option) => (
-                        <button
-                            key={option.code}
-                            onClick={() => {
-                                setLanguage(option.code);
-                                setIsLangMenuOpen(false);
-                            }}
-                            className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-800 flex items-center gap-3 transition-colors ${language === option.code ? 'bg-gray-800/50 text-brand-green' : 'text-gray-300'}`}
-                        >
-                            <span className="text-lg">{option.flag}</span>
-                            <span className="font-medium">{option.code.toUpperCase()}</span>
-                        </button>
-                    ))}
-                </div>
-            )}
-         </div>
+         
         <button
           onClick={toggleTheme}
           className="text-gray-400 hover:text-white transition-colors p-1"
@@ -264,9 +233,28 @@ const Header: React.FC<HeaderProps> = ({ user, onLogout, toggleSidebar, notifica
                             {user.rank}
                         </p>
                     </div>
+                    
+                    {/* Language Selection inside Profile Dropdown */}
+                    <div className="py-2 border-b border-gray-700">
+                        <p className="px-4 text-[10px] text-gray-500 uppercase font-bold mb-1">Idioma / Language</p>
+                        {LANGUAGE_OPTIONS.map((option) => (
+                            <button
+                                key={option.code}
+                                onClick={() => {
+                                    setLanguage(option.code);
+                                    setIsProfileOpen(false);
+                                }}
+                                className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-800 flex items-center gap-3 transition-colors ${language === option.code ? 'text-brand-green bg-gray-800/50' : 'text-gray-300'}`}
+                            >
+                                <span className="text-lg">{option.flag}</span>
+                                <span>{option.label}</span>
+                            </button>
+                        ))}
+                    </div>
+
                     <button
                         onClick={onLogout}
-                        className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-gray-800 flex items-center gap-2"
+                        className="w-full text-left px-4 py-3 text-sm text-red-400 hover:bg-gray-800 flex items-center gap-2"
                     >
                         {ICONS.logout}
                         {t.logout}

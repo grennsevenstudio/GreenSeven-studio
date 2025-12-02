@@ -1,3 +1,4 @@
+
 import { Language } from '../types';
 
 export const TRANSLATIONS = {
@@ -8,6 +9,7 @@ export const TRANSLATIONS = {
     transactions: 'Movimentações',
     profile: 'Meu Perfil',
     support: 'Suporte',
+    faq_menu: 'Perguntas Frequentes',
     users: 'Usuários',
     logs: 'Logs de Ações',
     settings: 'Configurações',
@@ -267,6 +269,7 @@ export const TRANSLATIONS = {
     transactions: 'Transactions',
     profile: 'My Profile',
     support: 'Support',
+    faq_menu: 'FAQ',
     users: 'Users',
     logs: 'Action Logs',
     settings: 'Settings',
@@ -479,6 +482,7 @@ export const TRANSLATIONS = {
     transactions: 'Transacciones',
     profile: 'Mi Perfil',
     support: 'Soporte',
+    faq_menu: 'Preguntas Frecuentes',
     users: 'Usuarios',
     logs: 'Registros',
     settings: 'Configuración',
@@ -607,7 +611,7 @@ export const TRANSLATIONS = {
         feature_profit_title: 'Rentabilidad Dolarizada',
         feature_profit_desc: 'Protege tu capital de la inflación e invierte en una moneda fuerte, maximizando tu poder adquisitivo y tus ganancias.',
         feature_security_title: 'Seguridad de Punta',
-        feature_security_desc: 'Operamos con cifrado de nivel bancario y las mejores prácticas de seguridad para proteger tus datos e inversiones.',
+        feature_security_desc: 'Operamos com cifrado de nivel bancario y las mejores prácticas de seguridad para proteger tus datos e inversiones.',
         feature_interface_title: 'Interfaz Intuitiva',
         feature_interface_desc: 'Gestiona tus inversiones de forma simple y eficiente a través de una plataforma moderna y fácil de usar.',
         feature_support_title: 'Soporte Exclusivo',
@@ -691,6 +695,7 @@ export const TRANSLATIONS = {
     transactions: 'Transactions',
     profile: 'Mon Profil',
     support: 'Support',
+    faq_menu: 'FAQ',
     users: 'Utilisateurs',
     logs: 'Journaux',
     settings: 'Paramètres',
@@ -900,6 +905,7 @@ export const TRANSLATIONS = {
     transactions: 'Transaktionen',
     profile: 'Mein Profil',
     support: 'Support',
+    faq_menu: 'FAQ',
     users: 'Benutzer',
     logs: 'Protokolle',
     settings: 'Einstellungen',

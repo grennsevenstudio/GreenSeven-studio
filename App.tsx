@@ -1,4 +1,6 @@
 
+
+
 import React, { useState, useEffect, useRef } from 'react';
 import type { User, Transaction, Notification, ChatMessage, PlatformSettings, AdminActionLog, Language, InvestmentPlan, SyncStatus } from './types';
 import { View, TransactionStatus, TransactionType, AdminActionType, UserStatus, InvestorRank } from './types';
@@ -65,11 +67,21 @@ const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('idle');
 
-  // View State
+  // View State - Synchronously check session on initialization
   const [view, setView] = useState<View>(() => {
       const path = window.location.pathname;
       if (path === '/register') return View.Register;
       if (path === '/login') return View.Login;
+      
+      // Check for session immediately to prevent flash
+      const storedUserId = getSessionUser();
+      if (storedUserId) {
+          const localData = getAllData();
+          const user = localData.users.find(u => u.id === storedUserId);
+          if (user) {
+              return user.isAdmin ? View.AdminDashboard : View.UserDashboard;
+          }
+      }
       return View.Home;
   });
 
@@ -197,7 +209,7 @@ const App: React.FC = () => {
             const user = remoteUsers.find((u: User) => u.id === storedUserId);
             if (user) {
                 setLoggedUser(user);
-                // Auto-redirect to dashboard if on home/login page
+                // Ensure view is consistent with user role
                 if (view === View.Home || view === View.Login) {
                     setView(user.isAdmin ? View.AdminDashboard : View.UserDashboard);
                 }
@@ -224,7 +236,10 @@ const App: React.FC = () => {
               const user = localData.users.find((u: User) => u.id === storedUserId);
               if (user) {
                   setLoggedUser(user);
-                  setView(user.isAdmin ? View.AdminDashboard : View.UserDashboard);
+                  // We already set view in useState initializer, but this ensures consistency if loaded async
+                  if (view === View.Home || view === View.Login) {
+                      setView(user.isAdmin ? View.AdminDashboard : View.UserDashboard);
+                  }
               }
           }
       }

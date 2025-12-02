@@ -1,4 +1,6 @@
 
+
+
 import React, { useState, useEffect } from 'react';
 import type { User, Transaction, Notification, ChatMessage, Language, InvestmentPlan, SyncStatus } from '../../../../types';
 import Sidebar from '../../../layout/Sidebar';
@@ -16,6 +18,7 @@ import Transactions from './pages/Transactions';
 import Profile from './pages/Profile';
 import CareerPlan from './pages/CareerPlan';
 import SupportChat from './pages/SupportChat';
+import FAQPage from './pages/FAQPage';
 
 interface UserDashboardProps {
   user: User;
@@ -96,6 +99,7 @@ const UserDashboard: React.FC<UserDashboardProps> = (props) => {
     { label: t.career, icon: ICONS.career, view: 'career' },
     { label: t.transactions, icon: ICONS.transactions, view: 'transactions' },
     { label: t.profile, icon: ICONS.profile, view: 'profile' },
+    { label: t.faq_menu, icon: ICONS.question, view: 'faq' },
     { label: t.support, icon: ICONS.support, view: 'support' },
   ];
 
@@ -149,6 +153,8 @@ const UserDashboard: React.FC<UserDashboardProps> = (props) => {
         return <Transactions transactions={transactions} />;
       case 'profile':
         return <Profile user={user} onUpdateUser={onUpdateUser} onUpdatePassword={onUpdatePassword} allTransactions={allTransactions} setActiveView={setActiveView} />;
+      case 'faq':
+        return <FAQPage language={language} />;
       case 'support':
         const userChatMessages = chatMessages
             .filter(m => (m.senderId === user.id && m.receiverId === adminUser.id) || (m.senderId === adminUser.id && m.receiverId === user.id))
