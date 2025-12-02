@@ -1,6 +1,4 @@
 
-
-
 import React, { useState, useEffect, useRef } from 'react';
 import type { User, ChatMessage } from '../../../../../types';
 import Card from '../../../../ui/Card';
@@ -18,7 +16,7 @@ interface SupportChatProps {
 const FAQS = [
     { question: "Como faço meu primeiro depósito?", answer: "Para depositar, acesse a aba 'Dashboard' e clique no botão 'Depositar'. Informe o valor em Reais (BRL) e pague através do QR Code PIX gerado. O valor será convertido para Dólar (USD) e creditado após aprovação." },
     { question: "Qual o prazo para saques?", answer: "Solicitações de saque realizadas das 08:00 às 18:00 (dias úteis) são processadas no mesmo dia. Solicitações após este horário ou em finais de semana serão processadas no próximo dia útil." },
-    { question: "Existe taxa de saque?", answer: "Sim, existe uma taxa administrativa de 5% sobre o valor do saque para cobrir custos de transação internacional e conversão cambial." },
+    { question: "Existe taxa de saque?", answer: "Não, atualmente a GreennSeven não cobra taxas administrativas para solicitações de saque. O valor integral solicitado será enviado para sua conta." },
     { question: "Como mudo meu plano de investimento?", answer: "Vá até a aba 'Planos', escolha o novo plano desejado e clique em 'Mudar de Plano'. Lembre-se que só é permitida uma troca de plano a cada 30 dias." },
 ];
 
