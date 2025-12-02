@@ -60,15 +60,6 @@ const StatCard: React.FC<{ title: string; value: React.ReactNode; icon: React.Re
     );
 };
 
-const Toast: React.FC<{ message: string; isVisible: boolean }> = ({ message, isVisible }) => {
-  if (!isVisible) return null;
-  return (
-    <div className="fixed bottom-20 right-4 bg-brand-green text-brand-black px-4 py-2 rounded-lg shadow-lg z-50 animate-fade-in-up font-bold text-sm flex items-center gap-2">
-      <span>{message}</span>
-    </div>
-  );
-};
-
 const SuccessDisplay: React.FC<{ title: string; children: React.ReactNode; onClose: () => void; }> = ({ title, children, onClose }) => {
     return (
         <div className="text-center animate-scale-in">
@@ -460,12 +451,6 @@ const TransactionRow: React.FC<{ tx: Transaction }> = ({ tx }) => {
             bgClass = 'bg-brand-blue/10';
             label = 'Bônus';
             break;
-        case TransactionType.Yield:
-             icon = ICONS.arrowUp;
-             colorClass = 'text-brand-green';
-             bgClass = 'bg-brand-green/10';
-             label = 'Rendimento';
-             break;
         default:
             icon = ICONS.history;
             colorClass = 'text-gray-400';
@@ -479,16 +464,14 @@ const TransactionRow: React.FC<{ tx: Transaction }> = ({ tx }) => {
         [TransactionStatus.Scheduled]: { text: 'Agendado', color: 'bg-blue-500/20 text-brand-blue' },
     };
     const statusInfo = statusMap[tx.status] || { text: tx.status, color: 'bg-gray-800 text-gray-400' };
-    const dateObj = new Date(tx.date);
-    const formattedDate = !isNaN(dateObj.getTime()) ? dateObj.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' }) : tx.date;
-
+    
     return (
-        <div className="flex items-center justify-between p-4 border-b border-gray-800 last:border-0 hover:bg-gray-800 transition-colors">
+        <div className="flex items-center justify-between p-4 border-b border-gray-800 last:border-0 hover:bg-gray-800/50 transition-colors">
             <div className="flex items-center gap-4">
                  <div className={`p-3 rounded-full ${bgClass} ${colorClass}`}>{icon}</div>
                 <div>
                     <p className="font-bold text-white text-sm">{label}</p>
-                    <p className="text-xs text-gray-500 mt-0.5">{formattedDate}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">{new Date(tx.date).toLocaleDateString('pt-BR')}</p>
                 </div>
             </div>
             <div className="text-right">
@@ -521,236 +504,232 @@ const StockTickerItem: React.FC<{ stock: Stock }> = ({ stock }) => {
         <div className="p-2 sm:p-3 bg-brand-black/50 rounded-xl border border-gray-800"> 
             <div className="flex justify-between items-center gap-2">
                 <div className="min-w-0">
-                    <p className="text-sm sm:text-base font-bold text-white">{stock.symbol}</p>
-                    <p className="text-[10px] text-gray-400 truncate">{stock.name}</p>
+                    <p className="font-bold text-gray-300 text-xs sm:text-sm truncate">{stock.symbol}</p>
+                    <p className="text-[10px] sm:text-xs text-gray-500 truncate">{stock.name}</p>
                 </div>
                 <div className="text-right flex-shrink-0">
-                    <p ref={priceRef} className={`font-bold text-sm sm:text-base transition-colors duration-500 ${colorClass}`}>${stock.price.toFixed(2)}</p>
-                    <div className={`flex items-center justify-end gap-1 text-[10px] font-semibold ${colorClass}`}>
-                        {icon}
-                        <span>{stock.change > 0 ? '+' : ''}{stock.change.toFixed(2)} ({stock.changePercent.toFixed(2)}%)</span>
-                    </div>
+                    <p ref={priceRef} className="font-mono text-white text-xs sm:text-sm transition-colors duration-300">${stock.price.toFixed(2)}</p>
+                    <p className={`text-[10px] sm:text-xs font-semibold flex items-center justify-end gap-0.5 ${colorClass}`}>
+                        {icon} {Math.abs(stock.change).toFixed(2)}%
+                    </p>
                 </div>
             </div>
         </div>
     );
 };
 
-const AnimatedBalance: React.FC<{ value: string; isShown: boolean }> = ({ value, isShown }) => {
-    return (
-        <span key={String(isShown)} className="inline-block balance-value-anim">
-            {value}
-        </span>
-    );
-};
-
-const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions = [], onAddTransaction, setActiveView, language, onRefreshData }) => {
-    const [isDepositModalOpen, setDepositModalOpen] = useState(false);
-    const [isWithdrawModalOpen, setWithdrawModalOpen] = useState(false);
-    const [showBalance, setShowBalance] = useState(true);
+const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions, onAddTransaction, setActiveView, language, onRefreshData }) => {
     const [stocks, setStocks] = useState<Stock[]>(MOCK_STOCKS);
-    const [isRefreshing, setIsRefreshing] = useState(false);
-    const [showToast, setShowToast] = useState(false);
+    const [isDepositModalOpen, setIsDepositModalOpen] = useState(false);
+    const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
     
-    const earningsRef = useRef<HTMLSpanElement>(null);
-    const requestRef = useRef<number>();
+    // Live Oscillation State
+    const [liveData, setLiveData] = useState({
+        balance: user.balanceUSD,
+        daily: user.dailyWithdrawableUSD,
+        bonus: user.bonusBalanceUSD
+    });
 
     const t = TRANSLATIONS[language] || TRANSLATIONS['pt'];
-    const maskedValue = '$ ●●●●●●●●';
-    
-    const dailyAvailable = user.dailyWithdrawableUSD || 0;
-    const bonusAvailable = user.bonusBalanceUSD || 0;
 
-    const userPlan = INVESTMENT_PLANS.find(p => p.name === user.plan) || INVESTMENT_PLANS[0];
-    const monthlyProfitUSD = user.capitalInvestedUSD * userPlan.returnRate;
-    const accumulatedBRL = (user.capitalInvestedUSD + monthlyProfitUSD) * DOLLAR_RATE;
+    // Sync live data when user prop changes (e.g. after a real transaction)
+    useEffect(() => {
+        setLiveData({
+            balance: user.balanceUSD,
+            daily: user.dailyWithdrawableUSD,
+            bonus: user.bonusBalanceUSD
+        });
+    }, [user]);
 
-    const handleRefresh = async () => {
-        if (onRefreshData) {
-            setIsRefreshing(true);
-            await onRefreshData();
-            setIsRefreshing(false);
-            setShowToast(true);
-            setTimeout(() => setShowToast(false), 3000);
-        }
-    };
+    // Oscillation Effect: Simulate tiny market fluctuations
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setLiveData(prev => {
+                // Random fluctuation: +/- $0.01 to $0.05
+                // Bias slightly upwards to simulate growth, or just noise
+                const noise = (Math.random() - 0.4) * 0.02; // Small noise
+                
+                // Only oscillate if value > 0
+                const newBalance = prev.balance > 0 ? prev.balance + noise : prev.balance;
+                const newDaily = prev.daily > 0 ? prev.daily + (noise * 0.5) : prev.daily;
 
-    const capitalSubValue = (
-        <div className="w-full mt-1">
-            <span className="text-xs text-gray-500 font-medium">{t.locked_capital}</span>
-            <div className="mt-3 pt-3 border-t border-gray-800 w-full space-y-1.5">
-                <div className="flex flex-col sm:flex-row justify-between sm:items-center w-full text-xs">
-                    <span className="text-gray-400">Lucro Mensal (Projeção) ({userPlan.name}):</span>
-                    <span className="text-brand-green font-bold">+{formatCurrency(monthlyProfitUSD, 'USD')}</span>
+                return {
+                    ...prev,
+                    balance: Math.max(0, newBalance),
+                    daily: Math.max(0, newDaily)
+                };
+            });
+        }, 3000); // Update every 3 seconds
+
+        return () => clearInterval(interval);
+    }, []);
+
+    // Updated Filter Logic: Explicitly include Deposit, Withdrawal, Bonus. Exclude internal Yields.
+    const recentTransactions = transactions
+        .filter(t => 
+            t.type === TransactionType.Deposit || 
+            t.type === TransactionType.Withdrawal || 
+            t.type === TransactionType.Bonus
+        )
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+        .slice(0, 10); // Increased limit to 10
+
+    // Simulate stock updates
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setStocks(prevStocks => prevStocks.map(stock => {
+                const change = (Math.random() - 0.5) * 2;
+                const newPrice = Math.max(0.01, stock.price + change);
+                const changePercent = ((newPrice - stock.price) / stock.price) * 100;
+                return { ...stock, price: newPrice, change: change, changePercent: changePercent };
+            }));
+        }, 3000);
+        return () => clearInterval(interval);
+    }, []);
+
+    // Estimate next 30 days profit
+    const currentPlanObj = INVESTMENT_PLANS.find(p => p.name === user.plan) || INVESTMENT_PLANS[0];
+    const estimatedProfit30DaysBRL = (user.capitalInvestedUSD * currentPlanObj.returnRate) * DOLLAR_RATE;
+
+    // Use live values for display
+    const bonusBalance = liveData.bonus; // Bonus usually static until referral
+    const dailyWithdrawable = liveData.daily;
+    const totalBalance = liveData.balance;
+
+    return (
+        <div className="space-y-6 sm:space-y-8 animate-fade-in p-4 sm:p-0 pb-20">
+             <style>{`
+                @keyframes fade-in {
+                    from { opacity: 0; }
+                    to { opacity: 1; }
+                }
+                .animate-fade-in { animation: fade-in 0.3s ease-out forwards; }
+                .flash { color: #fff; text-shadow: 0 0 5px #fff; }
+            `}</style>
+
+            <Modal isOpen={isDepositModalOpen} onClose={() => setIsDepositModalOpen(false)} title="Realizar Depósito">
+                <DepositModalContent user={user} onClose={() => setIsDepositModalOpen(false)} onAddTransaction={onAddTransaction} />
+            </Modal>
+
+            <Modal isOpen={isWithdrawModalOpen} onClose={() => setIsWithdrawModalOpen(false)} title="Solicitar Saque">
+                <WithdrawModalContent user={user} onClose={() => setIsWithdrawModalOpen(false)} onAddTransaction={onAddTransaction} setActiveView={setActiveView} />
+            </Modal>
+
+            {/* Header Section */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                    <h1 className="text-2xl sm:text-3xl font-bold">{t.financial_dashboard}</h1>
+                    <p className="text-gray-400 text-sm sm:text-base">{t.dashboard_subtitle}</p>
                 </div>
-                <div className="flex flex-col sm:flex-row justify-between sm:items-center w-full text-xs">
-                    <span className="text-gray-400">Estimativa de ganho em 30 dias (BRL):</span>
-                    <span className="text-gray-300 font-medium">≈ {formatCurrency(accumulatedBRL, 'BRL')}</span>
+            </div>
+
+            {/* Wallet Cards Grid - Adjusted for Mobile Stacking */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                <StatCard 
+                    title={t.total_balance} 
+                    value={formatCurrency(user.capitalInvestedUSD, 'USD')} 
+                    icon={ICONS.dollar} 
+                    subValue={t.locked_capital}
+                    locked
+                />
+                <StatCard 
+                    title={t.available_withdraw} 
+                    value={formatCurrency(dailyWithdrawable, 'USD')} 
+                    icon={ICONS.withdraw} 
+                    subValue={t.daily_yields}
+                    highlight
+                />
+                <StatCard 
+                    title={t.bonus_available} 
+                    value={formatCurrency(bonusBalance, 'USD')} 
+                    icon={ICONS.userPlus} 
+                    subValue={t.bonus_desc}
+                    highlight
+                />
+                <Card className="h-full flex flex-col justify-center">
+                    <div className="space-y-2">
+                        <p className="text-gray-400 text-sm font-medium">{t.projected_profit} ({user.plan}):</p>
+                        <p className="text-xl sm:text-2xl font-bold text-brand-green">
+                            +{formatCurrency(user.monthlyProfitUSD, 'USD')}
+                        </p>
+                        <div className="h-px bg-gray-800 my-2"></div>
+                        <p className="text-xs text-gray-500">{t.projection_30_days} (BRL):</p>
+                        <p className="text-base sm:text-lg font-semibold text-gray-300">
+                            ≈ {formatCurrency(estimatedProfit30DaysBRL, 'BRL')}
+                        </p>
+                    </div>
+                </Card>
+            </div>
+
+            {/* Live Earnings Ticker */}
+            <div className="bg-brand-black border border-gray-800 rounded-xl p-4 sm:p-6 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-lg relative overflow-hidden">
+                <div className="absolute top-0 left-0 w-1 h-full bg-brand-green animate-pulse"></div>
+                <div>
+                    <p className="text-gray-400 text-sm mb-1">{t.earnings_today}</p>
+                    <p className="text-2xl sm:text-4xl font-black text-white tracking-tighter transition-all duration-300">
+                        {formatCurrency(totalBalance, 'USD')}
+                    </p>
+                </div>
+                <div className="flex items-center gap-2 bg-brand-green/10 px-3 py-1.5 rounded-full border border-brand-green/20">
+                    <div className="w-2 h-2 bg-brand-green rounded-full animate-ping"></div>
+                    <span className="text-brand-green font-bold text-xs uppercase tracking-wider">{t.live}</span>
+                    <span className="text-brand-green text-xs hidden sm:inline">| {t.accumulating}</span>
+                </div>
+            </div>
+
+            {/* Quick Actions */}
+            <div className="bg-gradient-to-r from-brand-gray to-brand-black border border-gray-800 rounded-xl p-4 sm:p-6">
+                <h3 className="text-lg font-bold text-white mb-4">{t.quick_actions_title}</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <Button onClick={() => setIsDepositModalOpen(true)} className="h-12 sm:h-14 text-base sm:text-lg font-bold shadow-lg shadow-brand-green/20">
+                        {ICONS.deposit} {t.deposit}
+                    </Button>
+                    <Button onClick={() => setIsWithdrawModalOpen(true)} variant="secondary" className="h-12 sm:h-14 text-base sm:text-lg font-bold border-gray-700 hover:border-gray-500">
+                        {ICONS.withdraw} {t.withdraw}
+                    </Button>
+                </div>
+            </div>
+
+            <div className="grid lg:grid-cols-3 gap-6 sm:gap-8">
+                {/* Market Overview */}
+                <div className="lg:col-span-1 space-y-4">
+                    <div className="flex justify-between items-center">
+                        <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                            {ICONS.trendingUp} {t.market_title}
+                        </h3>
+                        <span className="text-[10px] bg-red-500 text-white px-2 py-0.5 rounded font-bold uppercase">{t.live}</span>
+                    </div>
+                    <div className="grid grid-cols-2 lg:grid-cols-1 gap-3">
+                        {stocks.map(stock => (
+                            <StockTickerItem key={stock.symbol} stock={stock} />
+                        ))}
+                    </div>
+                    <Button fullWidth variant="ghost" className="text-sm mt-2">{t.access_market} &rarr;</Button>
+                </div>
+
+                {/* Recent Transactions */}
+                <div className="lg:col-span-2">
+                    <Card className="h-full border-gray-800 bg-brand-black/20">
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="text-xl font-bold text-white">{t.recent_transactions}</h3>
+                            <button onClick={() => setActiveView('transactions')} className="text-brand-green text-sm hover:underline">Ver todas</button>
+                        </div>
+                        <div className="space-y-0 divide-y divide-gray-800">
+                            {recentTransactions.length > 0 ? (
+                                recentTransactions.map(tx => (
+                                    <TransactionRow key={tx.id} tx={tx} />
+                                ))
+                            ) : (
+                                <div className="p-8 text-center text-gray-500">
+                                    <p>Nenhuma movimentação recente.</p>
+                                </div>
+                            )}
+                        </div>
+                    </Card>
                 </div>
             </div>
         </div>
     );
-
-    useEffect(() => {
-        const userPlan = INVESTMENT_PLANS.find(p => p.name === user.plan) || INVESTMENT_PLANS[0];
-        const monthlyProfit = (user.capitalInvestedUSD || 0) * (userPlan?.returnRate || 0);
-        const totalDailyProfit = monthlyProfit / 30;
-        const profitPerMs = totalDailyProfit / (24 * 60 * 60 * 1000);
-        
-        const animate = () => {
-            const now = new Date();
-            const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-            const msElapsed = now.getTime() - startOfDay.getTime();
-            const currentEarnings = Math.min(msElapsed * profitPerMs, totalDailyProfit);
-            
-            if (earningsRef.current) {
-                 earningsRef.current.textContent = new Intl.NumberFormat('pt-BR', {
-                    style: 'currency',
-                    currency: 'USD',
-                    minimumFractionDigits: 6,
-                    maximumFractionDigits: 6
-                 }).format(currentEarnings);
-            }
-            
-            requestRef.current = requestAnimationFrame(animate);
-        };
-
-        requestRef.current = requestAnimationFrame(animate);
-
-        return () => {
-            if (requestRef.current) cancelAnimationFrame(requestRef.current);
-        };
-    }, [user.capitalInvestedUSD, user.plan]);
-    
-    useEffect(() => {
-        const initialPrices = MOCK_STOCKS.map(s => s.price);
-        const stockInterval = setInterval(() => {
-            setStocks(currentStocks => 
-                currentStocks.map((stock, index) => {
-                    const fluctuation = (Math.random() - 0.49) * (stock.price * 0.005);
-                    const newPrice = stock.price + fluctuation;
-                    const initialPrice = initialPrices[index];
-                    const newChange = newPrice - initialPrice;
-                    const newChangePercent = (newChange / initialPrice) * 100;
-                    return { ...stock, price: newPrice, change: newChange, changePercent: newChangePercent };
-                })
-            );
-        }, 3000);
-
-        return () => clearInterval(stockInterval);
-    }, []);
-
-    if (!t) return null;
-
-    return (
-        <>
-        <style>{`
-          @keyframes flash-green { color: #00FF99 !important; }
-          @keyframes flash-red { color: #EF4444 !important; }
-          @keyframes scale-in { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-          .animate-scale-in { animation: scale-in 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) both; }
-          @keyframes draw { to { stroke-dashoffset: 0; } }
-          .success-circle { stroke-dasharray: 264; stroke-dashoffset: 264; animation: draw 0.8s ease-out forwards; }
-          .success-check { stroke-dasharray: 50; stroke-dashoffset: 50; animation: draw 0.6s 0.3s ease-out forwards; }
-          @keyframes balance-fade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-          .balance-value-anim { animation: balance-fade 0.4s ease-out; }
-          .live-ticker { font-variant-numeric: tabular-nums; }
-          @keyframes pulse-green {
-            0% { box-shadow: 0 0 0 0 rgba(0, 255, 156, 0.4); }
-            70% { box-shadow: 0 0 0 6px rgba(0, 255, 156, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(0, 255, 156, 0); }
-          }
-        `}</style>
-        
-        <Toast message="Movimentações atualizadas!" isVisible={showToast} />
-
-        <Modal isOpen={isDepositModalOpen} onClose={() => setDepositModalOpen(false)} title="Depositar via PIX">
-            <DepositModalContent user={user} onClose={() => setDepositModalOpen(false)} onAddTransaction={onAddTransaction} />
-        </Modal>
-
-        <Modal isOpen={isWithdrawModalOpen} onClose={() => setWithdrawModalOpen(false)} title="Solicitar Saque">
-            <WithdrawModalContent user={user} onClose={() => setWithdrawModalOpen(false)} onAddTransaction={onAddTransaction} setActiveView={setActiveView} />
-        </Modal>
-
-        <div className="space-y-4 md:space-y-8 p-4 sm:p-0">
-             <div className="flex items-center justify-between">
-                <h1 className="text-xl font-bold text-white">{t.dashboard_subtitle}</h1>
-                <button onClick={() => setShowBalance(!showBalance)} className="text-gray-500 hover:text-white" title={showBalance ? "Ocultar saldos" : "Mostrar saldos"}>
-                    {showBalance ? ICONS.eyeSlash : ICONS.eye}
-                </button>
-             </div>
-            
-            {/* Grid Configuration: 1 column on mobile (stacked), 2 on small tablets, 2 on desktop */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
-                <StatCard 
-                    title="Capital Investido"
-                    value={<AnimatedBalance value={showBalance ? formatCurrency(user.capitalInvestedUSD, 'USD') : maskedValue} isShown={showBalance} />}
-                    subValue={capitalSubValue}
-                    icon={ICONS.shield} 
-                />
-                <StatCard 
-                    title="Lucro Disponível (Diário)" 
-                    value={<AnimatedBalance value={showBalance ? formatCurrency(dailyAvailable, 'USD') : maskedValue} isShown={showBalance} />}
-                    subValue="Rendimentos liberados para saque"
-                    icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>}
-                    highlight={true}
-                />
-                <StatCard 
-                    title="Bônus Disponível" 
-                    value={<AnimatedBalance value={showBalance ? formatCurrency(bonusAvailable, 'USD') : maskedValue} isShown={showBalance} />}
-                    subValue="Comissões por indicação"
-                    icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8V6m0 12v-2m0-10a9 9 0 110 18 9 9 0 010-18z" /></svg>}
-                    highlight={true}
-                />
-                <StatCard 
-                    title="Rendimentos Hoje" 
-                    value={
-                        <div className="flex items-center gap-3">
-                            <span className="live-ticker" ref={earningsRef}>$ 0,000000</span>
-                            <span className="relative flex h-3 w-3"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span><span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span></span>
-                        </div>
-                    }
-                    subValue={<div className="flex items-center gap-1 text-brand-green font-semibold"><span className="text-xs">{t.live}</span><span className="text-gray-400 font-normal ml-1">| {t.accumulating}</span></div>}
-                    icon={ICONS.arrowUp}
-                />
-            </div>
-
-             <Card className="p-4 md:p-6">
-                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                    <p className="font-semibold text-left text-sm md:text-base w-full">{t.quick_actions_title}</p>
-                    <div className="flex gap-3 w-full md:w-auto">
-                        <Button onClick={() => setDepositModalOpen(true)} variant="primary" fullWidth className="py-2 md:py-3 text-sm md:text-base">{ICONS.deposit} {t.deposit}</Button>
-                        <Button onClick={() => setWithdrawModalOpen(true)} variant="secondary" fullWidth className="py-2 md:py-3 text-sm md:text-base">{ICONS.withdraw} {t.withdraw}</Button>
-                    </div>
-                </div>
-            </Card>
-
-            <Card>
-                <h2 className="text-lg md:text-xl font-bold mb-4">{t.market_title}</h2>
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-                    {stocks.map(stock => ( <StockTickerItem key={stock.symbol} stock={stock} /> ))}
-                </div>
-                <div className="mt-6 text-center">
-                    <a href="https://www.investing.com" target="_blank" rel="noopener noreferrer">
-                        <Button variant="secondary">{t.access_market}<span className="ml-2 flex items-center">{ICONS.externalLink}</span></Button>
-                    </a>
-                </div>
-            </Card>
-            
-            <Card>
-                <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-lg md:text-xl font-bold">{t.recent_transactions}</h2>
-                    <button onClick={handleRefresh} className={`text-gray-500 hover:text-brand-green ${isRefreshing ? 'animate-spin' : ''}`} title="Atualizar movimentações">
-                        {ICONS.refresh}
-                    </button>
-                </div>
-                <div>
-                    {transactions.slice(0, 5).map(tx => (<TransactionRow key={tx.id} tx={tx} />))}
-                </div>
-            </Card>
-        </div>
-        </>
-    )
-}
+};
 
 export default DashboardHome;
