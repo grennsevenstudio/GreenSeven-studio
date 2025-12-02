@@ -10,7 +10,7 @@ import { ICONS, DOLLAR_RATE, MOCK_STOCKS, INVESTMENT_PLANS } from '../../../../.
 import { TRANSLATIONS } from '../../../../../lib/translations';
 import { formatCurrency } from '../../../../../lib/utils';
 
-const WITHDRAWAL_FEE_PERCENT = 0;
+const WITHDRAWAL_FEE_PERCENT = 5;
 
 interface DashboardHomeProps {
     user: User;
@@ -353,76 +353,70 @@ const WithdrawModalContent: React.FC<{
     }
     
     return (
-        <form onSubmit={handleAmountSubmit} className="space-y-4">
-             <div className="bg-brand-black border border-gray-700 rounded-lg p-4 flex flex-col gap-2 shadow-inner">
-                <div className="flex justify-between items-center">
-                    <label className="text-sm text-gray-400 font-medium">Origem do Saque:</label>
-                    <select 
-                        value={withdrawalSource} 
-                        onChange={(e) => setWithdrawalSource(e.target.value as 'yield' | 'bonus')}
-                        className="bg-gray-900 border border-gray-600 text-white text-sm rounded-lg p-2 focus:outline-none focus:border-brand-green"
-                    >
-                        <option value="yield">Rendimentos Diários</option>
-                        <option value="bonus">Bônus de Indicação</option>
-                    </select>
-                </div>
+        <form onSubmit={handleAmountSubmit} className="space-y-5">
+             <div className="grid grid-cols-2 gap-3">
+                <button
+                    type="button"
+                    onClick={() => setWithdrawalSource('yield')}
+                    className={`p-3 rounded-xl border flex flex-col items-center justify-center gap-1 transition-all ${
+                        withdrawalSource === 'yield' 
+                        ? 'bg-brand-green/10 border-brand-green text-brand-green' 
+                        : 'bg-brand-black border-gray-700 text-gray-400 hover:border-gray-600'
+                    }`}
+                >
+                    <span className="text-xs font-bold uppercase">Rendimentos</span>
+                    <span className="text-sm font-bold">{formatCurrency(user.dailyWithdrawableUSD || 0, 'USD')}</span>
+                </button>
                 
-                <div className="flex justify-between items-center pt-2 border-t border-gray-800 mt-2">
-                    <div>
-                        <p className="text-sm text-gray-400">Saldo Disponível</p>
-                        <p className="text-xs text-gray-500">{withdrawalSource === 'yield' ? 'Lucro acumulado' : 'Bônus de rede'}</p>
-                    </div>
-                    <p className="text-2xl font-bold text-brand-green">
-                        {formatCurrency(availableBalance, 'USD')}
-                    </p>
-                </div>
+                <button
+                    type="button"
+                    onClick={() => setWithdrawalSource('bonus')}
+                    className={`p-3 rounded-xl border flex flex-col items-center justify-center gap-1 transition-all ${
+                        withdrawalSource === 'bonus' 
+                        ? 'bg-brand-blue/10 border-brand-blue text-brand-blue' 
+                        : 'bg-brand-black border-gray-700 text-gray-400 hover:border-gray-600'
+                    }`}
+                >
+                    <span className="text-xs font-bold uppercase">Bônus</span>
+                    <span className="text-sm font-bold">{formatCurrency(user.bonusBalanceUSD || 0, 'USD')}</span>
+                </button>
             </div>
             
-            <div className="bg-yellow-500/10 border-l-2 border-yellow-500 p-3 rounded-r-lg">
-                <p className="text-xs text-yellow-400 font-bold uppercase mb-1">Regra de Saque</p>
-                <p className="text-sm text-gray-300">
-                    Seu capital principal ({formatCurrency(user.capitalInvestedUSD, 'USD')}) permanece <strong>bloqueado</strong>. 
-                    Você pode sacar seus rendimentos diários e bônus de indicação separadamente.
-                </p>
+            <div>
+                <Input 
+                    label="Quanto deseja sacar? (USD)"
+                    id="withdraw-usd"
+                    type="number"
+                    placeholder="Ex: 50.00"
+                    value={amountUSD}
+                    onChange={(e) => setAmountUSD(e.target.value)}
+                    required
+                    step="0.01"
+                    max={availableBalance}
+                />
             </div>
 
-            <div className="bg-blue-500/10 border-l-2 border-blue-500 p-3 rounded-r-lg mt-2">
-                 <p className="text-xs text-blue-400 font-bold uppercase mb-1">Horário de Atendimento</p>
-                 <p className="text-sm text-gray-300">
-                     Saques disponíveis das <strong>08:00 às 18:00</strong>.
-                 </p>
+            <div className="bg-brand-gray/50 rounded-xl p-4 border border-gray-800 space-y-3">
+                <div className="flex justify-between text-sm text-gray-400">
+                    <span>Taxa ({WITHDRAWAL_FEE_PERCENT}%):</span>
+                    <span className="text-red-400">- {formatCurrency(fee, 'USD')}</span>
+                </div>
+                <div className="h-px bg-gray-700"></div>
+                <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium text-white">Você recebe (PIX):</span>
+                    <span className="text-xl font-bold text-brand-green">{formatCurrency(amountToReceiveBRL, 'BRL')}</span>
+                </div>
+                <p className="text-[10px] text-gray-500 text-right">Cotação: {formatCurrency(DOLLAR_RATE, 'BRL')}</p>
+            </div>
+
+            <div className="flex gap-2 text-[10px] text-gray-400 bg-black/20 p-2 rounded-lg">
+                <div className="min-w-[4px] bg-brand-blue rounded-full"></div>
+                <div>
+                    <p>• Atendimento: Seg à Sex, 08:00 às 18:00.</p>
+                    <p>• Capital principal permanece investido (bloqueado).</p>
+                </div>
             </div>
             
-            <Input 
-                label="Valor do Saque (USD)"
-                id="withdraw-usd"
-                type="number"
-                placeholder="Ex: 50.00"
-                value={amountUSD}
-                onChange={(e) => setAmountUSD(e.target.value)}
-                required
-                step="0.01"
-                max={availableBalance}
-            />
-            <div className="p-4 bg-brand-black rounded-lg space-y-2 text-sm">
-                <div className="flex justify-between items-center text-gray-400">
-                    <span>Valor bruto do saque:</span>
-                    <span>{formatCurrency((parseFloat(amountUSD) || 0), 'USD')}</span>
-                </div>
-                <div className="flex justify-between items-center text-gray-400">
-                    <span>Taxa ({WITHDRAWAL_FEE_PERCENT}%):</span>
-                    <span className="text-red-500">- {formatCurrency(fee, 'USD')}</span>
-                </div>
-                <div className="border-t border-gray-700 my-2"></div>
-                <div className="flex justify-between items-center font-semibold">
-                    <span>Líquido a sacar (USD):</span>
-                    <span>{formatCurrency(amountToReceiveUSD, 'USD')}</span>
-                </div>
-                <div className="flex justify-between items-center font-bold text-brand-green text-base mt-1">
-                    <span>Total a receber (BRL):</span>
-                    <span>{formatCurrency(amountToReceiveBRL, 'BRL')}</span>
-                </div>
-            </div>
             <div className="pt-2">
                 <Button type="submit" fullWidth>Continuar</Button>
             </div>
@@ -704,7 +698,14 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions, onAdd
                             <StockTickerItem key={stock.symbol} stock={stock} />
                         ))}
                     </div>
-                    <Button fullWidth variant="ghost" className="text-sm mt-2">{t.access_market} &rarr;</Button>
+                    <Button 
+                        fullWidth 
+                        variant="ghost" 
+                        className="text-sm mt-2" 
+                        onClick={() => window.location.href = 'https://br.investing.com'}
+                    >
+                        {t.access_market} &rarr;
+                    </Button>
                 </div>
 
                 {/* Recent Transactions */}
