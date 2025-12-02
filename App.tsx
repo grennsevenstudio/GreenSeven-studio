@@ -20,6 +20,7 @@ import {
     syncNotificationToSupabase,
     fetchInvestmentPlansFromSupabase,
     syncInvestmentPlanToSupabase,
+    checkSupabaseConnection,
 } from './lib/supabase';
 import { requestNotificationPermission, showSystemNotification, formatCurrency } from './lib/utils';
 import { faker } from '@faker-js/faker';
@@ -151,6 +152,13 @@ const App: React.FC = () => {
   const loadRemoteData = async () => {
     setSyncStatus('syncing');
     try {
+        // Explicitly check connection first
+        const connectionCheck = await checkSupabaseConnection();
+        if (!connectionCheck.success) {
+            console.warn("Supabase connection check failed:", connectionCheck.message);
+            // Proceed to try fetches anyway, as they might provide more detail or cached data
+        }
+
         const [
             { data: remoteUsers, error: usersError },
             { data: remoteTxs, error: txsError },

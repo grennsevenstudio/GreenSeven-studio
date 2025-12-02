@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import type { PlatformSettings, User, Transaction } from '../../../../../types';
 import Card from '../../../../ui/Card';
@@ -50,9 +51,9 @@ const Settings: React.FC<SettingsProps> = ({ platformSettings, onUpdateSettings,
     const [isGeneratingLogo, setIsGeneratingLogo] = useState(false);
     const [generatedLogoUrl, setGeneratedLogoUrl] = useState<string | null>(null);
 
-    // Supabase Status State
-    const [supabaseStatus, setSupabaseStatus] = useState<'idle' | 'checking' | 'connected' | 'error'>('idle');
-    const [supabaseMessage, setSupabaseMessage] = useState('');
+    // Supabase Status State - Default to 'checking' to verify on mount
+    const [supabaseStatus, setSupabaseStatus] = useState<'idle' | 'checking' | 'connected' | 'error'>('checking');
+    const [supabaseMessage, setSupabaseMessage] = useState('Verificando conexão...');
     const [isSyncing, setIsSyncing] = useState(false);
 
     // Toast State
@@ -257,6 +258,11 @@ INSERT INTO public.users (
     useEffect(() => {
         setSettings(platformSettings);
     }, [platformSettings]);
+
+    // Automatically check Supabase connection on mount
+    useEffect(() => {
+        handleCheckSupabase();
+    }, []);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { id, value, type } = e.target;
