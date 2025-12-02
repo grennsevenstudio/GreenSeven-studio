@@ -194,7 +194,8 @@ const LoginPage: React.FC<LoginPageProps> = ({ setView, onLogin, language, setLa
           )}
       </Modal>
 
-      <div className="min-h-screen flex items-center justify-center bg-brand-black p-4 relative">
+      {/* Main Container - Adjusted for mobile centering without crop */}
+      <div className="min-h-[100dvh] flex flex-col bg-brand-black p-4 relative overflow-y-auto">
         {/* Back Button */}
         <button 
             onClick={() => setView(View.Home)} 
@@ -237,7 +238,8 @@ const LoginPage: React.FC<LoginPageProps> = ({ setView, onLogin, language, setLa
             )}
         </div>
 
-        <div className="w-full max-w-md">
+        {/* Center content wrapper with my-auto for safe vertical centering */}
+        <div className="w-full max-w-md mx-auto my-auto pt-20 pb-8">
           <div className="flex justify-center items-center gap-2 mb-8">
             <span className="text-3xl font-bold">
                 <span className="bg-gradient-to-r from-brand-green to-brand-blue text-transparent bg-clip-text">GreennSeven</span>

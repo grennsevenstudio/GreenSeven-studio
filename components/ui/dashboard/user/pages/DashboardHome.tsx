@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import type { User, Transaction, WithdrawalDetails, Stock, Language } from '../../../../../types';
 import { TransactionType, TransactionStatus } from '../../../../../types';
@@ -31,7 +32,7 @@ const StatCard: React.FC<{ title: string; value: React.ReactNode; icon: React.Re
 
     return (
         <div className={`relative p-[2px] rounded-2xl bg-gradient-to-br ${borderGradient} transition-all duration-300 hover:shadow-lg hover:shadow-brand-green/10 transform hover:-translate-y-1 h-full`}>
-            <div className="bg-brand-gray rounded-[14px] p-5 h-full flex flex-col relative overflow-hidden group">
+            <div className="bg-brand-gray rounded-[14px] p-4 sm:p-5 h-full flex flex-col relative overflow-hidden group">
                 {highlight && (
                     <>
                         <div className="absolute -top-1/4 -right-1/4 w-1/2 h-1/2 bg-brand-green/10 rounded-full blur-3xl opacity-50 group-hover:opacity-80 transition-opacity duration-500"></div>
@@ -40,16 +41,16 @@ const StatCard: React.FC<{ title: string; value: React.ReactNode; icon: React.Re
                 )}
 
                 <div className="flex justify-between items-start mb-4 relative z-10">
-                    <p className="font-medium text-gray-300 text-sm">{title}</p>
+                    <p className="font-medium text-gray-300 text-sm sm:text-base">{title}</p>
                     <div className={`transition-colors ${highlight ? 'text-brand-green' : 'text-gray-500 group-hover:text-brand-green'}`}>
                         {React.cloneElement(icon as React.ReactElement<any>, { className: "h-5 w-5 sm:h-6 sm:w-6" })}
                     </div>
                 </div>
                 
                 <div className="z-10 mt-auto">
-                    <div className="text-xl sm:text-2xl lg:text-3xl font-black text-white tracking-tight leading-none mb-1">{value}</div>
+                    <div className="text-2xl sm:text-3xl font-black text-white tracking-tight leading-none mb-2 break-words">{value}</div>
                     {subValue && typeof subValue === 'string' ? (
-                        <div className="text-xs text-gray-500 font-medium">{subValue}</div>
+                        <div className="text-xs sm:text-sm text-gray-500 font-medium">{subValue}</div>
                     ) : (
                         subValue
                     )}
@@ -679,7 +680,8 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions = [], 
                 </button>
              </div>
             
-            <div className="grid grid-cols-2 gap-4 md:gap-6">
+            {/* Grid Configuration: 1 column on mobile (stacked), 2 on small tablets, 2 on desktop */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
                 <StatCard 
                     title="Capital Investido"
                     value={<AnimatedBalance value={showBalance ? formatCurrency(user.capitalInvestedUSD, 'USD') : maskedValue} isShown={showBalance} />}

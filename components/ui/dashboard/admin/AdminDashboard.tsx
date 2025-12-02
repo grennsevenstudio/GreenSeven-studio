@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import type { User, Transaction, ChatMessage, PlatformSettings, AdminActionLog, Language, Notification, InvestmentPlan } from '../../../../types';
 import { TransactionStatus, UserStatus } from '../../../../types';
@@ -83,7 +84,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
   };
 
   return (
-    <div className="flex min-h-screen w-full overflow-x-hidden bg-gray-100 dark:bg-brand-black text-gray-900 dark:text-white transition-colors duration-300">
+    <div className="flex min-h-[100dvh] w-full overflow-x-hidden bg-gray-100 dark:bg-brand-black text-gray-900 dark:text-white transition-colors duration-300">
       <Sidebar
         user={user}
         navItems={navItems}

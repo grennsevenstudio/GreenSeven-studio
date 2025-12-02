@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import type { User, Notification, Language, SyncStatus } from '../../types';
 import { ICONS, RANK_COLORS } from '../../constants';
@@ -67,7 +68,7 @@ const SyncIndicator: React.FC<{ status: SyncStatus }> = ({ status }) => {
     return (
         <div className="flex items-center gap-2 text-xs font-semibold text-gray-400">
             <div className={`w-2 h-2 rounded-full ${currentStatus.color} ${currentStatus.pulse ? 'animate-pulse' : ''}`}></div>
-            <span>{currentStatus.text}</span>
+            <span className="hidden sm:inline">{currentStatus.text}</span>
         </div>
     );
 };
@@ -138,21 +139,23 @@ const Header: React.FC<HeaderProps> = ({ user, onLogout, toggleSidebar, notifica
   return (
     <>
     {toastMessage && <Toast message={toastMessage} />}
-    <header className="h-16 bg-brand-gray border-b border-gray-800 flex items-center justify-between px-4 lg:px-8 sticky top-0 z-30">
-      <div className="flex items-center gap-4">
+    <header className="h-16 bg-brand-gray border-b border-gray-800 flex items-center justify-between px-3 sm:px-4 lg:px-8 sticky top-0 z-30 w-full">
+      <div className="flex items-center gap-2 sm:gap-4 shrink">
         <button
           onClick={toggleSidebar}
-          className="text-gray-400 hover:text-white lg:hidden focus:outline-none"
+          className="text-gray-400 hover:text-white lg:hidden focus:outline-none p-1"
         >
           {ICONS.menu}
         </button>
-        <div className="flex items-center gap-2">
-            <span className="font-bold text-white truncate max-w-[200px]">{t.welcome}, {firstName}</span>
+        <div className="flex items-center gap-2 overflow-hidden">
+            <span className="font-bold text-white text-sm sm:text-base truncate max-w-[120px] sm:max-w-[200px]">{t.welcome}, {firstName}</span>
         </div>
       </div>
 
-      <div className="flex items-center gap-5">
-         <SyncIndicator status={syncStatus} />
+      <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+         <div className="hidden xs:block">
+            <SyncIndicator status={syncStatus} />
+         </div>
          {onRefreshData && (
              <button 
                 onClick={handleRefresh} 
@@ -162,7 +165,7 @@ const Header: React.FC<HeaderProps> = ({ user, onLogout, toggleSidebar, notifica
                  {ICONS.refresh}
              </button>
          )}
-         <div className="relative" ref={langMenuRef}>
+         <div className="relative hidden sm:block" ref={langMenuRef}>
             <button 
                 onClick={() => setIsLangMenuOpen(!isLangMenuOpen)}
                 className="flex items-center gap-1.5 focus:outline-none hover:opacity-80 transition-opacity"
@@ -193,26 +196,26 @@ const Header: React.FC<HeaderProps> = ({ user, onLogout, toggleSidebar, notifica
          </div>
         <button
           onClick={toggleTheme}
-          className="text-gray-400 hover:text-white transition-colors"
+          className="text-gray-400 hover:text-white transition-colors p-1"
           title={isDarkMode ? t.theme_light : t.theme_dark}
         >
           {isDarkMode ? ICONS.sun : ICONS.moon}
         </button>
         <div className="relative" ref={notificationRef}>
           <button
-            className="text-gray-400 hover:text-white relative flex items-center"
+            className="text-gray-400 hover:text-white relative flex items-center p-1"
             onClick={handleNotificationClick}
           >
             {ICONS.bell}
             {unreadCount > 0 && (
-              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full animate-pulse">
+              <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[10px] font-bold px-1 py-0 rounded-full animate-pulse">
                 {unreadCount}
               </span>
             )}
           </button>
 
           {isNotificationsOpen && (
-            <div className="absolute right-0 mt-2 w-80 bg-brand-gray border border-gray-700 rounded-lg shadow-xl overflow-hidden animate-fade-in-up z-50">
+            <div className="absolute right-0 mt-2 w-72 sm:w-80 bg-brand-gray border border-gray-700 rounded-lg shadow-xl overflow-hidden animate-fade-in-up z-50">
               <div className="p-3 border-b border-gray-700 flex justify-between items-center">
                 <h3 className="font-bold text-white">Notificações</h3>
                 {unreadCount > 0 && onMarkAllAsRead && (
@@ -243,13 +246,13 @@ const Header: React.FC<HeaderProps> = ({ user, onLogout, toggleSidebar, notifica
         </div>
         <div className="relative" ref={profileRef}>
             <button 
-                className="flex items-center focus:outline-none"
+                className="flex items-center focus:outline-none ml-1"
                 onClick={() => setIsProfileOpen(!isProfileOpen)}
             >
                 <img
                     src={user.avatarUrl}
                     alt="User Avatar"
-                    className="h-10 w-10 rounded-full border-2 border-brand-green object-cover hover:border-white transition-colors"
+                    className="h-8 w-8 sm:h-10 sm:w-10 rounded-full border-2 border-brand-green object-cover hover:border-white transition-colors"
                 />
             </button>
             

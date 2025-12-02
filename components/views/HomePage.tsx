@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { View, type Stock, type InvestmentPlan, type Language } from '../../types';
 import Button from '../ui/Button';
@@ -230,7 +231,7 @@ const HomePage: React.FC<HomePageProps> = ({ setView, language, setLanguage }) =
                 <div className="h-64 w-64 bg-brand-green/5 rounded-full blur-3xl"></div>
             </div>
             
-            <div className="space-y-4 relative">
+            <div className="space-y-4 relative transform scale-90 sm:scale-100">
                 <div className="absolute left-8 top-12 h-[76px] w-px border-l-2 border-dashed border-gray-700"></div>
                 <div className="absolute left-8 top-[188px] h-[76px] w-px border-l-2 border-dashed border-gray-700"></div>
 
@@ -266,7 +267,7 @@ const HomePage: React.FC<HomePageProps> = ({ setView, language, setLanguage }) =
     );
 
     return (
-        <div className="bg-brand-black text-white min-h-screen relative w-full overflow-x-hidden">
+        <div className="bg-brand-black text-white min-h-[100dvh] relative w-full overflow-x-hidden">
             <GridBackground />
             
              <Modal 
@@ -403,9 +404,9 @@ const HomePage: React.FC<HomePageProps> = ({ setView, language, setLanguage }) =
                 </div>
             </header>
 
-            <main id="home" className="h-[calc(100vh-76px)] min-h-[550px] flex items-center justify-center text-center relative px-4">
+            <main id="home" className="min-h-[calc(100dvh-76px)] py-12 h-auto flex items-center justify-center text-center relative px-4 overflow-hidden">
                 <div className="relative z-10 flex flex-col items-center">
-                    <h1 className="text-4xl sm:text-5xl md:text-7xl font-black leading-tight max-w-4xl text-white">
+                    <h1 className="text-4xl sm:text-5xl md:text-6xl font-black leading-tight max-w-4xl text-white">
                         <span>{t.landing.hero_title_1}</span>
                         <span className="block mt-2">{t.landing.hero_title_2}</span>
                         <span className="block mt-2 bg-gradient-to-r from-brand-green to-brand-blue text-transparent bg-clip-text animate-text-gradient bg-[200%_auto]">
@@ -419,20 +420,20 @@ const HomePage: React.FC<HomePageProps> = ({ setView, language, setLanguage }) =
                         {t.landing.hero_subtitle}
                     </p>
                     <div className="mt-10 flex flex-col sm:flex-row justify-center items-center gap-4">
-                        <Button onClick={() => setView(View.Register)} variant="primary" className="px-8 py-4 text-lg">
+                        <Button onClick={() => setView(View.Register)} variant="primary" className="px-6 py-3 text-base sm:px-8 sm:py-4 sm:text-lg">
                             <div className="flex items-center gap-2">
                                 {t.landing.hero_cta}
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
                             </div>
                         </Button>
-                        <Button variant="secondary" className="px-8 py-4 text-lg" onClick={() => setIsLearnMoreOpen(true)}>
+                        <Button variant="secondary" className="px-6 py-3 text-base sm:px-8 sm:py-4 sm:text-lg" onClick={() => setIsLearnMoreOpen(true)}>
                             {t.landing.hero_learn}
                         </Button>
                     </div>
                 </div>
             </main>
             
-            <section id="features" className="py-12 px-4 sm:py-16 sm:px-6 lg:px-12 bg-brand-gray/50 relative z-10">
+            <section id="features" className="py-12 sm:py-16 px-4 sm:px-6 lg:px-12 bg-brand-gray/50 relative z-10">
                 <div className="max-w-6xl mx-auto text-center">
                     <h2 className="text-3xl md:text-4xl font-black text-white">{t.landing.features_title}</h2>
                     <p className="mt-4 text-base md:text-lg text-gray-400 max-w-3xl mx-auto">{t.landing.features_subtitle}</p>
@@ -453,7 +454,7 @@ const HomePage: React.FC<HomePageProps> = ({ setView, language, setLanguage }) =
                 </div>
             </section>
             
-            <section id="how-it-works" className="py-12 px-4 sm:py-16 sm:px-6 lg:px-12 relative z-10">
+            <section id="how-it-works" className="py-12 sm:py-16 px-4 sm:px-6 lg:px-12 relative z-10">
                 <div className="max-w-6xl mx-auto text-center">
                     <h2 className="text-3xl md:text-4xl font-black text-white">{t.landing.how_title}</h2>
                     <p className="mt-4 text-base md:text-lg text-gray-400">{t.landing.how_subtitle}</p>
@@ -474,7 +475,7 @@ const HomePage: React.FC<HomePageProps> = ({ setView, language, setLanguage }) =
                 </div>
             </section>
 
-            <section id="plans" className="py-12 px-4 sm:py-16 sm:px-6 lg:px-12 bg-brand-gray/50 relative z-10">
+            <section id="plans" className="py-12 sm:py-16 px-4 sm:px-6 lg:px-12 bg-brand-gray/50 relative z-10">
                 <div className="max-w-6xl mx-auto text-center">
                     <h2 className="text-3xl md:text-4xl font-black text-white">{t.landing.plans_title}</h2>
                     <p className="mt-4 text-base md:text-lg text-gray-400 max-w-3xl mx-auto">{t.landing.plans_subtitle}</p>
@@ -495,7 +496,7 @@ const HomePage: React.FC<HomePageProps> = ({ setView, language, setLanguage }) =
                 <div className="max-w-4xl mx-auto text-center bg-gradient-to-r from-brand-blue/80 to-brand-green/80 p-8 md:p-12 rounded-2xl">
                     <h2 className="text-3xl md:text-4xl font-black text-brand-black">{t.landing.cta_title}</h2>
                     <p className="mt-4 text-base md:text-lg text-brand-black/80 max-w-2xl mx-auto">{t.landing.cta_subtitle}</p>
-                    <Button onClick={() => setView(View.Register)} variant="primary" className="px-8 py-4 text-lg mt-8">
+                    <Button onClick={() => setView(View.Register)} variant="primary" className="px-6 py-3 text-base sm:px-8 sm:py-4 sm:text-lg mt-8">
                         {t.landing.cta_button}
                     </Button>
                 </div>
@@ -505,7 +506,7 @@ const HomePage: React.FC<HomePageProps> = ({ setView, language, setLanguage }) =
                 <StockTicker />
             </div>
 
-            <footer className="bg-brand-gray border-t border-gray-800 py-16 px-4 sm:px-6 lg:px-12 relative z-10">
+            <footer className="bg-brand-gray border-t border-gray-800 py-12 md:py-16 px-4 sm:px-6 lg:px-12 relative z-10">
                 <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
                     <div className="md:col-span-1">
                         <div className="flex items-center gap-2">
@@ -514,7 +515,7 @@ const HomePage: React.FC<HomePageProps> = ({ setView, language, setLanguage }) =
                         </div>
                         <p className="mt-4 text-gray-400">{t.landing.footer_desc}</p>
                     </div>
-                     <div className="grid grid-cols-2 gap-8 md:col-span-2 md:grid-cols-2">
+                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 md:col-span-2">
                          <div>
                             <h4 className="font-bold text-white tracking-wider">{t.landing.footer_company}</h4>
                             <ul className="mt-4 space-y-2">

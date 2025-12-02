@@ -563,7 +563,7 @@ const App: React.FC = () => {
   else content = <HomePage setView={setView} language={language} setLanguage={handleSetLanguage} />;
 
   return (
-    <div className={`min-h-screen w-full overflow-x-hidden ${isDarkMode ? 'dark' : ''} bg-gray-100 dark:bg-brand-black text-gray-900 dark:text-white`}>
+    <div className={`min-h-[100dvh] w-full overflow-x-hidden ${isDarkMode ? 'dark' : ''} bg-gray-100 dark:bg-brand-black text-gray-900 dark:text-white`}>
         {content}
     </div>
   );

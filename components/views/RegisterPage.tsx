@@ -332,7 +332,7 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ setView, onRegister, langua
 
     if (isSubmitted) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-brand-black p-4">
+            <div className="min-h-[100dvh] flex items-center justify-center bg-brand-black p-4">
                 <Card className="text-center w-full max-w-md animate-scale-in border-brand-green/20">
                     <div className="flex justify-center mb-4">
                         <div className="h-16 w-16 bg-brand-green/20 rounded-full flex items-center justify-center text-brand-green text-3xl">
@@ -361,7 +361,8 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ setView, onRegister, langua
         </div>
       </Modal>
 
-      <div className="min-h-screen flex items-center justify-center bg-brand-black p-4 relative">
+      {/* Adjusted wrapper for mobile centering without cutoff */}
+      <div className="min-h-[100dvh] flex flex-col bg-brand-black p-4 relative overflow-y-auto">
         {/* Back Button */}
         <button 
             onClick={() => setView(View.Home)} 
@@ -404,7 +405,8 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ setView, onRegister, langua
             )}
         </div>
 
-        <div className="w-full max-w-lg">
+        {/* Center content wrapper with my-auto for safe vertical centering */}
+        <div className="w-full max-w-lg mx-auto my-auto pt-20 pb-8">
           <div 
             className="flex justify-center items-center gap-2 mb-6 cursor-pointer hover:opacity-80 transition-opacity"
             onClick={() => setView(View.Login)}
