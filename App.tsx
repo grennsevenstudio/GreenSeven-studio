@@ -320,9 +320,39 @@ const App: React.FC = () => {
           ...newTx
       };
       
+      let updatedUsers = [...dbState.users];
+      
+      // IMMEDIATE DEDUCTION LOGIC FOR WITHDRAWALS
+      // This ensures double spending is prevented at the source.
+      if (transaction.type === TransactionType.Withdrawal) {
+          const userIndex = updatedUsers.findIndex(u => u.id === transaction.userId);
+          if (userIndex !== -1) {
+              const user = updatedUsers[userIndex];
+              const amount = Math.abs(transaction.amountUSD);
+              
+              // Determine source wallet and deduct
+              if (transaction.walletSource === 'bonus') {
+                  user.bonusBalanceUSD = Math.max(0, user.bonusBalanceUSD - amount);
+              } else {
+                  user.dailyWithdrawableUSD = Math.max(0, user.dailyWithdrawableUSD - amount);
+              }
+              
+              // Deduct from total balance as well (Total = Capital + Profit + Bonus)
+              user.balanceUSD = Math.max(0, user.balanceUSD - amount);
+              
+              // Recalculate rank based on new balance
+              user.rank = calculateRank(user.balanceUSD);
+              
+              updatedUsers[userIndex] = user;
+              
+              // Sync User changes to Supabase immediately
+              await syncUserToSupabase(user);
+          }
+      }
+
       const updatedTxs = [...dbState.transactions, transaction];
-      setDbState(prev => ({ ...prev, transactions: updatedTxs }));
-      saveAllData({ ...dbState, transactions: updatedTxs });
+      setDbState(prev => ({ ...prev, transactions: updatedTxs, users: updatedUsers }));
+      saveAllData({ ...dbState, transactions: updatedTxs, users: updatedUsers });
       await syncTransactionToSupabase(transaction);
   };
 
@@ -331,39 +361,72 @@ const App: React.FC = () => {
       if (txIndex === -1) return;
 
       const tx = dbState.transactions[txIndex];
+      // Prevent redundant updates
+      if (tx.status === newStatus) return;
+
       const updatedTx = { ...tx, status: newStatus };
       const updatedTxs = [...dbState.transactions];
       updatedTxs[txIndex] = updatedTx;
 
-      // Update balances if deposit/withdrawal completed
       let updatedUsers = [...dbState.users];
-      if (newStatus === TransactionStatus.Completed && tx.status !== TransactionStatus.Completed) {
-          const userIndex = updatedUsers.findIndex(u => u.id === tx.userId);
-          if (userIndex !== -1) {
-              const user = updatedUsers[userIndex];
-              if (tx.type === TransactionType.Deposit) {
+      const userIndex = updatedUsers.findIndex(u => u.id === tx.userId);
+      let notifMessage = '';
+
+      if (userIndex !== -1) {
+          const user = updatedUsers[userIndex];
+
+          if (tx.type === TransactionType.Deposit) {
+              // Deposit Logic: Only add funds if approved (Completed)
+              if (newStatus === TransactionStatus.Completed && tx.status !== TransactionStatus.Completed) {
                   user.capitalInvestedUSD += tx.amountUSD;
                   user.balanceUSD += tx.amountUSD;
-                  // Recalculate rank
                   user.rank = calculateRank(user.balanceUSD);
-              } else if (tx.type === TransactionType.Withdrawal) {
-                  // Withdrawal logic: check source
-                  const amount = Math.abs(tx.amountUSD);
-                  if (tx.walletSource === 'bonus') {
-                      user.bonusBalanceUSD = Math.max(0, user.bonusBalanceUSD - amount);
-                  } else {
-                      user.dailyWithdrawableUSD = Math.max(0, user.dailyWithdrawableUSD - amount);
-                  }
-                  user.balanceUSD = Math.max(0, user.balanceUSD - amount);
-                  user.rank = calculateRank(user.balanceUSD);
+                  notifMessage = `Depósito de ${formatCurrency(tx.amountUSD, 'USD')} confirmado!`;
+              } else if (newStatus === TransactionStatus.Failed) {
+                  notifMessage = `Depósito de ${formatCurrency(tx.amountUSD, 'USD')} rejeitado.`;
               }
-              updatedUsers[userIndex] = user;
-              await syncUserToSupabase(user);
+          } else if (tx.type === TransactionType.Withdrawal) {
+              // Withdrawal Logic:
+              // Funds are deducted at creation (Pending).
+              // If Completed: Funds stay deducted. Just update status.
+              // If Failed (Rejected): REFUND the amount to user's wallet.
+              
+              const amount = Math.abs(tx.amountUSD);
+              
+              if (newStatus === TransactionStatus.Failed && tx.status !== TransactionStatus.Failed) {
+                  // REFUND LOGIC
+                  if (tx.walletSource === 'bonus') {
+                      user.bonusBalanceUSD += amount;
+                  } else {
+                      user.dailyWithdrawableUSD += amount;
+                  }
+                  user.balanceUSD += amount;
+                  user.rank = calculateRank(user.balanceUSD);
+                  notifMessage = `Saque de ${formatCurrency(amount, 'USD')} rejeitado. Valor estornado para sua carteira.`;
+              } else if (newStatus === TransactionStatus.Completed) {
+                  notifMessage = `Saque de ${formatCurrency(amount, 'USD')} aprovado e enviado!`;
+              }
           }
+          updatedUsers[userIndex] = user;
+          await syncUserToSupabase(user);
       }
 
-      setDbState(prev => ({ ...prev, transactions: updatedTxs, users: updatedUsers }));
-      saveAllData({ ...dbState, transactions: updatedTxs, users: updatedUsers });
+      // Create Notification
+      let updatedNotifs = [...dbState.notifications];
+      if (notifMessage && userIndex !== -1) {
+           const notif: Notification = {
+              id: faker.string.uuid(),
+              userId: tx.userId,
+              message: notifMessage,
+              date: new Date().toISOString(),
+              isRead: false
+          };
+          updatedNotifs = [...updatedNotifs, notif];
+          await syncNotificationToSupabase(notif);
+      }
+
+      setDbState(prev => ({ ...prev, transactions: updatedTxs, users: updatedUsers, notifications: updatedNotifs }));
+      saveAllData({ ...dbState, transactions: updatedTxs, users: updatedUsers, notifications: updatedNotifs });
       await syncTransactionToSupabase(updatedTx);
   };
 
