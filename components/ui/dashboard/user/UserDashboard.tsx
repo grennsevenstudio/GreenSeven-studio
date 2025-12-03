@@ -1,6 +1,8 @@
 
 
 
+
+
 import React, { useState, useEffect } from 'react';
 import type { User, Transaction, Notification, ChatMessage, Language, InvestmentPlan, SyncStatus } from '../../../../types';
 import Sidebar from '../../../layout/Sidebar';
@@ -173,7 +175,7 @@ const UserDashboard: React.FC<UserDashboardProps> = (props) => {
   };
 
   return (
-    <div className="flex min-h-[100dvh] w-full overflow-x-hidden bg-gray-100 dark:bg-brand-black text-gray-900 dark:text-white transition-colors duration-300">
+    <div className="flex min-h-[100dvh] w-full overflow-x-hidden bg-gray-50 dark:bg-brand-black text-gray-900 dark:text-white transition-colors duration-300">
       
       <Modal
         isOpen={showWelcomeModal}
@@ -189,19 +191,19 @@ const UserDashboard: React.FC<UserDashboardProps> = (props) => {
                 </div>
             </div>
             
-            <h3 className="text-xl font-bold text-white">
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white">
                 {t.welcome}, {user.name.split(' ')[0]}!
             </h3>
             
-            <div className="bg-brand-black/50 p-6 rounded-xl border border-gray-700 relative">
+            <div className="bg-white dark:bg-brand-black/50 p-6 rounded-xl border border-gray-200 dark:border-gray-700 relative">
                 <span className="absolute top-2 left-4 text-4xl text-brand-green opacity-50">“</span>
-                <p className="text-lg text-gray-300 italic font-medium relative z-10 px-2">
+                <p className="text-lg text-gray-600 dark:text-gray-300 italic font-medium relative z-10 px-2">
                     {dailyQuote.text}
                 </p>
                 <p className="text-right text-sm text-brand-green mt-4 font-bold">— {dailyQuote.author}</p>
             </div>
 
-            <p className="text-gray-400 text-sm">
+            <p className="text-gray-500 dark:text-gray-400 text-sm">
                 {language === 'pt' ? 'Seus investimentos estão trabalhando por você. Vamos conferir seus resultados de hoje?' : 'Your investments are working for you. Let\'s check your results today?'}
             </p>
             

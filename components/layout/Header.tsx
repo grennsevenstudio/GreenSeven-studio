@@ -1,6 +1,8 @@
 
 
 
+
+
 import React, { useState, useRef, useEffect } from 'react';
 import type { User, Notification, Language, SyncStatus } from '../../types';
 import { ICONS, RANK_COLORS } from '../../constants';
@@ -60,7 +62,7 @@ const Toast = ({ message }: { message: string }) => (
 
 const SyncIndicator: React.FC<{ status: SyncStatus }> = ({ status }) => {
     const statusMap = {
-        idle: { text: 'Iniciando', color: 'bg-gray-500', pulse: false },
+        idle: { text: 'Iniciando', color: 'bg-gray-400', pulse: false },
         syncing: { text: 'Sincronizando...', color: 'bg-blue-500', pulse: true },
         online: { text: 'Online', color: 'bg-green-500', pulse: false },
         error: { text: 'Offline', color: 'bg-red-500', pulse: false },
@@ -68,7 +70,7 @@ const SyncIndicator: React.FC<{ status: SyncStatus }> = ({ status }) => {
     const currentStatus = statusMap[status] || statusMap.idle;
 
     return (
-        <div className="flex items-center gap-2 text-xs font-semibold text-gray-400">
+        <div className="flex items-center gap-2 text-xs font-semibold text-gray-500 dark:text-gray-400">
             <div className={`w-2 h-2 rounded-full ${currentStatus.color} ${currentStatus.pulse ? 'animate-pulse' : ''}`}></div>
             <span className="hidden sm:inline">{currentStatus.text}</span>
         </div>
@@ -136,16 +138,16 @@ const Header: React.FC<HeaderProps> = ({ user, onLogout, toggleSidebar, notifica
   return (
     <>
     {toastMessage && <Toast message={toastMessage} />}
-    <header className="h-16 bg-brand-gray border-b border-gray-800 flex items-center justify-between px-3 sm:px-4 lg:px-8 sticky top-0 z-30 w-full">
+    <header className="h-16 bg-white dark:bg-brand-gray border-b border-gray-200 dark:border-gray-800 flex items-center justify-between px-3 sm:px-4 lg:px-8 sticky top-0 z-30 w-full transition-colors duration-300">
       <div className="flex items-center gap-2 sm:gap-4 shrink">
         <button
           onClick={toggleSidebar}
-          className="text-gray-400 hover:text-white lg:hidden focus:outline-none p-1"
+          className="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white lg:hidden focus:outline-none p-1"
         >
           {ICONS.menu}
         </button>
         <div className="flex items-center gap-2 overflow-hidden">
-            <span className="font-bold text-white text-sm sm:text-base truncate max-w-[120px] sm:max-w-[200px]">{t.welcome}, {firstName}</span>
+            <span className="font-bold text-gray-800 dark:text-white text-sm sm:text-base truncate max-w-[120px] sm:max-w-[200px]">{t.welcome}, {firstName}</span>
         </div>
       </div>
 
@@ -156,7 +158,7 @@ const Header: React.FC<HeaderProps> = ({ user, onLogout, toggleSidebar, notifica
          {onRefreshData && (
              <button 
                 onClick={handleRefresh} 
-                className={`text-gray-400 hover:text-brand-green transition-colors hidden md:block ${isRefreshing ? 'animate-spin text-brand-green' : ''}`}
+                className={`text-gray-500 dark:text-gray-400 hover:text-brand-green transition-colors hidden md:block ${isRefreshing ? 'animate-spin text-brand-green' : ''}`}
                 title="Atualizar Dados"
              >
                  {ICONS.refresh}
@@ -165,14 +167,14 @@ const Header: React.FC<HeaderProps> = ({ user, onLogout, toggleSidebar, notifica
          
         <button
           onClick={toggleTheme}
-          className="text-gray-400 hover:text-white transition-colors p-1"
+          className="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors p-1"
           title={isDarkMode ? t.theme_light : t.theme_dark}
         >
           {isDarkMode ? ICONS.sun : ICONS.moon}
         </button>
         <div className="relative" ref={notificationRef}>
           <button
-            className="text-gray-400 hover:text-white relative flex items-center p-1"
+            className="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white relative flex items-center p-1"
             onClick={handleNotificationClick}
           >
             {ICONS.bell}
@@ -184,9 +186,9 @@ const Header: React.FC<HeaderProps> = ({ user, onLogout, toggleSidebar, notifica
           </button>
 
           {isNotificationsOpen && (
-            <div className="absolute right-0 mt-2 w-72 sm:w-80 bg-brand-gray border border-gray-700 rounded-lg shadow-xl overflow-hidden animate-fade-in-up z-50">
-              <div className="p-3 border-b border-gray-700 flex justify-between items-center">
-                <h3 className="font-bold text-white">Notificações</h3>
+            <div className="absolute right-0 mt-2 w-72 sm:w-80 bg-white dark:bg-brand-gray border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl overflow-hidden animate-fade-in-up z-50">
+              <div className="p-3 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-brand-gray">
+                <h3 className="font-bold text-gray-900 dark:text-white">Notificações</h3>
                 {unreadCount > 0 && onMarkAllAsRead && (
                     <button onClick={onMarkAllAsRead} className="text-xs text-brand-green hover:underline">
                         Marcar todas como lidas
@@ -202,9 +204,9 @@ const Header: React.FC<HeaderProps> = ({ user, onLogout, toggleSidebar, notifica
                     notifications.map((notification) => (
                     <div
                         key={notification.id}
-                        className={`p-3 border-b border-gray-700 hover:bg-gray-800 transition-colors ${!notification.isRead ? 'bg-gray-800/50' : ''}`}
+                        className={`p-3 border-b border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors ${!notification.isRead ? 'bg-gray-50 dark:bg-gray-800/50' : ''}`}
                     >
-                        <p className="text-sm text-gray-200">{notification.message}</p>
+                        <p className="text-sm text-gray-700 dark:text-gray-200">{notification.message}</p>
                         <p className="text-xs text-gray-500 mt-1">{timeAgo(new Date(notification.date))}</p>
                     </div>
                     ))
@@ -221,21 +223,21 @@ const Header: React.FC<HeaderProps> = ({ user, onLogout, toggleSidebar, notifica
                 <img
                     src={user.avatarUrl}
                     alt="User Avatar"
-                    className="h-8 w-8 sm:h-10 sm:w-10 rounded-full border-2 border-brand-green object-cover hover:border-white transition-colors"
+                    className="h-8 w-8 sm:h-10 sm:w-10 rounded-full border-2 border-brand-green object-cover hover:border-gray-300 dark:hover:border-white transition-colors"
                 />
             </button>
             
             {isProfileOpen && (
-                <div className="absolute right-0 mt-2 w-56 bg-brand-gray border border-gray-700 rounded-lg shadow-xl py-1 animate-fade-in-up z-50">
-                    <div className="px-4 py-3 border-b border-gray-700">
-                        <p className="text-sm font-bold text-white truncate">{user.name}</p>
+                <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-brand-gray border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl py-1 animate-fade-in-up z-50">
+                    <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+                        <p className="text-sm font-bold text-gray-900 dark:text-white truncate">{user.name}</p>
                         <p className={`text-[10px] px-2 py-0.5 mt-1 rounded-full inline-block ${RANK_COLORS[user.rank]}`}>
                             {user.rank}
                         </p>
                     </div>
                     
                     {/* Language Selection inside Profile Dropdown */}
-                    <div className="py-2 border-b border-gray-700">
+                    <div className="py-2 border-b border-gray-200 dark:border-gray-700">
                         <p className="px-4 text-[10px] text-gray-500 uppercase font-bold mb-1">Idioma / Language</p>
                         {LANGUAGE_OPTIONS.map((option) => (
                             <button
@@ -244,7 +246,7 @@ const Header: React.FC<HeaderProps> = ({ user, onLogout, toggleSidebar, notifica
                                     setLanguage(option.code);
                                     setIsProfileOpen(false);
                                 }}
-                                className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-800 flex items-center gap-3 transition-colors ${language === option.code ? 'text-brand-green bg-gray-800/50' : 'text-gray-300'}`}
+                                className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-3 transition-colors ${language === option.code ? 'text-brand-green bg-gray-50 dark:bg-gray-800/50' : 'text-gray-700 dark:text-gray-300'}`}
                             >
                                 <span className="text-lg">{option.flag}</span>
                                 <span>{option.label}</span>
@@ -254,7 +256,7 @@ const Header: React.FC<HeaderProps> = ({ user, onLogout, toggleSidebar, notifica
 
                     <button
                         onClick={onLogout}
-                        className="w-full text-left px-4 py-3 text-sm text-red-400 hover:bg-gray-800 flex items-center gap-2"
+                        className="w-full text-left px-4 py-3 text-sm text-red-500 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2"
                     >
                         {ICONS.logout}
                         {t.logout}
