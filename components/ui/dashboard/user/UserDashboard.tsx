@@ -1,8 +1,4 @@
 
-
-
-
-
 import React, { useState, useEffect } from 'react';
 import type { User, Transaction, Notification, ChatMessage, Language, InvestmentPlan, SyncStatus } from '../../../../types';
 import Sidebar from '../../../layout/Sidebar';
@@ -31,7 +27,7 @@ interface UserDashboardProps {
   notifications: Notification[];
   chatMessages: ChatMessage[];
   onLogout: () => void;
-  onAddTransaction: (newTransaction: Omit<Transaction, 'id' | 'date' | 'bonusPayoutHandled'>) => void;
+  onAddTransaction: (newTransaction: Omit<Transaction, 'id' | 'date' | 'bonusPayoutHandled'>, userUpdate?: Partial<User>) => void;
   onMarkAllNotificationsAsRead: () => void;
   onSendMessage: (senderId: string, receiverId: string, text: string, attachment?: File) => void;
   onUpdateUser: (updatedUser: User) => void;
@@ -146,6 +142,7 @@ const UserDashboard: React.FC<UserDashboardProps> = (props) => {
                     setActiveView={setActiveView}
                     language={language}
                     onRefreshData={onRefreshData}
+                    onUpdateUser={onUpdateUser}
                 />;
       case 'plans':
         return <Plans user={user} onUpdateUser={onUpdateUser} language={language} />;
@@ -170,6 +167,7 @@ const UserDashboard: React.FC<UserDashboardProps> = (props) => {
                     setActiveView={setActiveView}
                     language={language}
                     onRefreshData={onRefreshData}
+                    onUpdateUser={onUpdateUser}
                 />;
     }
   };

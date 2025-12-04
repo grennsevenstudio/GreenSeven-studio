@@ -45,6 +45,18 @@ const isNetworkError = (err: any) => {
     return false;
 };
 
+/**
+ * Standardized error handler for Supabase calls
+ */
+const handleSupabaseError = (e: any, context: string) => {
+    if (isNetworkError(e)) {
+        // Return a standardized network error object
+        return { data: null, error: { message: 'Failed to fetch', isNetwork: true } };
+    }
+    console.warn(`Error in ${context}:`, e);
+    return { data: null, error: e };
+};
+
 // Helper to normalize rank to Title Case to match Enum
 const normalizeRank = (rank: string): InvestorRank => {
     if (!rank) return InvestorRank.Bronze;
@@ -79,7 +91,8 @@ export const fetchCareerPlanConfig = async () => {
     try {
         const { data, error } = await supabase.from('career_plan_config').select('*');
         if (error) {
-             // Silently fail if table doesn't exist yet (fallback to defaults in App)
+             if (isNetworkError(error)) return { data: null, error: { message: 'Network Error', isNetwork: true } };
+             // Silently fail if table doesn't exist yet
              return { data: null, error };
         }
         
@@ -92,7 +105,7 @@ export const fetchCareerPlanConfig = async () => {
         }
         return { data: config, error: null };
     } catch (e) {
-        return { data: null, error: e };
+        return handleSupabaseError(e, 'fetchCareerPlanConfig');
     }
 }
 
@@ -101,6 +114,7 @@ export const fetchInvestmentPlansFromSupabase = async () => {
         const { data, error } = await supabase.from('investment_plans').select('*').order('min_deposit_usd', { ascending: true });
         
         if (error) {
+            if (isNetworkError(error)) return { data: null, error: { message: 'Network Error', isNetwork: true } };
             return { data: null, error };
         }
         
@@ -117,7 +131,7 @@ export const fetchInvestmentPlansFromSupabase = async () => {
 
         return { data: mapped, error: null };
     } catch (e) {
-        return { data: null, error: e };
+        return handleSupabaseError(e, 'fetchInvestmentPlansFromSupabase');
     }
 };
 
@@ -126,11 +140,13 @@ export const fetchUsersFromSupabase = async () => {
         const { data, error } = await supabase.from('users').select('*');
         
         if (error) {
-            if (isNetworkError(error) || error.code === '42P01' || error.code === 'PGRST205') {
-                console.warn("Supabase unreachable or tables missing.");
+            if (isNetworkError(error)) {
+                return { data: null, error: { message: 'Network Error', isNetwork: true } };
+            }
+            if (error.code === '42P01' || error.code === 'PGRST205') {
+                console.warn("Supabase tables missing.");
                 return { data: null, error: error }; 
             }
-            console.error("Erro ao buscar usuários:", JSON.stringify(error, null, 2));
             return { data: null, error };
         }
         
@@ -185,8 +201,7 @@ export const fetchUsersFromSupabase = async () => {
 
         return { data: mappedUsers, error: null };
     } catch (e) {
-        console.warn("Exceção ao buscar usuários:", e);
-        return { data: null, error: e };
+        return handleSupabaseError(e, 'fetchUsersFromSupabase');
     }
 };
 
@@ -194,9 +209,7 @@ export const fetchTransactionsFromSupabase = async () => {
     try {
         const { data, error } = await supabase.from('transactions').select('*');
         if (error) {
-            if (isNetworkError(error) || error.code === '42P01') {
-                 return { data: null, error };
-            }
+            if (isNetworkError(error)) return { data: null, error: { message: 'Network Error', isNetwork: true } };
             return { data: null, error };
         }
         if (!data) return { data: [], error: null };
@@ -220,7 +233,7 @@ export const fetchTransactionsFromSupabase = async () => {
 
         return { data: mappedTxs, error: null };
     } catch (e) {
-        return { data: null, error: e };
+        return handleSupabaseError(e, 'fetchTransactionsFromSupabase');
     }
 };
 
@@ -228,6 +241,7 @@ export const fetchMessagesFromSupabase = async () => {
     try {
         const { data, error } = await supabase.from('messages').select('*');
         if (error) {
+            if (isNetworkError(error)) return { data: null, error: { message: 'Network Error', isNetwork: true } };
             return { data: null, error };
         }
         if (!data) return { data: [], error: null };
@@ -243,7 +257,7 @@ export const fetchMessagesFromSupabase = async () => {
         }));
         return { data: mapped, error: null };
     } catch (e) {
-        return { data: null, error: e };
+        return handleSupabaseError(e, 'fetchMessagesFromSupabase');
     }
 };
 
@@ -251,6 +265,7 @@ export const fetchSettingsFromSupabase = async () => {
     try {
         const { data, error } = await supabase.from('platform_settings').select('*').single();
         if (error) {
+            if (isNetworkError(error)) return { data: null, error: { message: 'Network Error', isNetwork: true } };
             return { data: null, error };
         }
         
@@ -265,14 +280,17 @@ export const fetchSettingsFromSupabase = async () => {
         };
         return { data: settings, error: null };
     } catch (e) {
-        return { data: null, error: e };
+        return handleSupabaseError(e, 'fetchSettingsFromSupabase');
     }
 };
 
 export const fetchAdminLogsFromSupabase = async () => {
     try {
         const { data, error } = await supabase.from('admin_logs').select('*').order('timestamp', { ascending: false });
-        if (error) return { data: null, error };
+        if (error) {
+            if (isNetworkError(error)) return { data: null, error: { message: 'Network Error', isNetwork: true } };
+            return { data: null, error };
+        }
         
         const logs: AdminActionLog[] = data.map((l: any) => ({
             id: l.id,
@@ -285,14 +303,17 @@ export const fetchAdminLogsFromSupabase = async () => {
         }));
         return { data: logs, error: null };
     } catch (e) {
-        return { data: null, error: e };
+        return handleSupabaseError(e, 'fetchAdminLogsFromSupabase');
     }
 };
 
 export const fetchNotificationsFromSupabase = async () => {
     try {
         const { data, error } = await supabase.from('notifications').select('*');
-        if (error) return { data: null, error };
+        if (error) {
+            if (isNetworkError(error)) return { data: null, error: { message: 'Network Error', isNetwork: true } };
+            return { data: null, error };
+        }
         if (!data) return { data: [], error: null };
         
         const mapped: Notification[] = data.map((n: any) => ({
@@ -304,7 +325,7 @@ export const fetchNotificationsFromSupabase = async () => {
         }));
         return { data: mapped, error: null };
     } catch (e) {
-        return { data: null, error: e };
+        return handleSupabaseError(e, 'fetchNotificationsFromSupabase');
     }
 };
 
@@ -377,8 +398,6 @@ export const syncTransactionToSupabase = async (tx: Transaction) => {
             amount_brl: tx.amountBRL,
             status: tx.status,
             date: tx.date,
-            // Use scheduled_date column if we add it, or store in JSON if simplified
-            // For now, let's assume we might need to add scheduled_date column in SQL
             scheduled_date: (tx as any).scheduledDate, 
             withdrawal_details: tx.withdrawalDetails,
             referral_level: tx.referralLevel,
@@ -475,7 +494,7 @@ export const syncNotificationsToSupabase = async (notifs: Notification[]) => {
             user_id: n.userId,
             message: n.message,
             date: n.date,
-            is_read: n.isRead 
+            is_read: n.isRead
         }));
         
         const { error } = await supabase.from('notifications').upsert(dbNotifs, { onConflict: 'id' });

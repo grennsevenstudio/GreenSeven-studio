@@ -181,13 +181,22 @@ const App: React.FC = () => {
 
         if (usersError || txsError || msgError || settingsError || logsError || notifError || careerError || plansError) {
              setSyncStatus('error');
+             
+             // Check if it's purely a network/offline issue to avoid spamming console errors
+             const isOffline = [usersError, txsError, msgError, settingsError, logsError, notifError, careerError, plansError].some(e => e?.isNetwork || e?.message?.includes('Failed to fetch'));
+             
+             if (isOffline) {
+                 console.warn("Supabase unreachable (Offline Mode). Using local data.");
+             } else {
+                 // Only log distinct API errors
+                 if (usersError && !usersError.isNetwork) console.error("Supabase fetch user error:", usersError.message);
+                 if (txsError && !txsError.isNetwork) console.error("Supabase fetch txs error:", txsError.message);
+                 if (msgError && !msgError.isNetwork) console.error("Supabase fetch msg error:", msgError.message);
+             }
         } else {
              setSyncStatus('online');
         }
 
-        if (usersError) console.error("Supabase fetch user error:", usersError.message);
-        if (txsError) console.error("Supabase fetch txs error:", txsError.message);
-        
         if (remoteCareerPlan && Object.keys(remoteCareerPlan).length > 0) {
             setReferralRates(remoteCareerPlan);
         }
@@ -268,6 +277,7 @@ const App: React.FC = () => {
           bonusBalanceUSD: 0,
           isAdmin: false,
           joinedDate: new Date().toISOString(),
+          lastProfitUpdate: new Date().toISOString(),
           referralCode: faker.string.alphanumeric(8).toUpperCase(),
           kycAnalysis: data.kycAnalysis
       };
@@ -312,7 +322,7 @@ const App: React.FC = () => {
 
   // --- Transaction Handlers ---
 
-  const handleAddTransaction = async (newTx: Omit<Transaction, 'id' | 'date' | 'bonusPayoutHandled'>) => {
+  const handleAddTransaction = async (newTx: Omit<Transaction, 'id' | 'date' | 'bonusPayoutHandled'>, userUpdate?: Partial<User>) => {
       const transaction: Transaction = {
           id: faker.string.uuid(),
           date: new Date().toISOString(),
@@ -327,9 +337,14 @@ const App: React.FC = () => {
       if (transaction.type === TransactionType.Withdrawal) {
           const userIndex = updatedUsers.findIndex(u => u.id === transaction.userId);
           if (userIndex !== -1) {
-              const user = updatedUsers[userIndex];
+              let user = updatedUsers[userIndex];
               const amount = Math.abs(transaction.amountUSD);
               
+              // Apply any updates FIRST (crystallizing the profit before withdrawal)
+              if (userUpdate) {
+                  user = { ...user, ...userUpdate };
+              }
+
               // Determine source wallet and deduct
               if (transaction.walletSource === 'bonus') {
                   user.bonusBalanceUSD = Math.max(0, user.bonusBalanceUSD - amount);
@@ -338,7 +353,7 @@ const App: React.FC = () => {
               }
               
               // Deduct from total balance as well (Total = Capital + Profit + Bonus)
-              user.balanceUSD = Math.max(0, user.balanceUSD - amount);
+              user.balanceUSD = user.capitalInvestedUSD + user.dailyWithdrawableUSD + user.bonusBalanceUSD;
               
               // Recalculate rank based on new balance
               user.rank = calculateRank(user.balanceUSD);
@@ -379,7 +394,7 @@ const App: React.FC = () => {
               // Deposit Logic: Only add funds if approved (Completed)
               if (newStatus === TransactionStatus.Completed && tx.status !== TransactionStatus.Completed) {
                   user.capitalInvestedUSD += tx.amountUSD;
-                  user.balanceUSD += tx.amountUSD;
+                  user.balanceUSD = user.capitalInvestedUSD + user.dailyWithdrawableUSD + user.bonusBalanceUSD;
                   user.rank = calculateRank(user.balanceUSD);
                   notifMessage = `Depósito de ${formatCurrency(tx.amountUSD, 'USD')} confirmado!`;
               } else if (newStatus === TransactionStatus.Failed) {
@@ -400,7 +415,7 @@ const App: React.FC = () => {
                   } else {
                       user.dailyWithdrawableUSD += amount;
                   }
-                  user.balanceUSD += amount;
+                  user.balanceUSD = user.capitalInvestedUSD + user.dailyWithdrawableUSD + user.bonusBalanceUSD;
                   user.rank = calculateRank(user.balanceUSD);
                   notifMessage = `Saque de ${formatCurrency(amount, 'USD')} rejeitado. Valor estornado para sua carteira.`;
               } else if (newStatus === TransactionStatus.Completed) {
@@ -451,7 +466,7 @@ const App: React.FC = () => {
               const bonusAmount = depositTx.amountUSD * rate;
               
               referrer.bonusBalanceUSD += bonusAmount;
-              referrer.balanceUSD += bonusAmount;
+              referrer.balanceUSD = referrer.capitalInvestedUSD + referrer.dailyWithdrawableUSD + referrer.bonusBalanceUSD;
               referrer.rank = calculateRank(referrer.balanceUSD);
               
               const bonusTx: Transaction = {
@@ -571,7 +586,18 @@ const App: React.FC = () => {
       const userIndex = dbState.users.findIndex(u => u.id === userId);
       if (userIndex === -1) return;
       
-      const updatedUser = { ...dbState.users[userIndex], balanceUSD: newBalance, rank: calculateRank(newBalance) };
+      // Update balanceUSD - we also need to decide how this splits. 
+      // For simplicity in admin edit, we just set total balance and maybe Capital.
+      // But user.balanceUSD is usually derived. Let's force it here or update capital.
+      // Let's assume Admin edits 'Capital' mostly.
+      const diff = newBalance - dbState.users[userIndex].balanceUSD;
+      const updatedUser = { 
+          ...dbState.users[userIndex], 
+          balanceUSD: newBalance, 
+          capitalInvestedUSD: dbState.users[userIndex].capitalInvestedUSD + diff,
+          rank: calculateRank(newBalance) 
+      };
+      
       const updatedUsers = [...dbState.users];
       updatedUsers[userIndex] = updatedUser;
       

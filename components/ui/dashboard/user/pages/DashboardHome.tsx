@@ -15,10 +15,11 @@ const WITHDRAWAL_FEE_PERCENT = 0;
 interface DashboardHomeProps {
     user: User;
     transactions: Transaction[];
-    onAddTransaction: (newTransaction: Omit<Transaction, 'id' | 'date' | 'bonusPayoutHandled'>) => void;
+    onAddTransaction: (newTransaction: Omit<Transaction, 'id' | 'date' | 'bonusPayoutHandled'>, userUpdate?: Partial<User>) => void;
     setActiveView: (view: string) => void;
     language: Language;
     onRefreshData?: () => Promise<void>;
+    onUpdateUser?: (user: User) => void;
 }
 
 // --- SUB-COMPONENTS ---
@@ -199,9 +200,10 @@ const DepositModalContent: React.FC<{
 const WithdrawModalContent: React.FC<{
     user: User;
     onClose: () => void;
-    onAddTransaction: (newTransaction: Omit<Transaction, 'id' | 'date' | 'bonusPayoutHandled'>) => void;
+    onAddTransaction: (newTransaction: Omit<Transaction, 'id' | 'date' | 'bonusPayoutHandled'>, userUpdate?: Partial<User>) => void;
     setActiveView: (view: string) => void;
-}> = ({ user, onClose, onAddTransaction, setActiveView }) => {
+    currentLiveProfit: number;
+}> = ({ user, onClose, onAddTransaction, setActiveView, currentLiveProfit }) => {
     const [step, setStep] = useState(1);
     const [amountUSD, setAmountUSD] = useState('');
     const [pin, setPin] = useState('');
@@ -215,8 +217,9 @@ const WithdrawModalContent: React.FC<{
     const amountToReceiveUSD = (parseFloat(amountUSD) || 0) - fee;
     const amountToReceiveBRL = amountToReceiveUSD * DOLLAR_RATE;
     
+    // For Yield, we use the LIVE calculated total (db + generated since last update)
     const availableBalance = withdrawalSource === 'yield' 
-        ? (user.dailyWithdrawableUSD || 0) 
+        ? currentLiveProfit
         : (user.bonusBalanceUSD || 0);
 
     const handleAmountSubmit = (e: React.FormEvent) => {
@@ -261,6 +264,15 @@ const WithdrawModalContent: React.FC<{
         }
         setIsLoading(true);
         setTimeout(() => {
+            // Prepare User Update to "crystallize" the live profit before deducting
+            let userUpdate: Partial<User> | undefined = undefined;
+            if (withdrawalSource === 'yield') {
+                userUpdate = {
+                    dailyWithdrawableUSD: currentLiveProfit, // Lock in the live amount to DB
+                    lastProfitUpdate: new Date().toISOString() // Reset the timer
+                };
+            }
+
             onAddTransaction({
                 userId: user.id,
                 type: TransactionType.Withdrawal,
@@ -269,7 +281,8 @@ const WithdrawModalContent: React.FC<{
                 amountBRL: amountToReceiveBRL,
                 withdrawalDetails: pixDetails,
                 walletSource: withdrawalSource
-            });
+            }, userUpdate);
+            
             setStep(4);
         }, 2000);
     };
@@ -365,7 +378,7 @@ const WithdrawModalContent: React.FC<{
                     }`}
                 >
                     <span className="text-xs font-bold uppercase">Rendimentos</span>
-                    <span className="text-sm font-bold">{formatCurrency(user.dailyWithdrawableUSD || 0, 'USD')}</span>
+                    <span className="text-sm font-bold">{formatCurrency(currentLiveProfit || 0, 'USD')}</span>
                 </button>
                 
                 <button
@@ -519,46 +532,56 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions, onAdd
     
     // Live Oscillation State
     const [liveData, setLiveData] = useState({
-        balance: user.balanceUSD,
         daily: user.dailyWithdrawableUSD,
-        bonus: user.bonusBalanceUSD
+        bonus: user.bonusBalanceUSD,
+        today: 0,
+        combinedDaily: user.dailyWithdrawableUSD
     });
 
     const t = TRANSLATIONS[language] || TRANSLATIONS['pt'];
 
-    // Sync live data when user prop changes (e.g. after a real transaction)
+    // Real-time calculation effect
     useEffect(() => {
-        setLiveData({
-            balance: user.balanceUSD,
-            daily: user.dailyWithdrawableUSD,
-            bonus: user.bonusBalanceUSD
-        });
-    }, [user]);
+        const calculateLiveProfit = () => {
+            const plan = INVESTMENT_PLANS.find(p => p.name.toLowerCase() === (user.plan || 'conservador').toLowerCase()) || INVESTMENT_PLANS[0];
+            const monthlyRate = plan.returnRate; // e.g., 0.05
+            const invested = user.capitalInvestedUSD;
+            
+            // Calculate daily earnings based on total invested
+            const dailyProfitTotal = (invested * monthlyRate) / 30;
+            // Calculate earnings per second (86400 seconds in a day)
+            const profitPerSecond = dailyProfitTotal / 86400;
 
-    // Oscillation Effect: Simulate tiny market fluctuations
-    useEffect(() => {
-        const interval = setInterval(() => {
-            setLiveData(prev => {
-                // Random fluctuation: +/- $0.01 to $0.05
-                // Bias slightly upwards to simulate growth, or just noise
-                const noise = (Math.random() - 0.4) * 0.02; // Small noise
-                
-                // Only oscillate if value > 0
-                const newBalance = prev.balance > 0 ? prev.balance + noise : prev.balance;
-                const newDaily = prev.daily > 0 ? prev.daily + (noise * 0.5) : prev.daily;
+            const now = new Date();
+            // IMPORTANT: Calculate time passed since the LAST UPDATE (withdrawal or reset), not just midnight
+            // If user.lastProfitUpdate is missing (legacy), fallback to start of day or joinedDate
+            const lastUpdate = new Date(user.lastProfitUpdate || user.joinedDate);
+            
+            // Difference in seconds
+            let secondsPassed = (now.getTime() - lastUpdate.getTime()) / 1000;
+            if (secondsPassed < 0) secondsPassed = 0;
+            
+            // Profit generated since the last snapshot/withdrawal
+            const generatedSinceLastUpdate = Math.max(0, profitPerSecond * secondsPassed);
 
-                return {
-                    ...prev,
-                    balance: Math.max(0, newBalance),
-                    daily: Math.max(0, newDaily)
-                };
+            setLiveData({
+                daily: user.dailyWithdrawableUSD, // Base amount from DB
+                bonus: user.bonusBalanceUSD,
+                today: generatedSinceLastUpdate, // Just visual indicator of "recent" growth
+                combinedDaily: user.dailyWithdrawableUSD + generatedSinceLastUpdate // What is actually available
             });
-        }, 3000); // Update every 3 seconds
+        };
+
+        // Initial Calculation
+        calculateLiveProfit();
+
+        // 2 second delay interval
+        const interval = setInterval(calculateLiveProfit, 2000);
 
         return () => clearInterval(interval);
-    }, []);
+    }, [user.capitalInvestedUSD, user.plan, user.dailyWithdrawableUSD, user.bonusBalanceUSD, user.lastProfitUpdate, user.joinedDate]);
 
-    // Updated Filter Logic: Explicitly include Deposit, Withdrawal, Bonus. Exclude internal Yields.
+    // Updated Filter Logic
     const recentTransactions = transactions
         .filter(t => 
             t.type === TransactionType.Deposit || 
@@ -566,7 +589,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions, onAdd
             t.type === TransactionType.Bonus
         )
         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-        .slice(0, 10); // Increased limit to 10
+        .slice(0, 10); 
 
     // Simulate stock updates
     useEffect(() => {
@@ -585,10 +608,9 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions, onAdd
     const currentPlanObj = INVESTMENT_PLANS.find(p => p.name === user.plan) || INVESTMENT_PLANS[0];
     const estimatedProfit30DaysBRL = (user.capitalInvestedUSD * currentPlanObj.returnRate) * DOLLAR_RATE;
 
-    // Use live values for display
-    const bonusBalance = liveData.bonus; // Bonus usually static until referral
-    const dailyWithdrawable = liveData.daily;
-    const totalBalance = liveData.balance;
+    const bonusBalance = liveData.bonus; 
+    const dailyWithdrawableLive = liveData.combinedDaily; // This is the total available for withdrawal
+    const earningsTicker = liveData.today; // Show just the "new" money growing
 
     return (
         <div className="space-y-6 sm:space-y-8 animate-fade-in p-4 sm:p-0 pb-20">
@@ -606,7 +628,13 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions, onAdd
             </Modal>
 
             <Modal isOpen={isWithdrawModalOpen} onClose={() => setIsWithdrawModalOpen(false)} title="Solicitar Saque">
-                <WithdrawModalContent user={user} onClose={() => setIsWithdrawModalOpen(false)} onAddTransaction={onAddTransaction} setActiveView={setActiveView} />
+                <WithdrawModalContent 
+                    user={user} 
+                    onClose={() => setIsWithdrawModalOpen(false)} 
+                    onAddTransaction={onAddTransaction} 
+                    setActiveView={setActiveView} 
+                    currentLiveProfit={dailyWithdrawableLive}
+                />
             </Modal>
 
             {/* Header Section */}
@@ -628,7 +656,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions, onAdd
                 />
                 <StatCard 
                     title={t.available_withdraw} 
-                    value={formatCurrency(dailyWithdrawable, 'USD')} 
+                    value={formatCurrency(dailyWithdrawableLive, 'USD')} 
                     icon={ICONS.withdraw} 
                     subValue={t.daily_yields}
                     highlight
@@ -659,9 +687,9 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions, onAdd
             <div className="bg-brand-black border border-gray-800 rounded-xl p-4 sm:p-6 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-lg relative overflow-hidden">
                 <div className="absolute top-0 left-0 w-1 h-full bg-brand-green animate-pulse"></div>
                 <div>
-                    <p className="text-gray-400 text-sm mb-1">{t.earnings_today}</p>
+                    <p className="text-gray-400 text-sm mb-1">{t.earnings_today} (Live)</p>
                     <p className="text-2xl sm:text-4xl font-black text-white tracking-tighter transition-all duration-300">
-                        {formatCurrency(totalBalance, 'USD')}
+                        {formatCurrency(earningsTicker, 'USD')}
                     </p>
                 </div>
                 <div className="flex items-center gap-2 bg-brand-green/10 px-3 py-1.5 rounded-full border border-brand-green/20">
