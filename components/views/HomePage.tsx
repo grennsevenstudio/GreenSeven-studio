@@ -1,18 +1,16 @@
-
-import React, { useState, useEffect, useRef } from 'react';
-import { View, type Stock, type InvestmentPlan, type Language } from '../../types';
+import React, { useState, useRef, useEffect } from 'react';
+import { View, Language } from '../../types';
 import Button from '../ui/Button';
 import Modal from '../layout/Modal';
 import { ICONS, INVESTMENT_PLANS } from '../../constants';
-import { 
-    TERMS_OF_USE_CONTENT, 
-    PRIVACY_POLICY_CONTENT,
-    SECURITY_CONTENT,
-    ABOUT_CONTENT,
-    CONTACT_CONTENT,
-    CAREERS_CONTENT
-} from '../legal/TermsAndPrivacy';
 import { TRANSLATIONS } from '../../lib/translations';
+import { SECURITY_CONTENT, ABOUT_CONTENT, CONTACT_CONTENT, CAREERS_CONTENT, TERMS_OF_USE_CONTENT, PRIVACY_POLICY_CONTENT } from '../legal/TermsAndPrivacy';
+
+interface HomePageProps {
+  setView: (view: View) => void;
+  language: Language;
+  setLanguage: (lang: Language) => void;
+}
 
 const LANGUAGE_OPTIONS: { code: Language; flag: string; label: string }[] = [
   { code: 'pt', flag: '🇧🇷', label: 'Português' },
@@ -22,367 +20,143 @@ const LANGUAGE_OPTIONS: { code: Language; flag: string; label: string }[] = [
   { code: 'de', flag: '🇩🇪', label: 'Deutsch' },
 ];
 
-const MOCK_TICKER_STOCKS: Stock[] = [
-    { symbol: 'AMZN', name: 'Amazon.com, Inc.', price: 145.64, change: 0.06, changePercent: 0.04 },
-    { symbol: 'TSLA', name: 'Tesla, Inc.', price: 245.24, change: -0.26, changePercent: -0.11 },
-    { symbol: 'NVDA', name: 'NVIDIA Corporation', price: 492.00, change: 0.64, changePercent: 0.13 },
-    { symbol: 'META', name: 'Meta Platforms, Inc.', price: 326.05, change: 0.50, changePercent: 0.15 },
-    { symbol: 'AAPL', name: 'Apple Inc.', price: 172.03, change: -0.53, changePercent: -0.31 },
-    { symbol: 'GOOG', name: 'Alphabet Inc.', price: 135.21, change: 0.12, changePercent: 0.09 },
-    { symbol: 'MSFT', name: 'Microsoft Corp.', price: 442.57, change: 2.11, changePercent: 0.48 },
-];
-
-const FAQList = ({ content }: { content: { q: string, a: string }[] }) => {
-    const [openIndex, setOpenIndex] = useState<number | null>(null);
-
-    return (
-        <div className="space-y-2">
-            {content.map((item, index) => (
-                <div key={index} className="border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-brand-black/50 overflow-hidden transition-colors">
-                    <button
-                        onClick={() => setOpenIndex(openIndex === index ? null : index)}
-                        className="w-full flex justify-between items-center p-5 text-left hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-                    >
-                        <span className="font-bold text-gray-900 dark:text-white text-lg">{item.q}</span>
-                        <span className={`transform transition-transform duration-200 text-brand-green ${openIndex === index ? 'rotate-180' : ''}`}>
-                            {ICONS.arrowDown}
-                        </span>
-                    </button>
-                    {openIndex === index && (
-                        <div className="p-5 pt-0 text-gray-600 dark:text-gray-400 text-base leading-relaxed border-t border-gray-100 dark:border-gray-700/50 mt-2">
-                            {item.a}
-                        </div>
-                    )}
-                </div>
-            ))}
-        </div>
-    );
-};
-
-const StockTickerItem: React.FC<{ stock: Stock }> = ({ stock }) => {
-    const isPositive = stock.change >= 0;
-    return (
-        <div className="flex items-center gap-4 px-6 flex-shrink-0 text-lg">
-            <span className="font-bold text-gray-700 dark:text-gray-400">{stock.symbol}</span>
-            <span className="font-semibold text-gray-900 dark:text-white">${stock.price.toFixed(2)}</span>
-            <div className={`flex items-center gap-1 font-semibold text-base ${isPositive ? 'text-brand-green-dark dark:text-brand-green' : 'text-red-600 dark:text-red-500'}`}>
-                {isPositive ? ICONS.stockUp : ICONS.stockDown}
-                <span>{isPositive ? '+' : ''}{stock.change.toFixed(2)} ({isPositive ? '+' : ''}{stock.changePercent.toFixed(2)}%)</span>
-            </div>
-        </div>
-    );
-};
-
-const StockTicker = () => {
-    const duplicatedStocks = [...MOCK_TICKER_STOCKS, ...MOCK_TICKER_STOCKS];
-    return (
-        <div className="h-20 bg-white dark:bg-brand-gray border-y border-gray-200 dark:border-gray-800">
-            <div className="relative h-full flex items-center overflow-hidden">
-                <div className="absolute top-0 left-0 flex items-center h-full animate-marquee whitespace-nowrap">
-                    {duplicatedStocks.map((stock, index) => <StockTickerItem key={`${stock.symbol}-${index}`} stock={stock} />)}
-                </div>
-            </div>
-        </div>
-    );
-};
-
-const FeatureCard: React.FC<{ icon: React.ReactNode; title: string; children: React.ReactNode; }> = ({ icon, title, children }) => (
-    <div className="bg-white dark:bg-brand-black/50 p-8 rounded-xl border border-gray-200 dark:border-gray-800 transform hover:-translate-y-2 transition-all duration-300 hover:border-brand-green/50 hover:shadow-2xl hover:shadow-brand-green/10">
-        <div className="flex items-center justify-center h-14 w-14 rounded-lg bg-brand-green/10 text-brand-green mb-5">
-            {React.cloneElement(icon as React.ReactElement<any>, { className: "h-8 w-8" })}
-        </div>
-        <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">{title}</h3>
-        <p className="text-base text-gray-600 dark:text-gray-400 leading-relaxed">{children}</p>
-    </div>
-);
-
-const HowItWorksStep: React.FC<{ number: string; title: string; children: React.ReactNode; }> = ({ number, title, children }) => (
-    <div className="relative pl-14">
-        <div className="absolute left-0 top-0 flex items-center justify-center w-10 h-10 rounded-full bg-brand-blue text-brand-black font-bold text-xl">
-            {number}
-        </div>
-        <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">{title}</h3>
-        <p className="text-base text-gray-600 dark:text-gray-400 leading-relaxed">{children}</p>
-    </div>
-);
-
-const PlanPreviewCard: React.FC<{ plan: InvestmentPlan, returnLabel: string, depositLabel: string }> = ({ plan, returnLabel, depositLabel }) => (
-     <div className="bg-white dark:bg-brand-gray p-10 rounded-2xl border-2 border-gray-200 dark:border-gray-800 flex flex-col text-center items-center transition-all duration-300 hover:border-brand-green hover:-translate-y-2 hover:shadow-2xl hover:shadow-brand-green/10">
-        <h3 className={`text-3xl font-bold ${plan.color}`}>{plan.name}</h3>
-        <p className="text-gray-500 dark:text-gray-400 mt-3 text-lg">{returnLabel}</p>
-        <p className="text-5xl font-black text-gray-900 dark:text-white my-6">{plan.monthlyReturn}</p>
-        <p className="text-gray-500 dark:text-gray-400 text-lg">{depositLabel}</p>
-        <p className="text-2xl font-bold text-gray-800 dark:text-white mt-1">US$ {plan.minDepositUSD}</p>
-    </div>
-);
-
-interface HomePageProps {
-    setView: (view: View) => void;
-    language: Language;
-    setLanguage: (lang: Language) => void;
-}
-
 const HomePage: React.FC<HomePageProps> = ({ setView, language, setLanguage }) => {
-    const [isLearnMoreOpen, setIsLearnMoreOpen] = useState(false);
-    const [infoModalContent, setInfoModalContent] = useState<{ title: string; content: React.ReactNode } | null>(null);
-    const [isLangMenuOpen, setIsLangMenuOpen] = useState(false);
-    const langMenuRef = useRef<HTMLDivElement>(null);
-    
-    const t = TRANSLATIONS[language];
+  const [isLangMenuOpen, setIsLangMenuOpen] = useState(false);
+  const langMenuRef = useRef<HTMLDivElement>(null);
+  const [modalContent, setModalContent] = useState<{ title: string; content: React.ReactNode } | null>(null);
+  const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
 
-    // Close dropdowns when clicking outside
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (langMenuRef.current && !langMenuRef.current.contains(event.target as Node)) {
-                setIsLangMenuOpen(false);
-            }
-        };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => {
-            document.removeEventListener('mousedown', handleClickOutside);
-        };
-    }, []);
+  const t = TRANSLATIONS[language].landing;
+  const faqList = TRANSLATIONS[language].faq;
 
-    const openInfoModal = (type: string) => {
-        let title = '';
-        let content: React.ReactNode = null;
-
-        switch (type) {
-            case 'security':
-                title = t.landing.footer_security;
-                content = SECURITY_CONTENT;
-                break;
-            case 'about':
-                title = t.landing.footer_about;
-                content = ABOUT_CONTENT;
-                break;
-            case 'contact':
-                title = t.landing.footer_contact;
-                content = CONTACT_CONTENT;
-                break;
-            case 'careers':
-                title = t.landing.footer_careers;
-                content = CAREERS_CONTENT;
-                break;
-            case 'terms':
-                title = t.landing.footer_terms;
-                content = TERMS_OF_USE_CONTENT;
-                break;
-            case 'privacy':
-                title = t.landing.footer_privacy;
-                content = PRIVACY_POLICY_CONTENT;
-                break;
-            case 'faq':
-                title = 'FAQ';
-                content = <FAQList content={t.faq} />;
-                break;
-            default:
-                return;
-        }
-        setInfoModalContent({ title, content });
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (langMenuRef.current && !langMenuRef.current.contains(event.target as Node)) {
+        setIsLangMenuOpen(false);
+      }
     };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
-    const navItems = [
-        { name: t.landing.nav_home, href: '#home' },
-        { name: t.landing.nav_features, href: '#features' },
-        { name: t.landing.nav_how, href: '#how-it-works' },
-        { name: t.landing.nav_plans, href: '#plans' },
-        { name: t.landing.nav_faq, href: '#faq', action: () => openInfoModal('faq') },
-    ];
+  const navItems = [
+    { name: t.nav_home, href: '#home', action: () => window.scrollTo({ top: 0, behavior: 'smooth' }) },
+    { name: t.nav_features, href: '#features' },
+    { name: t.nav_how, href: '#how-it-works' },
+    { name: t.nav_plans, href: '#plans' },
+    { name: t.nav_faq, href: '#faq' },
+  ];
 
-    useEffect(() => {
-        const handleScroll = (e: MouseEvent) => {
-            const target = e.target as HTMLAnchorElement;
-            const href = target.getAttribute('href');
-            if (target.tagName === 'A' && href && href.startsWith('#') && !href.includes('faq')) {
-                e.preventDefault();
-                const elementId = href.substring(1);
-                const element = document.getElementById(elementId);
-                if (element) {
-                    element.scrollIntoView({ behavior: 'smooth' });
-                }
-            }
-        };
-
-        const nav = document.querySelector('nav');
-        nav?.addEventListener('click', handleScroll);
-
-        return () => {
-            nav?.removeEventListener('click', handleScroll);
-        };
-    }, []);
-
-    const GridBackground = () => (
-         <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none bg-gray-50 dark:bg-brand-black transition-colors duration-300">
-            <div className="absolute inset-0 opacity-10 dark:opacity-100" style={{
-                backgroundImage: `
-                    linear-gradient(rgba(0, 0, 0, 0.05) 1px, transparent 1px),
-                    linear-gradient(90deg, rgba(0, 0, 0, 0.05) 1px, transparent 1px)
-                `,
-                backgroundSize: '40px 40px',
-            }}></div>
-             <div className="absolute inset-0 dark:opacity-100 opacity-0" style={{
-                backgroundImage: `
-                    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-                    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px)
-                `,
-                backgroundSize: '40px 40px',
-            }}></div>
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(0,255,156,0.05)_0%,rgba(0,0,0,0)_60%)]"></div>
-        </div>
-    );
-    
-    const HowItWorksDiagram = () => (
-        <div className="w-full md:w-1/2 flex items-center justify-center p-8 relative">
-            <div className="absolute inset-0 flex items-center justify-center">
-                <div className="h-72 w-72 bg-brand-green/5 rounded-full blur-3xl"></div>
-            </div>
-            
-            <div className="space-y-6 relative transform scale-100">
-                <div className="absolute left-9 top-14 h-[90px] w-px border-l-2 border-dashed border-gray-300 dark:border-gray-700"></div>
-                <div className="absolute left-9 top-[220px] h-[90px] w-px border-l-2 border-dashed border-gray-300 dark:border-gray-700"></div>
-
-                <div className="flex items-center gap-6 relative z-10">
-                    <div className="flex items-center justify-center h-20 w-20 rounded-full bg-white dark:bg-brand-gray border-2 border-brand-blue text-brand-blue flex-shrink-0 shadow-lg dark:shadow-none">
-                        {React.cloneElement(ICONS.userPlus as React.ReactElement<any>, { className: "w-10 h-10" })}
-                    </div>
-                    <div>
-                        <h4 className="font-bold text-xl text-gray-900 dark:text-white">{t.landing.diagram_create}</h4>
-                        <p className="text-base text-gray-600 dark:text-gray-400">{t.landing.diagram_create_sub}</p>
-                    </div>
-                </div>
-                <div className="flex items-center gap-6 relative z-10">
-                    <div className="flex items-center justify-center h-20 w-20 rounded-full bg-white dark:bg-brand-gray border-2 border-brand-green text-brand-green flex-shrink-0 shadow-lg dark:shadow-none">
-                        {React.cloneElement(ICONS.deposit as React.ReactElement<any>, { className: "w-10 h-10" })}
-                    </div>
-                    <div>
-                        <h4 className="font-bold text-xl text-gray-900 dark:text-white">{t.landing.diagram_dep}</h4>
-                        <p className="text-base text-gray-600 dark:text-gray-400">{t.landing.diagram_dep_sub}</p>
-                    </div>
-                </div>
-                <div className="flex items-center gap-6 relative z-10">
-                    <div className="flex items-center justify-center h-20 w-20 rounded-full bg-white dark:bg-brand-gray border-2 border-gray-300 dark:border-gray-600 text-gray-400 flex-shrink-0 shadow-lg dark:shadow-none">
-                        {React.cloneElement(ICONS.plans as React.ReactElement<any>, { className: "w-10 h-10" })}
-                    </div>
-                    <div>
-                        <h4 className="font-bold text-xl text-gray-900 dark:text-white">{t.landing.diagram_profit}</h4>
-                        <p className="text-base text-gray-600 dark:text-gray-400">{t.landing.diagram_profit_sub}</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-
-    return (
-        <div className="bg-gray-50 dark:bg-brand-black text-gray-900 dark:text-white min-h-[100dvh] relative w-full overflow-x-hidden transition-colors duration-300">
-            <GridBackground />
-            
-             <Modal 
-                isOpen={isLearnMoreOpen} 
-                onClose={() => setIsLearnMoreOpen(false)} 
-                title={t.landing.modal_learn_title}
-            >
-                <div className="space-y-6">
-                    <div className="bg-gray-100 dark:bg-brand-gray p-6 rounded-xl border border-gray-200 dark:border-gray-700">
-                        <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-                            {React.cloneElement(ICONS.shield as React.ReactElement<any>, { className: "h-6 w-6 text-brand-green" })} {t.landing.modal_why_title}
-                        </h3>
-                        <p className="text-gray-600 dark:text-gray-400 text-base leading-relaxed">
-                            {t.landing.modal_why_desc}
-                        </p>
-                    </div>
-
-                    <div>
-                        <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">{t.landing.modal_advantages_title}</h3>
-                        <div className="grid gap-6">
-                            <div className="flex gap-4 items-start">
-                                <div className="mt-1 bg-brand-green/20 p-2.5 rounded-lg h-fit text-brand-green">
-                                    {React.cloneElement(ICONS.arrowUp as React.ReactElement<any>, { className: "h-6 w-6" })}
-                                </div>
-                                <div>
-                                    <h4 className="font-bold text-lg text-gray-900 dark:text-white">{t.landing.modal_adv_1_title}</h4>
-                                    <p className="text-base text-gray-600 dark:text-gray-400">{t.landing.modal_adv_1_desc}</p>
-                                </div>
+  const openModal = (type: 'security' | 'about' | 'contact' | 'careers' | 'terms' | 'privacy' | 'learn') => {
+      let content = null;
+      let title = '';
+      switch (type) {
+          case 'security': title = t.footer_security; content = SECURITY_CONTENT; break;
+          case 'about': title = t.footer_about; content = ABOUT_CONTENT; break;
+          case 'contact': title = t.footer_contact; content = CONTACT_CONTENT; break;
+          case 'careers': title = t.footer_careers; content = CAREERS_CONTENT; break;
+          case 'terms': title = t.footer_terms; content = TERMS_OF_USE_CONTENT; break;
+          case 'privacy': title = t.footer_privacy; content = PRIVACY_POLICY_CONTENT; break;
+          case 'learn': 
+            title = t.modal_learn_title; 
+            content = (
+                <div className="space-y-4">
+                    <h3 className="text-xl font-bold text-brand-green">{t.modal_why_title}</h3>
+                    <p className="text-gray-300">{t.modal_why_desc}</p>
+                    
+                    <h3 className="text-lg font-bold text-white mt-4">{t.modal_advantages_title}</h3>
+                    <ul className="space-y-3">
+                        <li className="flex gap-3">
+                            <div className="text-brand-green mt-1">✓</div>
+                            <div>
+                                <strong className="text-white">{t.modal_adv_1_title}</strong>
+                                <p className="text-sm text-gray-400">{t.modal_adv_1_desc}</p>
                             </div>
-                            <div className="flex gap-4 items-start">
-                                <div className="mt-1 bg-brand-blue/20 p-2.5 rounded-lg h-fit text-brand-blue">
-                                    {React.cloneElement(ICONS.dollar as React.ReactElement<any>, { className: "h-6 w-6" })}
-                                </div>
-                                <div>
-                                    <h4 className="font-bold text-lg text-gray-900 dark:text-white">{t.landing.modal_adv_2_title}</h4>
-                                    <p className="text-base text-gray-600 dark:text-gray-400">{t.landing.modal_adv_2_desc}</p>
-                                </div>
+                        </li>
+                        <li className="flex gap-3">
+                            <div className="text-brand-green mt-1">✓</div>
+                            <div>
+                                <strong className="text-white">{t.modal_adv_2_title}</strong>
+                                <p className="text-sm text-gray-400">{t.modal_adv_2_desc}</p>
                             </div>
-                            <div className="flex gap-4 items-start">
-                                <div className="mt-1 bg-purple-500/20 p-2.5 rounded-lg h-fit text-purple-500 dark:text-purple-400">
-                                    {React.cloneElement(ICONS.transactions as React.ReactElement<any>, { className: "h-6 w-6" })}
-                                </div>
-                                <div>
-                                    <h4 className="font-bold text-lg text-gray-900 dark:text-white">{t.landing.modal_adv_3_title}</h4>
-                                    <p className="text-base text-gray-600 dark:text-gray-400">{t.landing.modal_adv_3_desc}</p>
-                                </div>
+                        </li>
+                        <li className="flex gap-3">
+                            <div className="text-brand-green mt-1">✓</div>
+                            <div>
+                                <strong className="text-white">{t.modal_adv_3_title}</strong>
+                                <p className="text-sm text-gray-400">{t.modal_adv_3_desc}</p>
                             </div>
-                        </div>
-                    </div>
-
-                    <div className="pt-6 border-t border-gray-200 dark:border-gray-800">
-                        <p className="text-center text-gray-600 dark:text-gray-400 text-base mb-6">{t.landing.modal_start_text}</p>
-                        <Button fullWidth onClick={() => { setIsLearnMoreOpen(false); setView(View.Register); }} className="text-lg py-4">
-                            {t.landing.modal_cta}
-                        </Button>
-                    </div>
-                </div>
-            </Modal>
-
-            <Modal
-                isOpen={!!infoModalContent}
-                onClose={() => setInfoModalContent(null)}
-                title={infoModalContent?.title || ''}
-            >
-                <div className="prose prose-invert prose-base max-h-[60vh] overflow-y-auto pr-4 text-gray-600 dark:text-gray-300">
-                    {infoModalContent?.content}
-                </div>
-            </Modal>
-
-            <header className="sticky top-0 bg-white/90 dark:bg-brand-black/80 backdrop-blur-md z-30 py-5 px-4 sm:px-6 lg:px-12 w-full border-b border-gray-200 dark:border-gray-900 transition-colors duration-300">
-                <div className="flex justify-between items-center">
-                    <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-3 cursor-pointer" onClick={() => window.location.reload()}>
-                            {React.cloneElement(ICONS.career as React.ReactElement<any>, {className: "h-8 w-8 text-brand-green"})}
-                            <span className="text-2xl md:text-3xl font-bold tracking-wider text-gray-900 dark:text-white">GREENNSEVEN</span>
-                        </div>
-                        <div className="relative" ref={langMenuRef}>
-                            <button 
-                                onClick={() => setIsLangMenuOpen(!isLangMenuOpen)}
-                                className="flex items-center gap-2 focus:outline-none hover:opacity-80 transition-opacity p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"
-                            >
-                                <span className="text-2xl leading-none">{LANGUAGE_OPTIONS.find(l => l.code === language)?.flag}</span>
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                                </svg>
-                            </button>
-                            
-                            {isLangMenuOpen && (
-                                <div className="absolute left-0 mt-2 w-40 bg-white dark:bg-brand-gray border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl py-2 animate-fade-in-up z-50">
-                                    {LANGUAGE_OPTIONS.map((option) => (
-                                        <button
-                                            key={option.code}
-                                            onClick={() => {
-                                                setLanguage(option.code);
-                                                setIsLangMenuOpen(false);
-                                            }}
-                                            className={`w-full text-left px-5 py-3 text-base hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-3 transition-colors ${language === option.code ? 'bg-gray-50 dark:bg-gray-800/50 text-brand-green' : 'text-gray-700 dark:text-gray-300'}`}
-                                        >
-                                            <span className="text-xl">{option.flag}</span>
-                                            <span className="font-medium">{option.code.toUpperCase()}</span>
-                                        </button>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
+                        </li>
+                    </ul>
+                    
+                    <div className="bg-brand-green/10 border border-brand-green/30 p-4 rounded-lg mt-6 text-center">
+                        <p className="text-brand-green font-bold">{t.modal_start_text}</p>
                     </div>
                     
-                    <nav className="hidden md:flex items-center gap-8">
+                    <div className="pt-4">
+                        <Button fullWidth onClick={() => { setModalContent(null); setView(View.Register); }}>{t.modal_cta}</Button>
+                    </div>
+                </div>
+            );
+            break;
+      }
+      setModalContent({ title, content });
+  };
+
+  return (
+    <div className="min-h-screen bg-white dark:bg-brand-black text-gray-900 dark:text-white font-sans scroll-smooth">
+        <Modal 
+            isOpen={!!modalContent} 
+            onClose={() => setModalContent(null)} 
+            title={modalContent?.title || ''}
+        >
+            <div className="prose prose-invert max-h-[70vh] overflow-y-auto pr-2">
+                {modalContent?.content}
+            </div>
+        </Modal>
+
+        {/* HEADER */}
+        <header className="sticky top-0 bg-white/90 dark:bg-black/90 backdrop-blur-md z-30 py-5 px-4 sm:px-6 lg:px-12 w-full border-b border-gray-200 dark:border-gray-900 transition-colors duration-300">
+            <div className="flex justify-between items-center w-full">
+                <div className="flex items-center gap-3 cursor-pointer shrink-0" onClick={() => window.location.reload()}>
+                    {React.cloneElement(ICONS.career as React.ReactElement<any>, {className: "h-8 w-8 text-brand-green"})}
+                    <span className="text-2xl md:text-3xl font-bold tracking-wider text-gray-900 dark:text-white">GREENNSEVEN</span>
+                </div>
+                
+                <div className="flex items-center gap-4 md:gap-6">
+                    <div className="relative" ref={langMenuRef}>
+                        <button 
+                            onClick={() => setIsLangMenuOpen(!isLangMenuOpen)}
+                            className="flex items-center gap-2 focus:outline-none hover:opacity-80 transition-opacity p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"
+                        >
+                            <span className="text-2xl leading-none">{LANGUAGE_OPTIONS.find(l => l.code === language)?.flag}</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </button>
+                        
+                        {isLangMenuOpen && (
+                            <div className="absolute right-0 md:right-auto md:left-0 mt-2 w-40 bg-white dark:bg-brand-gray border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl py-2 animate-fade-in-up z-50">
+                                {LANGUAGE_OPTIONS.map((option) => (
+                                    <button
+                                        key={option.code}
+                                        onClick={() => {
+                                            setLanguage(option.code);
+                                            setIsLangMenuOpen(false);
+                                        }}
+                                        className={`w-full text-left px-5 py-3 text-base hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-3 transition-colors ${language === option.code ? 'bg-gray-50 dark:bg-gray-800/50 text-brand-green' : 'text-gray-700 dark:text-gray-300'}`}
+                                    >
+                                        <span className="text-xl">{option.flag}</span>
+                                        <span className="font-medium">{option.code.toUpperCase()}</span>
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
+                    <nav className="hidden md:flex items-center gap-6 lg:gap-8">
                         {navItems.map(item => (
                             <a 
                                 key={item.name} 
@@ -393,7 +167,7 @@ const HomePage: React.FC<HomePageProps> = ({ setView, language, setLanguage }) =
                                         item.action();
                                     }
                                 }}
-                                className="font-semibold text-gray-600 dark:text-gray-300 hover:text-brand-green dark:hover:text-brand-green transition-colors uppercase text-base tracking-wide"
+                                className="font-semibold text-gray-600 dark:text-gray-300 hover:text-brand-green dark:hover:text-brand-green transition-colors uppercase text-sm lg:text-base tracking-wide whitespace-nowrap"
                             >
                                 {item.name}
                             </a>
@@ -401,157 +175,244 @@ const HomePage: React.FC<HomePageProps> = ({ setView, language, setLanguage }) =
                     </nav>
 
                     <div className="flex items-center gap-3">
-                         <Button onClick={() => setView(View.Login)} variant="secondary" className="px-6 py-2.5 !rounded-md text-base bg-gray-100 text-gray-900 border-gray-300 hover:bg-gray-200 dark:bg-gray-800 dark:text-white dark:border-gray-700 dark:hover:bg-gray-700">
-                           {t.landing.login}
-                         </Button>
-                         <Button onClick={() => setView(View.Register)} variant="primary" className="px-6 py-2.5 !rounded-md hidden sm:block text-base">
-                           {t.landing.signup}
-                         </Button>
+                            <Button onClick={() => setView(View.Login)} variant="secondary" className="px-5 py-2.5 !rounded-md text-sm lg:text-base bg-gray-100 text-gray-900 border-gray-300 hover:bg-gray-200 dark:bg-gray-800 dark:text-white dark:border-gray-700 dark:hover:bg-gray-700 whitespace-nowrap">
+                            {t.login}
+                            </Button>
+                            <Button onClick={() => setView(View.Register)} variant="primary" className="px-5 py-2.5 !rounded-md hidden sm:block text-sm lg:text-base whitespace-nowrap">
+                            {t.signup}
+                            </Button>
                     </div>
                 </div>
-            </header>
+            </div>
+        </header>
 
-            <main id="home" className="min-h-[calc(100dvh-76px)] py-16 h-auto flex items-center justify-center text-center relative px-4 overflow-hidden">
-                <div className="relative z-10 flex flex-col items-center">
-                    <h1 className="text-5xl sm:text-6xl md:text-7xl font-black leading-tight max-w-5xl text-gray-900 dark:text-white">
-                        <span>{t.landing.hero_title_1}</span>
-                        <span className="block mt-3">{t.landing.hero_title_2}</span>
-                        <span className="block mt-3 bg-gradient-to-r from-brand-green to-brand-blue text-transparent bg-clip-text animate-text-gradient bg-[200%_auto]">
-                            {t.landing.hero_title_3}
-                        </span>
-                    </h1>
-
-                    <div className="my-10 h-3 md:h-4 w-56 md:w-72 rounded-full bg-gradient-to-r from-brand-blue to-brand-green"></div>
-
-                    <p className="text-lg md:text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto leading-relaxed">
-                        {t.landing.hero_subtitle}
-                    </p>
-                    <div className="mt-12 flex flex-col sm:flex-row justify-center items-center gap-6">
-                        <Button onClick={() => setView(View.Register)} variant="primary" className="px-8 py-4 text-lg sm:px-10 sm:py-5 sm:text-xl">
-                            <div className="flex items-center gap-2">
-                                {t.landing.hero_cta}
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
-                            </div>
-                        </Button>
-                        <Button variant="secondary" className="px-8 py-4 text-lg sm:px-10 sm:py-5 sm:text-xl bg-gray-200 text-gray-900 border-gray-300 hover:bg-gray-300 dark:bg-gray-800 dark:text-white dark:border-gray-700 dark:hover:bg-gray-700" onClick={() => setIsLearnMoreOpen(true)}>
-                            {t.landing.hero_learn}
-                        </Button>
-                    </div>
-                </div>
-            </main>
-            
-            <section id="features" className="py-16 sm:py-20 px-4 sm:px-6 lg:px-12 bg-white dark:bg-brand-gray/50 relative z-10 transition-colors duration-300">
-                <div className="max-w-7xl mx-auto text-center">
-                    <h2 className="text-4xl md:text-5xl font-black text-gray-900 dark:text-white">{t.landing.features_title}</h2>
-                    <p className="mt-6 text-lg md:text-xl text-gray-600 dark:text-gray-400 max-w-4xl mx-auto leading-relaxed">{t.landing.features_subtitle}</p>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 md:gap-10 mt-16 text-left">
-                        <FeatureCard icon={ICONS.featureProfit} title={t.landing.feature_profit_title}>
-                            {t.landing.feature_profit_desc}
-                        </FeatureCard>
-                        <FeatureCard icon={ICONS.featureSecurity} title={t.landing.feature_security_title}>
-                            {t.landing.feature_security_desc}
-                        </FeatureCard>
-                         <FeatureCard icon={ICONS.featureLayout} title={t.landing.feature_interface_title}>
-                            {t.landing.feature_interface_desc}
-                        </FeatureCard>
-                        <FeatureCard icon={ICONS.featureSupport} title={t.landing.feature_support_title}>
-                            {t.landing.feature_support_desc}
-                        </FeatureCard>
-                    </div>
-                </div>
-            </section>
-            
-            <section id="how-it-works" className="py-16 sm:py-20 px-4 sm:px-6 lg:px-12 relative z-10">
-                <div className="max-w-7xl mx-auto text-center">
-                    <h2 className="text-4xl md:text-5xl font-black text-gray-900 dark:text-white">{t.landing.how_title}</h2>
-                    <p className="mt-6 text-lg md:text-xl text-gray-600 dark:text-gray-400">{t.landing.how_subtitle}</p>
-                    <div className="mt-20 flex flex-col-reverse md:flex-row justify-between items-center text-left gap-16">
-                        <div className="w-full md:w-1/2 space-y-16">
-                            <HowItWorksStep number="1" title={t.landing.step_1_title}>
-                                {t.landing.step_1_desc}
-                            </HowItWorksStep>
-                            <HowItWorksStep number="2" title={t.landing.step_2_title}>
-                                {t.landing.step_2_desc}
-                            </HowItWorksStep>
-                            <HowItWorksStep number="3" title={t.landing.step_3_title}>
-                                {t.landing.step_3_desc}
-                            </HowItWorksStep>
-                        </div>
-                         <HowItWorksDiagram />
-                    </div>
-                </div>
-            </section>
-
-            <section id="plans" className="py-16 sm:py-20 px-4 sm:px-6 lg:px-12 bg-white dark:bg-brand-gray/50 relative z-10 transition-colors duration-300">
-                <div className="max-w-7xl mx-auto text-center">
-                    <h2 className="text-4xl md:text-5xl font-black text-gray-900 dark:text-white">{t.landing.plans_title}</h2>
-                    <p className="mt-6 text-lg md:text-xl text-gray-600 dark:text-gray-400 max-w-4xl mx-auto leading-relaxed">{t.landing.plans_subtitle}</p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 md:gap-10 mt-16">
-                        {INVESTMENT_PLANS.map(plan => (
-                            <PlanPreviewCard 
-                                key={plan.id} 
-                                plan={plan} 
-                                returnLabel={t.landing.plan_return_label}
-                                depositLabel={t.landing.plan_deposit_label}
-                            />
-                        ))}
-                    </div>
-                </div>
-            </section>
-
-            <section id="cta" className="py-16 px-4 sm:py-20 sm:px-6 lg:px-12 relative z-10">
-                <div className="max-w-5xl mx-auto text-center bg-gradient-to-r from-brand-blue/80 to-brand-green/80 p-10 md:p-16 rounded-3xl shadow-2xl">
-                    <h2 className="text-4xl md:text-5xl font-black text-brand-black">{t.landing.cta_title}</h2>
-                    <p className="mt-6 text-lg md:text-xl text-brand-black/80 max-w-3xl mx-auto leading-relaxed">{t.landing.cta_subtitle}</p>
-                    <Button onClick={() => setView(View.Register)} variant="primary" className="px-8 py-4 text-lg sm:px-10 sm:py-5 sm:text-xl mt-10 shadow-lg hover:shadow-xl">
-                        {t.landing.cta_button}
-                    </Button>
-                </div>
-            </section>
-            
-            <div className="relative z-10">
-                <StockTicker />
+        {/* HERO */}
+        <section id="home" className="relative pt-20 pb-32 overflow-hidden">
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full max-w-7xl pointer-events-none">
+                <div className="absolute top-20 right-0 w-[500px] h-[500px] bg-brand-green/5 rounded-full blur-[120px]"></div>
+                <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-brand-blue/5 rounded-full blur-[100px]"></div>
             </div>
 
-            <footer className="bg-white dark:bg-brand-gray border-t border-gray-200 dark:border-gray-800 py-16 md:py-20 px-4 sm:px-6 lg:px-12 relative z-10 transition-colors duration-300">
-                <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-10">
-                    <div className="md:col-span-1">
-                        <div className="flex items-center gap-3">
-                            {React.cloneElement(ICONS.career as React.ReactElement<any>, {className: "h-9 w-9 text-brand-green"})}
-                            <span className="text-3xl font-bold tracking-wider text-gray-900 dark:text-white">GREENNSEVEN</span>
+            <div className="container mx-auto px-4 relative z-10 text-center">
+                <h1 className="text-5xl md:text-7xl font-black mb-6 tracking-tight leading-tight">
+                    {t.hero_title_1} <br/>
+                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-green via-brand-blue to-brand-green bg-[length:200%_auto] animate-text-gradient">{t.hero_title_2}</span> <br/>
+                    {t.hero_title_3}
+                </h1>
+                <p className="text-xl md:text-2xl text-gray-500 dark:text-gray-400 max-w-3xl mx-auto mb-10 leading-relaxed">
+                    {t.hero_subtitle}
+                </p>
+                <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                    <Button onClick={() => setView(View.Register)} className="px-10 py-4 text-lg !rounded-full shadow-brand-green/25 shadow-xl hover:shadow-2xl hover:scale-105 transition-all">
+                        {t.hero_cta}
+                    </Button>
+                    <Button onClick={() => openModal('learn')} variant="secondary" className="px-10 py-4 text-lg !rounded-full border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800/50 hover:bg-gray-50 dark:hover:bg-gray-800 backdrop-blur-sm">
+                        {t.hero_learn}
+                    </Button>
+                </div>
+            </div>
+        </section>
+
+        {/* FEATURES */}
+        <section id="features" className="py-24 bg-gray-50 dark:bg-brand-gray/30 border-y border-gray-200 dark:border-gray-800/50">
+            <div className="container mx-auto px-4">
+                <div className="text-center mb-16">
+                    <h2 className="text-3xl md:text-4xl font-bold mb-4">{t.features_title}</h2>
+                    <p className="text-gray-500 dark:text-gray-400 max-w-2xl mx-auto">{t.features_subtitle}</p>
+                </div>
+
+                <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+                    {[
+                        { icon: ICONS.featureProfit, title: t.feature_profit_title, desc: t.feature_profit_desc },
+                        { icon: ICONS.featureSecurity, title: t.feature_security_title, desc: t.feature_security_desc },
+                        { icon: ICONS.featureLayout, title: t.feature_interface_title, desc: t.feature_interface_desc },
+                        { icon: ICONS.featureSupport, title: t.feature_support_title, desc: t.feature_support_desc },
+                    ].map((feature, idx) => (
+                        <div key={idx} className="bg-white dark:bg-brand-gray p-8 rounded-2xl border border-gray-200 dark:border-gray-800 hover:border-brand-green/50 hover:shadow-lg transition-all duration-300 group">
+                            <div className="p-4 bg-gray-100 dark:bg-brand-black rounded-xl w-fit mb-6 text-brand-green group-hover:bg-brand-green group-hover:text-brand-black transition-colors">
+                                {feature.icon}
+                            </div>
+                            <h3 className="text-xl font-bold mb-3">{feature.title}</h3>
+                            <p className="text-gray-500 dark:text-gray-400 leading-relaxed text-sm">
+                                {feature.desc}
+                            </p>
                         </div>
-                        <p className="mt-6 text-base text-gray-600 dark:text-gray-400 leading-relaxed">{t.landing.footer_desc}</p>
+                    ))}
+                </div>
+            </div>
+        </section>
+
+        {/* HOW IT WORKS */}
+        <section id="how-it-works" className="py-24 relative overflow-hidden">
+            <div className="container mx-auto px-4">
+                <div className="text-center mb-20">
+                    <h2 className="text-3xl md:text-4xl font-bold mb-4">{t.how_title}</h2>
+                    <p className="text-gray-500 dark:text-gray-400 max-w-2xl mx-auto">{t.how_subtitle}</p>
+                </div>
+
+                <div className="grid md:grid-cols-3 gap-12 relative">
+                    <div className="absolute top-12 left-0 w-full h-0.5 bg-gradient-to-r from-transparent via-brand-green/30 to-transparent hidden md:block"></div>
+
+                    {[
+                        { step: "01", title: t.step_1_title, desc: t.step_1_desc },
+                        { step: "02", title: t.step_2_title, desc: t.step_2_desc },
+                        { step: "03", title: t.step_3_title, desc: t.step_3_desc },
+                    ].map((item, idx) => (
+                        <div key={idx} className="relative z-10 flex flex-col items-center text-center">
+                            <div className="w-24 h-24 rounded-full bg-white dark:bg-brand-black border-4 border-brand-green flex items-center justify-center text-3xl font-black text-brand-green shadow-xl mb-8">
+                                {item.step}
+                            </div>
+                            <h3 className="text-xl font-bold mb-4">{item.title}</h3>
+                            <p className="text-gray-500 dark:text-gray-400 leading-relaxed">
+                                {item.desc}
+                            </p>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </section>
+
+        {/* PLANS */}
+        <section id="plans" className="py-24 bg-brand-black text-white relative">
+            <div className="absolute inset-0 bg-brand-green/5"></div>
+            <div className="container mx-auto px-4 relative z-10">
+                <div className="text-center mb-16">
+                    <h2 className="text-3xl md:text-4xl font-bold mb-4">{t.plans_title}</h2>
+                    <p className="text-gray-400 max-w-2xl mx-auto">{t.plans_subtitle}</p>
+                </div>
+
+                <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {INVESTMENT_PLANS.map((plan, idx) => (
+                        <div key={plan.id} className={`bg-brand-gray border border-gray-800 rounded-2xl p-6 hover:border-brand-green transition-all duration-300 flex flex-col relative ${idx === 1 ? 'lg:-mt-4 lg:mb-4 shadow-2xl shadow-brand-green/10 border-brand-green/50' : ''}`}>
+                            {idx === 1 && <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-brand-green text-brand-black text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">Recomendado</div>}
+                            <h3 className={`text-2xl font-bold mb-2 ${plan.color}`}>{plan.name}</h3>
+                            <div className="mb-6">
+                                <p className="text-gray-400 text-xs uppercase">{t.plan_return_label}</p>
+                                <p className="text-4xl font-black">{plan.monthlyReturn}</p>
+                            </div>
+                            <div className="space-y-4 mb-8 flex-1">
+                                <div className="flex justify-between items-center text-sm border-b border-gray-800 pb-2">
+                                    <span className="text-gray-400">{t.plan_deposit_label}</span>
+                                    <span className="font-bold">US$ {plan.minDepositUSD}</span>
+                                </div>
+                                {/* Mock features based on plan */}
+                                <div className="space-y-2">
+                                    <div className="flex items-center gap-2 text-sm text-gray-300">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-brand-green"></div>
+                                        Saques Diários
+                                    </div>
+                                    <div className="flex items-center gap-2 text-sm text-gray-300">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-brand-green"></div>
+                                        Suporte {idx > 1 ? 'Prioritário' : 'Padrão'}
+                                    </div>
+                                    <div className="flex items-center gap-2 text-sm text-gray-300">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-brand-green"></div>
+                                        Proteção Cambial
+                                    </div>
+                                </div>
+                            </div>
+                            <Button onClick={() => setView(View.Register)} fullWidth variant={idx === 1 ? 'primary' : 'secondary'}>
+                                Selecionar
+                            </Button>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </section>
+
+        {/* CTA */}
+        <section className="py-24 bg-gradient-to-r from-brand-green to-brand-blue text-brand-black text-center">
+            <div className="container mx-auto px-4">
+                <h2 className="text-3xl md:text-5xl font-black mb-6">{t.cta_title}</h2>
+                <p className="text-xl md:text-2xl mb-10 max-w-3xl mx-auto font-medium opacity-90">{t.cta_subtitle}</p>
+                <Button onClick={() => setView(View.Register)} className="bg-brand-black text-white hover:bg-gray-900 border-none px-12 py-5 text-lg !rounded-full shadow-2xl">
+                    {t.cta_button}
+                </Button>
+            </div>
+        </section>
+
+        {/* FAQ */}
+        <section id="faq" className="py-24 bg-white dark:bg-brand-black">
+            <div className="container mx-auto px-4 max-w-4xl">
+                <div className="text-center mb-16">
+                    <h2 className="text-3xl md:text-4xl font-bold mb-4">FAQ</h2>
+                    <p className="text-gray-500 dark:text-gray-400">{t.nav_faq}</p>
+                </div>
+
+                <div className="space-y-4">
+                    {faqList.map((item, idx) => (
+                        <div key={idx} className="border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden">
+                            <button 
+                                onClick={() => setOpenFaqIndex(openFaqIndex === idx ? null : idx)}
+                                className="w-full flex justify-between items-center p-6 text-left bg-gray-50 dark:bg-brand-gray/30 hover:bg-gray-100 dark:hover:bg-brand-gray/50 transition-colors"
+                            >
+                                <span className="font-bold text-gray-900 dark:text-white pr-8">{item.q}</span>
+                                <span className={`transform transition-transform duration-300 ${openFaqIndex === idx ? 'rotate-180' : ''}`}>
+                                    {ICONS.arrowDown}
+                                </span>
+                            </button>
+                            {openFaqIndex === idx && (
+                                <div className="p-6 bg-white dark:bg-brand-black border-t border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-300 leading-relaxed animate-fade-in">
+                                    {item.a}
+                                </div>
+                            )}
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </section>
+
+        {/* FOOTER */}
+        <footer className="bg-brand-black border-t border-gray-800 pt-16 pb-8 text-sm">
+            <div className="container mx-auto px-4">
+                <div className="grid md:grid-cols-4 gap-12 mb-16">
+                    <div className="col-span-1 md:col-span-1">
+                        <div className="flex items-center gap-2 mb-6 text-white">
+                            {ICONS.career}
+                            <span className="text-xl font-bold tracking-wider">GREENNSEVEN</span>
+                        </div>
+                        <p className="text-gray-500 mb-6">
+                            {t.footer_desc}
+                        </p>
+                        <div className="flex gap-4">
+                            <a href="#" className="text-gray-500 hover:text-brand-green transition-colors">{ICONS.twitter}</a>
+                            <a href="#" className="text-gray-500 hover:text-brand-green transition-colors">{ICONS.instagram}</a>
+                            <a href="#" className="text-gray-500 hover:text-brand-green transition-colors">{ICONS.facebook}</a>
+                        </div>
                     </div>
-                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-10 md:col-span-2">
-                         <div>
-                            <h4 className="font-bold text-gray-900 dark:text-white text-lg tracking-wider">{t.landing.footer_company}</h4>
-                            <ul className="mt-6 space-y-4 text-base">
-                                <li><a href="#" onClick={(e) => {e.preventDefault(); openInfoModal('about')}} className="text-gray-600 dark:text-gray-400 hover:text-brand-green dark:hover:text-white transition-colors">{t.landing.footer_about}</a></li>
-                                <li><a href="#" onClick={(e) => {e.preventDefault(); openInfoModal('contact')}} className="text-gray-600 dark:text-gray-400 hover:text-brand-green dark:hover:text-white transition-colors">{t.landing.footer_contact}</a></li>
-                                <li><a href="#" onClick={(e) => {e.preventDefault(); openInfoModal('careers')}} className="text-gray-600 dark:text-gray-400 hover:text-brand-green dark:hover:text-white transition-colors">{t.landing.footer_careers}</a></li>
-                            </ul>
-                        </div>
-                         <div>
-                            <h4 className="font-bold text-gray-900 dark:text-white text-lg tracking-wider">{t.landing.footer_legal}</h4>
-                            <ul className="mt-6 space-y-4 text-base">
-                                <li><a href="#" onClick={(e) => {e.preventDefault(); openInfoModal('terms')}} className="text-gray-600 dark:text-gray-400 hover:text-brand-green dark:hover:text-white transition-colors">{t.landing.footer_terms}</a></li>
-                                <li><a href="#" onClick={(e) => {e.preventDefault(); openInfoModal('privacy')}} className="text-gray-600 dark:text-gray-400 hover:text-brand-green dark:hover:text-white transition-colors">{t.landing.footer_privacy}</a></li>
-                                <li><a href="#" onClick={(e) => {e.preventDefault(); openInfoModal('security')}} className="text-gray-600 dark:text-gray-400 hover:text-brand-green dark:hover:text-white transition-colors">{t.landing.footer_security}</a></li>
-                            </ul>
-                        </div>
+                    
+                    <div>
+                        <h4 className="font-bold text-white mb-6 uppercase tracking-wider">{t.footer_company}</h4>
+                        <ul className="space-y-3 text-gray-500">
+                            <li><button onClick={() => openModal('about')} className="hover:text-brand-green transition-colors">{t.footer_about}</button></li>
+                            <li><button onClick={() => openModal('contact')} className="hover:text-brand-green transition-colors">{t.footer_contact}</button></li>
+                            <li><button onClick={() => openModal('careers')} className="hover:text-brand-green transition-colors">{t.footer_careers}</button></li>
+                        </ul>
+                    </div>
+
+                    <div>
+                        <h4 className="font-bold text-white mb-6 uppercase tracking-wider">{t.footer_legal}</h4>
+                        <ul className="space-y-3 text-gray-500">
+                            <li><button onClick={() => openModal('terms')} className="hover:text-brand-green transition-colors">{t.footer_terms}</button></li>
+                            <li><button onClick={() => openModal('privacy')} className="hover:text-brand-green transition-colors">{t.footer_privacy}</button></li>
+                            <li><button onClick={() => openModal('security')} className="hover:text-brand-green transition-colors">{t.footer_security}</button></li>
+                        </ul>
+                    </div>
+
+                    <div>
+                        <h4 className="font-bold text-white mb-6 uppercase tracking-wider">{t.hero_cta}</h4>
+                        <p className="text-gray-500 mb-4">{t.modal_start_text}</p>
+                        <Button onClick={() => setView(View.Register)} fullWidth>{t.signup}</Button>
                     </div>
                 </div>
-                <div className="max-w-7xl mx-auto mt-16 pt-10 border-t border-gray-200 dark:border-gray-800 flex flex-col sm:flex-row justify-between items-center text-base">
-                    <p className="text-gray-500">&copy; 2025 GreennSeven. {t.landing.footer_rights}</p>
-                    <div className="flex gap-6 mt-6 sm:mt-0">
-                        <a href="#" className="text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">{React.cloneElement(ICONS.twitter, {className: "h-7 w-7"})}</a>
-                        <a href="https://www.instagram.com/greennseven?igsh=amhsM2N6MWw1MzIx" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">{React.cloneElement(ICONS.instagram, {className: "h-7 w-7"})}</a>
-                        <a href="#" className="text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">{React.cloneElement(ICONS.facebook, {className: "h-7 w-7"})}</a>
-                    </div>
+                
+                <div className="border-t border-gray-800 pt-8 text-center text-gray-600">
+                    <p>&copy; {new Date().getFullYear()} GreennSeven Invest. {t.footer_rights}</p>
                 </div>
-            </footer>
-        </div>
-    );
+            </div>
+        </footer>
+    </div>
+  );
 };
 
 export default HomePage;

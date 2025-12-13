@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import Card from '../../../../ui/Card';
 import { ICONS } from '../../../../../constants';
@@ -7,9 +6,10 @@ import type { Language } from '../../../../../types';
 
 interface FAQPageProps {
     language: Language;
+    setActiveView: (view: string) => void;
 }
 
-const FAQPage: React.FC<FAQPageProps> = ({ language }) => {
+const FAQPage: React.FC<FAQPageProps> = ({ language, setActiveView }) => {
     const [openIndex, setOpenIndex] = useState<number | null>(null);
     const t = TRANSLATIONS[language] || TRANSLATIONS['pt'];
 
@@ -60,10 +60,13 @@ const FAQPage: React.FC<FAQPageProps> = ({ language }) => {
                         <h4 className="text-brand-blue font-bold text-lg mb-1">Ainda tem dúvidas?</h4>
                         <p className="text-sm text-gray-300">Nossa equipe de suporte está pronta para te atender.</p>
                     </div>
-                    <div className="flex items-center gap-2 text-brand-blue font-bold bg-brand-blue/10 px-4 py-2 rounded-lg">
+                    <button 
+                        onClick={() => setActiveView('support')}
+                        className="flex items-center gap-2 text-brand-blue font-bold bg-brand-blue/10 px-4 py-2 rounded-lg hover:bg-brand-blue/20 transition-colors cursor-pointer"
+                    >
                         {ICONS.support}
                         <span>Fale no Chat</span>
-                    </div>
+                    </button>
                 </div>
             </Card>
         </div>
