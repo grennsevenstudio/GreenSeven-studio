@@ -537,7 +537,7 @@ const HomePage: React.FC<HomePageProps> = ({ setView, language, setLanguage }) =
                         </p>
                         <div className="flex gap-4">
                             <a href="#" className="text-gray-500 hover:text-brand-green transition-colors">{ICONS.twitter}</a>
-                            <a href="#" className="text-gray-500 hover:text-brand-green transition-colors">{ICONS.instagram}</a>
+                            <a href="https://www.instagram.com/greennseven?igsh=amhsM2N6MWw1MzIx" target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-brand-green transition-colors">{ICONS.instagram}</a>
                             <a href="#" className="text-gray-500 hover:text-brand-green transition-colors">{ICONS.facebook}</a>
                         </div>
                     </div>
