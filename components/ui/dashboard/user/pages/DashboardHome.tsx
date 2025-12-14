@@ -529,6 +529,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions, onAdd
     const [stocks, setStocks] = useState<Stock[]>(MOCK_STOCKS);
     const [isDepositModalOpen, setIsDepositModalOpen] = useState(false);
     const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
+    const [isBalanceVisible, setIsBalanceVisible] = useState(true);
     
     // Live Oscillation State
     const [liveData, setLiveData] = useState({
@@ -539,6 +540,9 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions, onAdd
     });
 
     const t = TRANSLATIONS[language] || TRANSLATIONS['pt'];
+
+    // Mask helper
+    const maskValue = (val: string) => isBalanceVisible ? val : '••••••';
 
     // Real-time calculation effect
     useEffect(() => {
@@ -640,7 +644,18 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions, onAdd
             {/* Header Section */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
-                    <h1 className="text-2xl sm:text-3xl font-bold">{t.financial_dashboard}</h1>
+                    <div className="flex items-center gap-3">
+                        <h1 className="text-2xl sm:text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-brand-green to-brand-blue">
+                            {t.financial_dashboard}
+                        </h1>
+                        <button 
+                            onClick={() => setIsBalanceVisible(!isBalanceVisible)}
+                            className="text-gray-400 hover:text-white transition-colors focus:outline-none"
+                            title={isBalanceVisible ? "Ocultar valores" : "Mostrar valores"}
+                        >
+                            {isBalanceVisible ? ICONS.eye : ICONS.eyeSlash}
+                        </button>
+                    </div>
                     <p className="text-gray-400 text-sm sm:text-base">{t.dashboard_subtitle}</p>
                 </div>
             </div>
@@ -649,21 +664,21 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions, onAdd
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                 <StatCard 
                     title={t.total_balance} 
-                    value={formatCurrency(user.capitalInvestedUSD, 'USD')} 
+                    value={maskValue(formatCurrency(user.capitalInvestedUSD, 'USD'))} 
                     icon={ICONS.dollar} 
                     subValue={t.locked_capital}
                     locked
                 />
                 <StatCard 
                     title={t.available_withdraw} 
-                    value={formatCurrency(dailyWithdrawableLive, 'USD')} 
+                    value={maskValue(formatCurrency(dailyWithdrawableLive, 'USD'))} 
                     icon={ICONS.withdraw} 
                     subValue={t.daily_yields}
                     highlight
                 />
                 <StatCard 
                     title={t.bonus_available} 
-                    value={formatCurrency(bonusBalance, 'USD')} 
+                    value={maskValue(formatCurrency(bonusBalance, 'USD'))} 
                     icon={ICONS.userPlus} 
                     subValue={t.bonus_desc}
                     highlight
@@ -672,12 +687,12 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions, onAdd
                     <div className="space-y-2">
                         <p className="text-gray-400 text-sm font-medium">{t.projected_profit} ({user.plan}):</p>
                         <p className="text-xl sm:text-2xl font-bold text-brand-green">
-                            +{formatCurrency(user.monthlyProfitUSD, 'USD')}
+                            {isBalanceVisible ? `+${formatCurrency(user.monthlyProfitUSD, 'USD')}` : '+ ••••••'}
                         </p>
                         <div className="h-px bg-gray-800 my-2"></div>
                         <p className="text-xs text-gray-500">{t.projection_30_days} (BRL):</p>
                         <p className="text-base sm:text-lg font-semibold text-gray-300">
-                            ≈ {formatCurrency(estimatedProfit30DaysBRL, 'BRL')}
+                            ≈ {maskValue(formatCurrency(estimatedProfit30DaysBRL, 'BRL'))}
                         </p>
                     </div>
                 </Card>
@@ -689,7 +704,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions, onAdd
                 <div>
                     <p className="text-gray-400 text-sm mb-1">{t.earnings_today} (Live)</p>
                     <p className="text-2xl sm:text-4xl font-black text-white tracking-tighter transition-all duration-300">
-                        {formatCurrency(earningsTicker, 'USD')}
+                        {maskValue(formatCurrency(earningsTicker, 'USD'))}
                     </p>
                 </div>
                 <div className="flex items-center gap-2 bg-brand-green/10 px-3 py-1.5 rounded-full border border-brand-green/20">
