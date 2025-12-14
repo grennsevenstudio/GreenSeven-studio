@@ -1,10 +1,12 @@
+
 import React, { useState, useMemo } from 'react';
 import Card from '../../../../ui/Card';
 import Button from '../../../../ui/Button';
 import Modal from '../../../../layout/Modal';
 import type { Transaction, User } from '../../../../../types';
 import { TransactionStatus, TransactionType } from '../../../../../types';
-import { REFERRAL_BONUS_RATES } from '../../../../../constants';
+import { REFERRAL_BONUS_RATES, ICONS } from '../../../../../constants';
+import Input from '../../../../ui/Input';
 
 interface BonusPayoutDetails {
     level: number;
@@ -31,6 +33,80 @@ const Toast: React.FC<{ message: string }> = ({ message }) => (
         `}</style>
     </div>
 );
+
+const WithdrawalReviewModal: React.FC<{
+    isOpen: boolean;
+    onClose: () => void;
+    onConfirm: () => void;
+    tx: Transaction;
+    user: User | undefined;
+}> = ({ isOpen, onClose, onConfirm, tx, user }) => {
+    if (!tx || !user) return null;
+
+    return (
+        <Modal isOpen={isOpen} onClose={onClose} title="Analisar Solicitação de Saque">
+            <div className="space-y-4">
+                <div className="bg-brand-black p-4 rounded-lg border border-gray-700 space-y-3">
+                    <div className="flex justify-between border-b border-gray-800 pb-2">
+                        <span className="text-gray-400">Solicitante:</span>
+                        <span className="text-white font-bold">{user.name}</span>
+                    </div>
+                    <div className="flex justify-between border-b border-gray-800 pb-2">
+                        <span className="text-gray-400">Valor Solicitado (USD):</span>
+                        <span className="text-white font-bold">$ {Math.abs(tx.amountUSD).toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between border-b border-gray-800 pb-2">
+                        <span className="text-gray-400">Valor a Transferir (BRL):</span>
+                        <span className="text-brand-green font-black text-lg">R$ {tx.amountBRL ? tx.amountBRL.toFixed(2) : '0.00'}</span>
+                    </div>
+                </div>
+
+                <div className="bg-brand-gray p-4 rounded-lg border border-gray-700">
+                    <h4 className="text-gray-400 text-xs font-bold uppercase mb-3">Dados para Transferência (PIX)</h4>
+                    {tx.withdrawalDetails ? (
+                        <div className="space-y-2 text-sm">
+                            <p><span className="text-gray-500">Nome:</span> <span className="text-white">{tx.withdrawalDetails.fullName}</span></p>
+                            <p><span className="text-gray-500">CPF:</span> <span className="text-white">{tx.withdrawalDetails.cpf}</span></p>
+                            <p><span className="text-gray-500">Banco:</span> <span className="text-white">{tx.withdrawalDetails.bank}</span></p>
+                            <div className="mt-2">
+                                <span className="text-gray-500 block mb-1">Chave PIX:</span>
+                                <div className="flex items-center gap-2 bg-black p-2 rounded border border-gray-800">
+                                    <code className="text-brand-green flex-1 break-all">{tx.withdrawalDetails.pixKey}</code>
+                                    <button 
+                                        className="text-gray-400 hover:text-white p-1"
+                                        title="Copiar Chave"
+                                        onClick={() => {
+                                            navigator.clipboard.writeText(tx.withdrawalDetails?.pixKey || '');
+                                            alert("Chave PIX copiada!");
+                                        }}
+                                    >
+                                        {ICONS.copy}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    ) : (
+                        <p className="text-red-500">Dados bancários não encontrados.</p>
+                    )}
+                </div>
+
+                <div className="bg-yellow-500/10 p-3 rounded border border-yellow-500/30">
+                    <p className="text-yellow-200 text-xs flex gap-2 items-start">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 flex-shrink-0 mt-0.5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                        </svg>
+                        <span>Confirme que realizou a transferência bancária <strong>ANTES</strong> de aprovar. A aprovação notificará o usuário de que o pagamento foi enviado.</span>
+                    </p>
+                </div>
+
+                <div className="flex justify-end gap-3 pt-2">
+                    <Button variant="ghost" onClick={onClose}>Cancelar</Button>
+                    <Button variant="primary" onClick={onConfirm}>Confirmar Transferência</Button>
+                </div>
+            </div>
+        </Modal>
+    );
+};
 
 const PayoutConfirmationModal: React.FC<{
     isOpen: boolean;
@@ -72,8 +148,9 @@ const TransactionRow: React.FC<{
     allUsers: User[],
     onUpdateTransaction: (transactionId: string, newStatus: TransactionStatus) => void
     onOpenPayoutModal: (tx: Transaction) => void;
+    onOpenWithdrawalModal: (tx: Transaction) => void;
     isBonusEligible: boolean;
-}> = ({ tx, allUsers, onUpdateTransaction, onOpenPayoutModal, isBonusEligible }) => {
+}> = ({ tx, allUsers, onUpdateTransaction, onOpenPayoutModal, onOpenWithdrawalModal, isBonusEligible }) => {
     const user = allUsers.find(u => u.id === tx.userId);
     const sourceUser = tx.sourceUserId ? allUsers.find(u => u.id === tx.sourceUserId) : null;
     const amountColor = tx.amountUSD > 0 ? 'text-brand-green' : 'text-red-500';
@@ -84,17 +161,28 @@ const TransactionRow: React.FC<{
         [TransactionStatus.Scheduled]: 'bg-blue-500/20 text-blue-400',
     };
 
+    const handleApprove = () => {
+        if (tx.type === TransactionType.Withdrawal) {
+            onOpenWithdrawalModal(tx);
+        } else {
+            onUpdateTransaction(tx.id, TransactionStatus.Completed);
+        }
+    };
+
     return (
         <tr className="border-b border-gray-800 hover:bg-brand-gray/50">
             <td className="p-4">
-                <p className="font-semibold">{user?.name || 'Usuário Desconhecido'}</p>
-                <p className="text-sm text-gray-500">{tx.id.slice(0, 8)}...</p>
+                <p className="font-semibold text-white">{user?.name || 'Usuário Desconhecido'}</p>
+                <p className="text-xs text-gray-500 font-mono">{tx.id.slice(0, 8)}...</p>
             </td>
-            <td className="p-4">{tx.date}</td>
-            <td className="p-4 font-medium">
-                {tx.type}
+            <td className="p-4 text-sm text-gray-400">{new Date(tx.date).toLocaleDateString('pt-BR')}</td>
+            <td className="p-4 font-medium text-sm text-gray-300">
+                {tx.type === TransactionType.Deposit ? 'Depósito' : 
+                 tx.type === TransactionType.Withdrawal ? 'Saque' : 
+                 tx.type === TransactionType.Bonus ? 'Bônus' : tx.type}
+                
                 {tx.type === TransactionType.Bonus && tx.referralLevel && (
-                    <span className="text-xs text-gray-400 block">
+                    <span className="text-[10px] text-gray-500 block mt-0.5">
                         Nível {tx.referralLevel} (de {sourceUser?.name || 'N/A'})
                     </span>
                 )}
@@ -104,32 +192,34 @@ const TransactionRow: React.FC<{
                     {tx.type === TransactionType.Deposit && tx.amountBRL ? `R$ ${tx.amountBRL.toFixed(2)}` : `US$ ${tx.amountUSD.toFixed(2)}`}
                 </p>
                 {tx.type === TransactionType.Withdrawal && tx.status === TransactionStatus.Pending && tx.amountBRL && (
-                    <p className="text-sm font-normal text-gray-300">Pagar: R$ {tx.amountBRL.toFixed(2)}</p>
+                    <p className="text-xs font-normal text-yellow-500 mt-1">Pagar: R$ {tx.amountBRL.toFixed(2)}</p>
                 )}
             </td>
             <td className="p-4 text-xs text-gray-400">
                 {tx.withdrawalDetails ? (
                     <div className="space-y-0.5">
-                        <p><strong>Nome:</strong> {tx.withdrawalDetails.fullName}</p>
-                        <p><strong>CPF:</strong> {tx.withdrawalDetails.cpf}</p>
-                        <p><strong>PIX:</strong> {tx.withdrawalDetails.pixKey}</p>
-                        <p><strong>Banco:</strong> {tx.withdrawalDetails.bank}</p>
+                        <p><span className="text-gray-600">PIX:</span> <span className="text-gray-300 select-all">{tx.withdrawalDetails.pixKey}</span></p>
+                        <p><span className="text-gray-600">Banco:</span> {tx.withdrawalDetails.bank}</p>
                     </div>
                 ) : 'N/A'}
             </td>
             <td className="p-4">
-                <span className={`px-2 py-1 text-xs font-semibold rounded-full ${statusColors[tx.status]}`}>{tx.status}</span>
+                <span className={`px-2 py-1 text-[10px] font-bold uppercase rounded-full ${statusColors[tx.status]}`}>{tx.status}</span>
             </td>
             <td className="p-4">
                 <div className="flex gap-2 items-center">
                     {tx.status === TransactionStatus.Pending && tx.type !== TransactionType.Bonus && (
                         <>
-                            <Button onClick={() => onUpdateTransaction(tx.id, TransactionStatus.Completed)} variant="ghost" className="px-2 py-1 text-sm text-brand-green hover:text-brand-green-light">Aprovar</Button>
-                            <Button onClick={() => onUpdateTransaction(tx.id, TransactionStatus.Failed)} variant="ghost" className="px-2 py-1 text-sm text-red-500 hover:text-red-400">Recusar</Button>
+                            <Button onClick={handleApprove} variant="ghost" className="px-2 py-1 text-xs bg-green-500/10 text-green-500 hover:bg-green-500/20 border border-green-500/30">
+                                {tx.type === TransactionType.Withdrawal ? 'Analisar' : 'Aprovar'}
+                            </Button>
+                            <Button onClick={() => onUpdateTransaction(tx.id, TransactionStatus.Failed)} variant="ghost" className="px-2 py-1 text-xs bg-red-500/10 text-red-500 hover:bg-red-500/20 border border-red-500/30">
+                                Recusar
+                            </Button>
                         </>
                     )}
                      {isBonusEligible && (
-                        <Button onClick={() => onOpenPayoutModal(tx)} variant="secondary" className="px-2 py-1 text-sm">Repassar Bônus</Button>
+                        <Button onClick={() => onOpenPayoutModal(tx)} variant="secondary" className="px-2 py-1 text-xs">Repassar Bônus</Button>
                     )}
                 </div>
             </td>
@@ -148,7 +238,13 @@ interface ManageTransactionsProps {
 
 const ManageTransactions: React.FC<ManageTransactionsProps> = ({ transactions, allUsers, onUpdateTransaction, onPayoutBonus, referralRates }) => {
     const [selectedTxForBonus, setSelectedTxForBonus] = useState<Transaction | null>(null);
+    const [selectedTxForWithdrawal, setSelectedTxForWithdrawal] = useState<Transaction | null>(null);
     const [toastMessage, setToastMessage] = useState<string | null>(null);
+    
+    // Filters State
+    const [statusFilter, setStatusFilter] = useState<'All' | TransactionStatus>('Pending'); // Default to Pending for better admin focus
+    const [typeFilter, setTypeFilter] = useState<'All' | TransactionType>('All');
+    const [searchTerm, setSearchTerm] = useState('');
 
     const activeReferralRates = referralRates || REFERRAL_BONUS_RATES;
 
@@ -203,8 +299,36 @@ const ManageTransactions: React.FC<ManageTransactionsProps> = ({ transactions, a
         setToastMessage(`Transação ${action} com sucesso!`);
         setTimeout(() => setToastMessage(null), 3000);
     };
+
+    const handleConfirmWithdrawal = () => {
+        if (selectedTxForWithdrawal) {
+            handleUpdateWithToast(selectedTxForWithdrawal.id, TransactionStatus.Completed);
+            setSelectedTxForWithdrawal(null);
+        }
+    };
     
     const sourceUserForModal = selectedTxForBonus ? allUsers.find(u => u.id === selectedTxForBonus.userId) : undefined;
+    const withdrawalUserForModal = selectedTxForWithdrawal ? allUsers.find(u => u.id === selectedTxForWithdrawal.userId) : undefined;
+
+    // Filter Logic
+    const filteredTransactions = useMemo(() => {
+        return transactions.filter(tx => {
+            const matchesStatus = statusFilter === 'All' || tx.status === statusFilter;
+            const matchesType = typeFilter === 'All' || tx.type === typeFilter;
+            
+            let matchesSearch = true;
+            if (searchTerm) {
+                const term = searchTerm.toLowerCase();
+                const user = allUsers.find(u => u.id === tx.userId);
+                matchesSearch = 
+                    (user?.name.toLowerCase().includes(term) || false) ||
+                    (user?.email.toLowerCase().includes(term) || false) ||
+                    tx.id.toLowerCase().includes(term);
+            }
+
+            return matchesStatus && matchesType && matchesSearch;
+        }).sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    }, [transactions, statusFilter, typeFilter, searchTerm, allUsers]);
 
     return (
         <>
@@ -219,11 +343,63 @@ const ManageTransactions: React.FC<ManageTransactionsProps> = ({ transactions, a
                 sourceUser={sourceUserForModal}
             />
         )}
+        {selectedTxForWithdrawal && (
+            <WithdrawalReviewModal
+                isOpen={!!selectedTxForWithdrawal}
+                onClose={() => setSelectedTxForWithdrawal(null)}
+                onConfirm={handleConfirmWithdrawal}
+                tx={selectedTxForWithdrawal}
+                user={withdrawalUserForModal}
+            />
+        )}
+
         <div className="space-y-8">
             <div>
                 <h1 className="text-3xl font-bold">Gestão de Transações</h1>
                 <p className="text-gray-400">Aprove transações, visualize detalhes e gerencie repasses de bônus.</p>
             </div>
+
+            {/* Filters */}
+            <Card className="p-4 bg-brand-black/20 border-gray-800">
+                <div className="flex flex-col md:flex-row gap-4">
+                    <div className="flex-1">
+                        <Input 
+                            label="Buscar" 
+                            id="search-admin-tx" 
+                            placeholder="Nome, Email ou ID..." 
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                    </div>
+                    <div className="w-full md:w-48">
+                        <label className="block text-sm font-medium text-gray-400 mb-1">Status</label>
+                        <select 
+                            className="w-full bg-brand-black border border-gray-700 rounded-lg py-3 px-3 text-white focus:outline-none focus:ring-2 focus:ring-brand-green"
+                            value={statusFilter}
+                            onChange={(e) => setStatusFilter(e.target.value as any)}
+                        >
+                            <option value="All">Todos</option>
+                            <option value={TransactionStatus.Pending}>Pendentes</option>
+                            <option value={TransactionStatus.Completed}>Concluídos</option>
+                            <option value={TransactionStatus.Failed}>Falharam</option>
+                        </select>
+                    </div>
+                    <div className="w-full md:w-48">
+                        <label className="block text-sm font-medium text-gray-400 mb-1">Tipo</label>
+                        <select 
+                            className="w-full bg-brand-black border border-gray-700 rounded-lg py-3 px-3 text-white focus:outline-none focus:ring-2 focus:ring-brand-green"
+                            value={typeFilter}
+                            onChange={(e) => setTypeFilter(e.target.value as any)}
+                        >
+                            <option value="All">Todos</option>
+                            <option value={TransactionType.Deposit}>Depósitos</option>
+                            <option value={TransactionType.Withdrawal}>Saques</option>
+                            <option value={TransactionType.Bonus}>Bônus</option>
+                        </select>
+                    </div>
+                </div>
+            </Card>
+
             <Card>
                 <div className="overflow-x-auto">
                     <table className="w-full text-left">
@@ -233,22 +409,31 @@ const ManageTransactions: React.FC<ManageTransactionsProps> = ({ transactions, a
                                 <th className="p-4">Data</th>
                                 <th className="p-4">Tipo</th>
                                 <th className="p-4">Valor</th>
-                                <th className="p-4">Detalhes de Pagamento</th>
+                                <th className="p-4">Detalhes</th>
                                 <th className="p-4">Status</th>
                                 <th className="p-4">Ações</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {transactions.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(tx => (
-                                <TransactionRow 
-                                    key={tx.id} 
-                                    tx={tx}
-                                    allUsers={allUsers}
-                                    onUpdateTransaction={handleUpdateWithToast} 
-                                    onOpenPayoutModal={setSelectedTxForBonus}
-                                    isBonusEligible={isTxBonusEligible(tx, transactions)}
-                                />
-                            ))}
+                            {filteredTransactions.length > 0 ? (
+                                filteredTransactions.map(tx => (
+                                    <TransactionRow 
+                                        key={tx.id} 
+                                        tx={tx}
+                                        allUsers={allUsers}
+                                        onUpdateTransaction={handleUpdateWithToast} 
+                                        onOpenPayoutModal={setSelectedTxForBonus}
+                                        onOpenWithdrawalModal={setSelectedTxForWithdrawal}
+                                        isBonusEligible={isTxBonusEligible(tx, transactions)}
+                                    />
+                                ))
+                            ) : (
+                                <tr>
+                                    <td colSpan={7} className="p-8 text-center text-gray-500">
+                                        Nenhuma transação encontrada com os filtros atuais.
+                                    </td>
+                                </tr>
+                            )}
                         </tbody>
                     </table>
                 </div>
