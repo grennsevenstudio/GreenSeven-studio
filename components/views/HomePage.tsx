@@ -28,6 +28,11 @@ const HomePage: React.FC<HomePageProps> = ({ setView, language, setLanguage }) =
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
   const [scrolled, setScrolled] = useState(false);
 
+  // Newsletter state
+  const [newsletterEmail, setNewsletterEmail] = useState('');
+  const [isSubmittingNewsletter, setIsSubmittingNewsletter] = useState(false);
+  const [newsletterSuccess, setNewsletterSuccess] = useState(false);
+
   const t = TRANSLATIONS[language].landing;
   const faqList = TRANSLATIONS[language].faq;
 
@@ -51,6 +56,28 @@ const HomePage: React.FC<HomePageProps> = ({ setView, language, setLanguage }) =
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
+
+  const handleNewsletterSubmit = () => {
+    if (!newsletterEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newsletterEmail)) {
+        // Visual feedback for invalid email
+        const input = document.getElementById('newsletter-input');
+        if(input) {
+            input.classList.add('border-red-500');
+            setTimeout(() => input.classList.remove('border-red-500'), 2000);
+        }
+        return;
+    }
+
+    setIsSubmittingNewsletter(true);
+    
+    // Simulate API call
+    setTimeout(() => {
+        setIsSubmittingNewsletter(false);
+        setNewsletterSuccess(true);
+        setNewsletterEmail('');
+        setTimeout(() => setNewsletterSuccess(false), 5000);
+    }, 1500);
+  };
 
   const navItems = [
     { name: t.nav_home, href: '#home', action: () => window.scrollTo({ top: 0, behavior: 'smooth' }) },
@@ -536,9 +563,28 @@ const HomePage: React.FC<HomePageProps> = ({ setView, language, setLanguage }) =
                     <div>
                         <h4 className="font-bold text-white mb-6 uppercase tracking-wider text-xs">Newsletter</h4>
                         <div className="flex gap-2">
-                            <input type="email" placeholder="Email" className="bg-[#111] border border-white/10 rounded px-3 py-2 w-full focus:outline-none focus:border-brand-green text-white placeholder-gray-600 transition-colors" />
-                            <Button className="px-4 py-2 bg-brand-green text-black font-bold">OK</Button>
+                            <input 
+                                id="newsletter-input"
+                                type="email" 
+                                placeholder="Email" 
+                                className="bg-[#111] border border-white/10 rounded px-3 py-2 w-full focus:outline-none focus:border-brand-green text-white placeholder-gray-600 transition-colors" 
+                                value={newsletterEmail}
+                                onChange={(e) => setNewsletterEmail(e.target.value)}
+                                disabled={isSubmittingNewsletter}
+                            />
+                            <Button 
+                                className="px-4 py-2 bg-brand-green text-black font-bold"
+                                onClick={handleNewsletterSubmit}
+                                isLoading={isSubmittingNewsletter}
+                            >
+                                OK
+                            </Button>
                         </div>
+                        {newsletterSuccess && (
+                            <p className="text-brand-green text-xs mt-2 animate-fade-in font-medium">
+                                ✓ Obrigado! Enviamos um guia exclusivo sobre a GreennSeven para seu e-mail.
+                            </p>
+                        )}
                     </div>
                 </div>
                 

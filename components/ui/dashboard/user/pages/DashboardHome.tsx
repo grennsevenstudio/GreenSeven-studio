@@ -1,16 +1,14 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import type { User, Transaction, WithdrawalDetails, Stock, Language } from '../../../../../types';
+import type { User, Transaction, WithdrawalDetails, Stock, Language, PlatformSettings } from '../../../../../types';
 import { TransactionType, TransactionStatus } from '../../../../../types';
 import Card from '../../../../ui/Card';
 import Button from '../../../../ui/Button';
 import Input from '../../../../ui/Input';
 import Modal from '../../../../layout/Modal';
-import { ICONS, DOLLAR_RATE, MOCK_STOCKS, INVESTMENT_PLANS } from '../../../../../constants';
+import { ICONS, MOCK_STOCKS, INVESTMENT_PLANS } from '../../../../../constants';
 import { TRANSLATIONS } from '../../../../../lib/translations';
 import { formatCurrency } from '../../../../../lib/utils';
-
-const WITHDRAWAL_FEE_PERCENT = 0;
 
 interface DashboardHomeProps {
     user: User;
@@ -20,6 +18,7 @@ interface DashboardHomeProps {
     language: Language;
     onRefreshData?: () => Promise<void>;
     onUpdateUser?: (user: User) => void;
+    platformSettings: PlatformSettings;
 }
 
 // --- SUB-COMPONENTS ---
@@ -87,22 +86,24 @@ const DepositModalContent: React.FC<{
     user: User;
     onClose: () => void;
     onAddTransaction: (newTransaction: Omit<Transaction, 'id' | 'date' | 'bonusPayoutHandled'>) => void;
-}> = ({ user, onClose, onAddTransaction }) => {
+    platformSettings: PlatformSettings;
+}> = ({ user, onClose, onAddTransaction, platformSettings }) => {
     const [step, setStep] = useState(1);
     const [amountBRL, setAmountBRL] = useState('');
     const [pixKey, setPixKey] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     
+    const dollarRate = platformSettings.dollarRate || 5.50;
+    const adminPixKey = platformSettings.pixKey || "chave-nao-configurada";
     const beneficiaryName = "GREENNSEVEN TECNOLOGIA LTDA";
     const cnpj = "40.840.653/0001-01";
-    const staticPixKey = "00020126580014br.gov.bcb.pix013640b383be-3df8-4bc2-88a5-be6c7b0a55a05204000053039865802BR5925GREENNSEVEN TECNOLOGIA LTDA6009SAO PAULO62070503***6304B3A8";
 
     const handleGeneratePix = (e: React.FormEvent) => {
         e.preventDefault();
         if (parseFloat(amountBRL) > 0) {
             setIsLoading(true);
             setTimeout(() => {
-                setPixKey(staticPixKey);
+                setPixKey(adminPixKey); // Use dynamic key from settings
                 setStep(2);
                 setIsLoading(false);
             }, 1500);
@@ -113,7 +114,7 @@ const DepositModalContent: React.FC<{
         setIsLoading(true);
         setTimeout(() => {
             const brl = parseFloat(amountBRL);
-            const usd = brl / DOLLAR_RATE;
+            const usd = brl / dollarRate;
             onAddTransaction({
                 userId: user.id,
                 type: TransactionType.Deposit,
@@ -187,8 +188,8 @@ const DepositModalContent: React.FC<{
                 step="0.01"
             />
             <p className="text-sm text-gray-400">
-                Valor estimado em dólar (cotação {formatCurrency(DOLLAR_RATE, 'BRL')}): 
-                <span className="font-bold text-white"> {amountBRL ? formatCurrency(parseFloat(amountBRL) / DOLLAR_RATE, 'USD') : formatCurrency(0, 'USD')}</span>
+                Valor estimado em dólar (cotação {formatCurrency(dollarRate, 'BRL')}): 
+                <span className="font-bold text-white"> {amountBRL ? formatCurrency(parseFloat(amountBRL) / dollarRate, 'USD') : formatCurrency(0, 'USD')}</span>
             </p>
             <div className="pt-2">
                 <Button type="submit" fullWidth isLoading={isLoading}>Gerar Chave PIX</Button>
@@ -203,7 +204,8 @@ const WithdrawModalContent: React.FC<{
     onAddTransaction: (newTransaction: Omit<Transaction, 'id' | 'date' | 'bonusPayoutHandled'>, userUpdate?: Partial<User>) => void;
     setActiveView: (view: string) => void;
     currentLiveProfit: number;
-}> = ({ user, onClose, onAddTransaction, setActiveView, currentLiveProfit }) => {
+    platformSettings: PlatformSettings;
+}> = ({ user, onClose, onAddTransaction, setActiveView, currentLiveProfit, platformSettings }) => {
     const [step, setStep] = useState(1);
     const [amountUSD, setAmountUSD] = useState('');
     const [pin, setPin] = useState('');
@@ -213,9 +215,12 @@ const WithdrawModalContent: React.FC<{
     const [isLoading, setIsLoading] = useState(false);
     const [withdrawalSource, setWithdrawalSource] = useState<'yield' | 'bonus'>('yield');
 
-    const fee = (parseFloat(amountUSD) || 0) * (WITHDRAWAL_FEE_PERCENT / 100);
+    const withdrawalFeePercent = platformSettings.withdrawalFeePercent || 0;
+    const dollarRate = platformSettings.dollarRate || 5.50;
+
+    const fee = (parseFloat(amountUSD) || 0) * (withdrawalFeePercent / 100);
     const amountToReceiveUSD = (parseFloat(amountUSD) || 0) - fee;
-    const amountToReceiveBRL = amountToReceiveUSD * DOLLAR_RATE;
+    const amountToReceiveBRL = amountToReceiveUSD * dollarRate;
     
     // For Yield, we use the LIVE calculated total (db + generated since last update)
     const availableBalance = withdrawalSource === 'yield' 
@@ -411,7 +416,7 @@ const WithdrawModalContent: React.FC<{
 
             <div className="bg-brand-gray/50 rounded-xl p-4 border border-gray-800 space-y-3">
                 <div className="flex justify-between text-sm text-gray-400">
-                    <span>Taxa ({WITHDRAWAL_FEE_PERCENT}%):</span>
+                    <span>Taxa ({withdrawalFeePercent}%):</span>
                     <span className="text-red-400">- {formatCurrency(fee, 'USD')}</span>
                 </div>
                 <div className="h-px bg-gray-700"></div>
@@ -419,7 +424,7 @@ const WithdrawModalContent: React.FC<{
                     <span className="text-sm font-medium text-white">Você recebe (PIX):</span>
                     <span className="text-xl font-bold text-brand-green">{formatCurrency(amountToReceiveBRL, 'BRL')}</span>
                 </div>
-                <p className="text-[10px] text-gray-500 text-right">Cotação: {formatCurrency(DOLLAR_RATE, 'BRL')}</p>
+                <p className="text-[10px] text-gray-500 text-right">Cotação: {formatCurrency(dollarRate, 'BRL')}</p>
             </div>
 
             <div className="flex gap-2 text-[10px] text-gray-400 bg-black/20 p-2 rounded-lg">
@@ -525,12 +530,14 @@ const StockTickerItem: React.FC<{ stock: Stock }> = ({ stock }) => {
     );
 };
 
-const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions, onAddTransaction, setActiveView, language, onRefreshData }) => {
+const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions, onAddTransaction, setActiveView, language, onRefreshData, platformSettings }) => {
     const [stocks, setStocks] = useState<Stock[]>(MOCK_STOCKS);
     const [isDepositModalOpen, setIsDepositModalOpen] = useState(false);
     const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
     const [isBalanceVisible, setIsBalanceVisible] = useState(true);
     
+    const dollarRate = platformSettings.dollarRate || 5.50;
+
     // Live Oscillation State
     const [liveData, setLiveData] = useState({
         daily: user.dailyWithdrawableUSD,
@@ -610,7 +617,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions, onAdd
 
     // Estimate next 30 days profit
     const currentPlanObj = INVESTMENT_PLANS.find(p => p.name === user.plan) || INVESTMENT_PLANS[0];
-    const estimatedProfit30DaysBRL = (user.capitalInvestedUSD * currentPlanObj.returnRate) * DOLLAR_RATE;
+    const estimatedProfit30DaysBRL = (user.capitalInvestedUSD * currentPlanObj.returnRate) * dollarRate;
 
     const bonusBalance = liveData.bonus; 
     const dailyWithdrawableLive = liveData.combinedDaily; // This is the total available for withdrawal
@@ -628,7 +635,12 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions, onAdd
             `}</style>
 
             <Modal isOpen={isDepositModalOpen} onClose={() => setIsDepositModalOpen(false)} title="Realizar Depósito">
-                <DepositModalContent user={user} onClose={() => setIsDepositModalOpen(false)} onAddTransaction={onAddTransaction} />
+                <DepositModalContent 
+                    user={user} 
+                    onClose={() => setIsDepositModalOpen(false)} 
+                    onAddTransaction={onAddTransaction} 
+                    platformSettings={platformSettings}
+                />
             </Modal>
 
             <Modal isOpen={isWithdrawModalOpen} onClose={() => setIsWithdrawModalOpen(false)} title="Solicitar Saque">
@@ -638,6 +650,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions, onAdd
                     onAddTransaction={onAddTransaction} 
                     setActiveView={setActiveView} 
                     currentLiveProfit={dailyWithdrawableLive}
+                    platformSettings={platformSettings}
                 />
             </Modal>
 

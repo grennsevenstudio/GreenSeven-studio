@@ -31,6 +31,7 @@ import RegisterPage, { type ExtendedRegisterData } from './components/views/Regi
 import ForgotPasswordPage from './components/views/ForgotPasswordPage';
 import UserDashboard from './components/ui/dashboard/user/UserDashboard';
 import AdminDashboard from './components/ui/dashboard/admin/AdminDashboard';
+import MaintenancePage from './components/views/MaintenancePage';
 
 // Initialize local storage cleanup
 initializeDB();
@@ -270,11 +271,11 @@ const App: React.FC = () => {
           avatarUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(data.name)}&background=00FF9C&color=000`,
           rank: InvestorRank.Bronze,
           plan: 'Conservador',
-          balanceUSD: 0,
+          balanceUSD: dbState.platformSettings.signupBonusUSD || 0,
           capitalInvestedUSD: 0,
           monthlyProfitUSD: 0,
           dailyWithdrawableUSD: 0,
-          bonusBalanceUSD: 0,
+          bonusBalanceUSD: dbState.platformSettings.signupBonusUSD || 0, // Bonus goes to bonus wallet or direct balance? Usually Bonus Wallet.
           isAdmin: false,
           joinedDate: new Date().toISOString(),
           lastProfitUpdate: new Date().toISOString(),
@@ -730,6 +731,14 @@ const App: React.FC = () => {
   // Admin User Helper
   const adminUser = dbState.users.find(u => u.isAdmin);
 
+  // Maintenance Mode Logic
+  if (dbState.platformSettings.isMaintenanceMode) {
+      // Allow access only to admin
+      if (!loggedUser || !loggedUser.isAdmin) {
+          return <MaintenancePage endTime={dbState.platformSettings.maintenanceEndTime} />;
+      }
+  }
+
   return (
     <>
       {view === View.Home && <HomePage setView={setView} language={language} setLanguage={handleSetLanguage} />}
@@ -762,6 +771,7 @@ const App: React.FC = () => {
           onRefreshData={loadRemoteData}
           investmentPlans={dbState.investmentPlans}
           syncStatus={syncStatus}
+          platformSettings={dbState.platformSettings}
         />
       )}
       

@@ -1,3 +1,4 @@
+
 import { faker } from '@faker-js/faker';
 import {
   type User,
@@ -110,6 +111,7 @@ export const initializeDB = () => {
     signupBonusUSD: 10,
     pixKey: 'seu-cnpj-ou-chave-aleatoria',
     isMaintenanceMode: false,
+    maintenanceEndTime: undefined,
     allowNewRegistrations: true,
     logoUrl: '',
   };

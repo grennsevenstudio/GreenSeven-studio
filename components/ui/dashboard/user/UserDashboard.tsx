@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import type { User, Transaction, Notification, ChatMessage, InvestmentPlan, Language, SyncStatus } from '../../../../types';
+import type { User, Transaction, Notification, ChatMessage, InvestmentPlan, Language, SyncStatus, PlatformSettings } from '../../../../types';
 import Sidebar from '../../../layout/Sidebar';
 import Header from '../../../layout/Header';
 import BottomNavBar from '../../../layout/BottomNavBar';
@@ -37,6 +37,7 @@ interface UserDashboardProps {
   onRefreshData: () => Promise<void>;
   investmentPlans: InvestmentPlan[];
   syncStatus: SyncStatus;
+  platformSettings: PlatformSettings;
 }
 
 const UserDashboard: React.FC<UserDashboardProps> = (props) => {
@@ -60,7 +61,8 @@ const UserDashboard: React.FC<UserDashboardProps> = (props) => {
     setLanguage,
     onRefreshData,
     investmentPlans,
-    syncStatus
+    syncStatus,
+    platformSettings
   } = props;
 
   const [activeView, setActiveView] = useState('dashboard');
@@ -89,6 +91,7 @@ const UserDashboard: React.FC<UserDashboardProps> = (props) => {
             setActiveView={setActiveView}
             language={language}
             onRefreshData={onRefreshData}
+            platformSettings={platformSettings}
           />
         );
       case 'transactions':
@@ -134,6 +137,7 @@ const UserDashboard: React.FC<UserDashboardProps> = (props) => {
             setActiveView={setActiveView}
             language={language}
             onRefreshData={onRefreshData}
+            platformSettings={platformSettings}
           />
         );
     }

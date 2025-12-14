@@ -159,11 +159,13 @@ CREATE TABLE IF NOT EXISTS public.platform_settings (
     signup_bonus_usd NUMERIC,
     pix_key TEXT,
     is_maintenance_mode BOOLEAN,
+    maintenance_end_time TEXT, -- Stores timestamp for maintenance end
     allow_new_registrations BOOLEAN,
     logo_url TEXT,
     updated_at TIMESTAMPTZ DEFAULT now()
 );
 ALTER TABLE public.platform_settings ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT now();
+ALTER TABLE public.platform_settings ADD COLUMN IF NOT EXISTS maintenance_end_time TEXT;
 
 -- 7. TABELA DE LOGS DE ADMINISTRAÇÃO (admin_logs)
 CREATE TABLE IF NOT EXISTS public.admin_logs (
@@ -273,10 +275,19 @@ INSERT INTO public.users (
     };
 
     const handleToggleChange = (id: keyof PlatformSettings, checked: boolean) => {
-        setSettings(prev => ({
-            ...prev,
-            [id]: checked,
-        }));
+        setSettings(prev => {
+            const updated = { ...prev, [id]: checked };
+            // If maintenance mode is toggled ON, set 7-hour timer
+            if (id === 'isMaintenanceMode' && checked) {
+                const now = new Date();
+                const sevenHoursLater = new Date(now.getTime() + (7 * 60 * 60 * 1000));
+                updated.maintenanceEndTime = sevenHoursLater.toISOString();
+            } else if (id === 'isMaintenanceMode' && !checked) {
+                // If toggled OFF, clear timer
+                updated.maintenanceEndTime = undefined;
+            }
+            return updated;
+        });
     };
     
     const handleSubmit = (e: React.FormEvent) => {

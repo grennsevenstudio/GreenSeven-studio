@@ -1,3 +1,4 @@
+
 import React, { useMemo, useState, useEffect } from 'react';
 import type { User, Transaction, Language } from '../../../../../types';
 import { TransactionStatus, TransactionType, InvestorRank } from '../../../../../types';
@@ -137,14 +138,20 @@ const CareerPlan: React.FC<CareerPlanProps> = ({ user, allUsers = [], allTransac
     // Effect to detect new bonuses and animate
     useEffect(() => {
         if (bonusHistory.length > prevBonusCount) {
-            // In a real app, we might show a confetti or specific toast here
             setPrevBonusCount(bonusHistory.length);
         }
     }, [bonusHistory.length, prevBonusCount]);
 
+    const referralLink = `https://www.greenseven.online/register?ref=${referralCode}`;
+
     const copyCode = () => {
         navigator.clipboard.writeText(referralCode);
         alert('Código copiado para a área de transferência!');
+    };
+
+    const copyLink = () => {
+        navigator.clipboard.writeText(referralLink);
+        alert('Link de cadastro copiado para a área de transferência!');
     };
 
     return (
@@ -208,9 +215,29 @@ const CareerPlan: React.FC<CareerPlanProps> = ({ user, allUsers = [], allTransac
                             <div className="bg-gray-900/80 p-4 rounded-lg border border-gray-700 text-center mb-4">
                                 <p className="text-3xl font-mono font-black text-brand-green tracking-widest">{referralCode}</p>
                             </div>
-                            <Button onClick={copyCode} fullWidth variant="primary">
-                                {ICONS.copy} {t.copy_code}
-                            </Button>
+                            
+                            <div className="space-y-3">
+                                <Button onClick={copyCode} fullWidth variant="primary">
+                                    {ICONS.copy} {t.copy_code}
+                                </Button>
+                                <Button onClick={copyLink} fullWidth variant="secondary" className="text-sm bg-gray-800 hover:bg-gray-700 border-gray-600 text-white">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                                    </svg>
+                                    Copiar Link de Cadastro
+                                </Button>
+                            </div>
+                            
+                            <div className="mt-4 text-center">
+                                <a 
+                                    href={referralLink} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer" 
+                                    className="text-[10px] text-gray-500 break-all hover:text-brand-green transition-colors underline decoration-dotted"
+                                >
+                                    {referralLink}
+                                </a>
+                            </div>
                         </div>
                     </div>
 

@@ -1,5 +1,4 @@
 
-
 export enum View {
   Home,
   Login,
@@ -158,6 +157,7 @@ export interface PlatformSettings {
     signupBonusUSD: number;
     pixKey: string;
     isMaintenanceMode: boolean;
+    maintenanceEndTime?: string; // ISO Date string for when maintenance ends
     allowNewRegistrations: boolean;
     logoUrl: string;
 }

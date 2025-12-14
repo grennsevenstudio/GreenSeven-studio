@@ -1,3 +1,4 @@
+
 import { createClient } from '@supabase/supabase-js';
 import type { User, Transaction, ChatMessage, PlatformSettings, AdminActionLog, Notification, InvestmentPlan } from '../types';
 import { InvestorRank } from '../types';
@@ -275,6 +276,7 @@ export const fetchSettingsFromSupabase = async () => {
             signupBonusUSD: Number(data.signup_bonus_usd),
             pixKey: data.pix_key,
             isMaintenanceMode: data.is_maintenance_mode,
+            maintenanceEndTime: data.maintenance_end_time, // Ensure this field is mapped
             allowNewRegistrations: data.allow_new_registrations,
             logoUrl: data.logo_url
         };
@@ -441,6 +443,7 @@ export const syncSettingsToSupabase = async (settings: PlatformSettings) => {
             signup_bonus_usd: settings.signupBonusUSD,
             pix_key: settings.pixKey,
             is_maintenance_mode: settings.isMaintenanceMode,
+            maintenance_end_time: settings.maintenanceEndTime,
             allow_new_registrations: settings.allowNewRegistrations,
             logo_url: settings.logoUrl
         };
