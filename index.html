@@ -7,7 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
     <script>
       tailwind.config = {
         darkMode: 'class',
@@ -17,23 +17,25 @@
               sans: ['Inter', 'sans-serif'],
             },
             colors: {
-              'brand-black': '#000000',
-              'brand-gray': '#111111',
+              'brand-black': '#050505', // Deep rich black
+              'brand-gray': '#121212', // Slightly lighter for cards
+              'brand-surface': '#1E1E1E',
               'brand-green': {
                 'DEFAULT': '#00FF9C',
-                'light': '#4DFFB8',
-                'dark': '#00E68A',
+                'dim': 'rgba(0, 255, 156, 0.1)',
+                'glow': 'rgba(0, 255, 156, 0.5)',
               },
               'brand-blue': {
                 'DEFAULT': '#00B2FF',
-                'light': '#4DC9FF',
-                'dark': '#0099E6',
+                'dim': 'rgba(0, 178, 255, 0.1)',
               },
             },
             animation: {
               'gradient-x': 'gradient-x 5s ease infinite',
               'marquee': 'marquee 40s linear infinite',
               'text-gradient': 'text-gradient 3s ease infinite',
+              'float': 'float 6s ease-in-out infinite',
+              'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
             },
             keyframes: {
               'gradient-x': {
@@ -58,6 +60,10 @@
                   'background-position': '100% 50%',
                 },
               },
+              'float': {
+                '0%, 100%': { transform: 'translateY(0)' },
+                '50%': { transform: 'translateY(-20px)' },
+              }
             },
           },
         },
@@ -76,7 +82,7 @@
 }
 </script>
 </head>
-  <body class="bg-gray-50 text-gray-900 dark:bg-brand-black dark:text-gray-100 transition-colors duration-300 overflow-x-hidden w-full">
+  <body class="bg-brand-black text-gray-100 transition-colors duration-300 overflow-x-hidden w-full selection:bg-brand-green selection:text-black">
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
   </body>
