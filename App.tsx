@@ -51,17 +51,27 @@ const calculateProfit = (investedCapital: number, planName: string = 'Conservado
 };
 
 const App: React.FC = () => {
+  // Initialize state synchronously from LocalStorage to prevent login flash
+  const initialLocalData = getAllData();
+
   const [dbState, setDbState] = useState<AppDB>({
-      users: [],
-      transactions: [],
-      chatMessages: [],
-      notifications: [],
-      adminActionLogs: [],
-      platformSettings: {} as any,
-      investmentPlans: DEFAULT_PLANS
+      users: initialLocalData.users || [],
+      transactions: initialLocalData.transactions || [],
+      chatMessages: initialLocalData.chatMessages || [],
+      notifications: initialLocalData.notifications || [],
+      adminActionLogs: initialLocalData.adminActionLogs || [],
+      platformSettings: initialLocalData.platformSettings || {} as any,
+      investmentPlans: initialLocalData.investmentPlans || DEFAULT_PLANS
   });
 
-  const [loggedUser, setLoggedUser] = useState<User | null>(null);
+  const [loggedUser, setLoggedUser] = useState<User | null>(() => {
+      const storedUserId = getSessionUser();
+      if (storedUserId && initialLocalData.users) {
+          return initialLocalData.users.find(u => u.id === storedUserId) || null;
+      }
+      return null;
+  });
+
   const [isLoading, setIsLoading] = useState(true);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('idle');
 
@@ -73,9 +83,8 @@ const App: React.FC = () => {
       
       // Check for session immediately to prevent flash
       const storedUserId = getSessionUser();
-      if (storedUserId) {
-          const localData = getAllData();
-          const user = localData.users.find(u => u.id === storedUserId);
+      if (storedUserId && initialLocalData.users) {
+          const user = initialLocalData.users.find(u => u.id === storedUserId);
           if (user) {
               return user.isAdmin ? View.AdminDashboard : View.UserDashboard;
           }
@@ -217,14 +226,14 @@ const App: React.FC = () => {
         
         saveAllData(dbState);
 
-        // Session Restoration
+        // Session Restoration - Check again to ensure sync if remote data changed roles/status
         const storedUserId = getSessionUser();
-        if (storedUserId && (remoteUsers || localData.users)) {
+        if (storedUserId) {
             const users = remoteUsers || localData.users;
             const user = users.find((u: User) => u.id === storedUserId);
             if (user) {
                 setLoggedUser(user);
-                // Ensure view is consistent with user role
+                // Ensure view is consistent with user role (e.g. if promoted to admin while offline)
                 if (view === View.Home || view === View.Login) {
                     setView(user.isAdmin ? View.AdminDashboard : View.UserDashboard);
                 }
