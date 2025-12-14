@@ -232,7 +232,7 @@ export const TRANSLATIONS = {
         modal_adv_2_desc: 'Tenha ativos na moeda mais utilizada e confiável do comércio global.',
         modal_adv_3_title: 'Diversificação Inteligente',
         modal_adv_3_desc: 'Não dependa apenas da economia do seu país. A GreennSeven conecta você ao mercado global.',
-        modal_start_text: 'Comece com apenas US$ 10,00 e veja seu dinheiro render em moeda forte.',
+        modal_start_text: 'Comece com apenas US$ 8,70 e veja seu dinheiro render em moeda forte.',
         modal_cta: 'Começar a Investir Agora',
     },
     faq: [
@@ -240,7 +240,7 @@ export const TRANSLATIONS = {
         { q: "O QUE É A DOLARIZAÇÃO DE CAPITAL?", a: "Dolarizar significa converter seu saldo em Reais para Dólares no momento do depósito. Isso blinda seu dinheiro contra a desvalorização do Real." },
         { q: "COMO FUNCIONAM OS DEPÓSITOS E SAQUES?", a: "Depósitos são feitos instantáneamente via PIX (24 horas). Para sacar, convertimos seus dólares de volta para Reais e enviamos para sua chave PIX. O Capital Principal fica bloqueado por 30 dias, mas os rendimentos diários podem ser sacados das 08:00 às 18:00." },
         { q: "A PLATAFORMA É SEGURA?", a: "Sim. Utilizamos criptografia de ponta (AES-256) e operamos com 'Cold Wallets' para custódia segura dos ativos." },
-        { q: "QUAL O VALOR MÍNIMO PARA COMEÇAR?", a: "Você pode começar a investir com o plano Conservador a partir de apenas US$ 10,00." }
+        { q: "QUAL O VALOR MÍNIMO PARA COMEÇAR?", a: "Você pode começar a investir com o plano Conservador a partir de apenas US$ 8,70." }
     ]
   },
   en: {
@@ -445,7 +445,7 @@ export const TRANSLATIONS = {
         modal_adv_2_desc: 'Hold assets in the most used and trusted currency in global trade.',
         modal_adv_3_title: 'Smart Diversification',
         modal_adv_3_desc: 'Don\'t rely solely on your country\'s economy. GreennSeven connects you to the global market.',
-        modal_start_text: 'Start with just $10.00 USD and watch your money grow in a strong currency.',
+        modal_start_text: 'Start with just $8.70 USD and watch your money grow in a strong currency.',
         modal_cta: 'Start Investing Now',
     },
     faq: [
@@ -453,7 +453,7 @@ export const TRANSLATIONS = {
         { q: "WHAT IS CAPITAL DOLLARIZATION?", a: "Dollarization means converting your balance from local currency to Dollars at the time of deposit. This shields your money against devaluation." },
         { q: "HOW DO DEPOSITS AND WITHDRAWALS WORK?", a: "Deposits are made instantly via PIX (24/7). To withdraw, we convert your dollars back to local currency and send it to your PIX key. Principal Capital is locked for 30 days, but daily yields can be withdrawn between 08:00 and 18:00." },
         { q: "IS THE PLATFORM SECURE?", a: "Yes. We use top-tier encryption (AES-256) and operate with 'Cold Wallets' for secure asset custody." },
-        { q: "WHAT IS THE MINIMUM AMOUNT TO START?", a: "You can start investing with the Conservative plan starting from just $10.00 USD." }
+        { q: "WHAT IS THE MINIMUM AMOUNT TO START?", a: "You can start investing with the Conservative plan starting from just $8.70 USD." }
     ]
   },
   es: {
@@ -658,7 +658,7 @@ export const TRANSLATIONS = {
         modal_adv_2_desc: 'Ten activos en la moneda más utilizada y confiable del comercio global.',
         modal_adv_3_title: 'Diversificación Inteligente',
         modal_adv_3_desc: 'No dependas solo de la economía de tu país. GreennSeven te conecta con el mercado global.',
-        modal_start_text: 'Empieza con solo US$ 10,00 y ve tu dinero crecer en moneda fuerte.',
+        modal_start_text: 'Empieza con solo US$ 8,70 y ve tu dinero crecer en moneda fuerte.',
         modal_cta: 'Empezar a Invertir Ahora',
     },
     faq: [
@@ -666,7 +666,7 @@ export const TRANSLATIONS = {
         { q: "¿QUÉ ES LA DOLARIZACIÓN DE CAPITAL?", a: "Dolarizar significa convertir tu saldo en moneda local a Dólares en el momento del depósito. Esto blinda tu dinero contra la devaluación." },
         { q: "¿CÓMO FUNCIONAN LOS DEPÓSITOS Y RETIROS?", a: "Los depósitos se realizan instantáneamente vía PIX (24h). Para retirar, convertimos tus dólares nuevamente a moneda local y los enviamos a tu clave PIX. El Capital Principal queda bloqueado por 30 días, pero los rendimientos diarios pueden ser retirados de 08:00 a 18:00." },
         { q: "¿LA PLATAFORMA ES SEGURA?", a: "Sí. Utilizamos cifrado de punta (AES-256) y operamos con 'Cold Wallets' para la custodia segura de los activos." },
-        { q: "¿CUÁL ES EL VALOR MÍNIMO PARA EMPEZAR?", a: "Puedes empezar a invertir con el plan Conservador desde solo US$ 10,00." }
+        { q: "¿CUÁL ES EL VALOR MÍNIMO PARA EMPEZAR?", a: "Puedes empezar a invertir con el plan Conservador desde solo US$ 8,70." }
     ]
   },
   fr: {
@@ -868,7 +868,7 @@ export const TRANSLATIONS = {
         modal_adv_2_desc: 'Détenez des actifs dans la monnaie la plus utilisée et la plus fiable du commerce mondial.',
         modal_adv_3_title: 'Diversification Intelligente',
         modal_adv_3_desc: 'Ne dépendez pas uniquement de l\'économie de votre pays. GreennSeven vous connecte au marché mondial.',
-        modal_start_text: 'Commencez avec seulement 10,00 $ US et voyez votre argent fructifier dans une monnaie forte.',
+        modal_start_text: 'Commencez avec seulement 8,70 $ US et voyez votre argent fructifier dans une monnaie forte.',
         modal_cta: 'Commencer à Investir Maintenant',
     },
     faq: [
@@ -876,7 +876,7 @@ export const TRANSLATIONS = {
         { q: "QU'EST-CE QUE LA DOLLARISATION DU CAPITAL ?", a: "Dollariser signifie convertir votre solde en monnaie locale en dollars au moment du dépôt. Cela protège votre argent contre la dévaluation." },
         { q: "COMMENT FONCTIONNENT LES DÉPÔTS ET RETRAITS ?", a: "Les dépôts se font instantanément via PIX (24/24h). Pour retirer, nous convertissons vos dollars en monnaie locale et les envoyons à votre clé PIX. Le Capital Principal est bloqué pendant 30 jours, mais les rendements quotidiens peuvent être retirés de 08h00 à 18h00." },
         { q: "LA PLATEFORME EST-ELLE SÉCURISÉE ?", a: "Oui. Nous utilisons un cryptage de pointe (AES-256) et opérons avec des 'Cold Wallets' pour la garde sécurisée des actifs." },
-        { q: "QUEL EST LE MONTANT MINIMUM POUR COMMENCER ?", a: "Vous pouvez commencer à investir avec le plan Conservateur à partir de seulement 10,00 $ US." }
+        { q: "QUEL EST LE MONTANT MINIMUM POUR COMMENCER ?", a: "Vous pouvez commencer à investir avec le plan Conservateur à partir de seulement 8,70 $ US." }
     ]
   },
   de: {
@@ -1078,7 +1078,7 @@ export const TRANSLATIONS = {
         modal_adv_2_desc: 'Halten Sie Vermögenswerte in der meistgenutzten und vertrauenswürdigsten Währung im globalen Handel.',
         modal_adv_3_title: 'Intelligente Diversifikation',
         modal_adv_3_desc: 'Verlassen Sie sich nicht nur auf die Wirtschaft Ihres Landes. GreennSeven verbindet Sie mit dem globalen Markt.',
-        modal_start_text: 'Beginnen Sie mit nur 10,00 USD und sehen Sie, wie Ihr Geld in einer starken Währung wächst.',
+        modal_start_text: 'Beginnen Sie mit nur 8,70 USD und sehen Sie, wie Ihr Geld in einer starken Währung wächst.',
         modal_cta: 'Jetzt Investieren',
     },
     faq: [
@@ -1086,7 +1086,7 @@ export const TRANSLATIONS = {
         { q: "WAS IST KAPITAL-DOLLARISIERUNG?", a: "Dollarisierung bedeutet, Ihr Guthaben in lokaler Währung zum Zeitpunkt der Einzahlung in Dollar umzuwandeln. Dies schützt Ihr Geld vor Abwertung." },
         { q: "WIE FUNKTIONIEREN EINZAHLUNGEN UND ABHEBUNGEN?", a: "Einzahlungen erfolgen sofort über PIX (24/7). Für Auszahlungen konvertieren wir Ihre Dollar zurück in die lokale Währung und senden sie an Ihren PIX-Schlüssel. Das Hauptkapital ist für 30 Tage gesperrt, aber tägliche Erträge können von 08:00 bis 18:00 Uhr abgehoben werden." },
         { q: "IST DIE PLATTFORM SICHER?", a: "Ja. Wir verwenden erstklassige Verschlüsselung (AES-256) und arbeiten mit 'Cold Wallets' für die sichere Verwahrung von Vermögenswerten." },
-        { q: "WAS IST DER MINDESTBETRAG ZUM STARTEN?", a: "Sie können mit dem konservativen Plan bereits ab 10,00 USD investieren." }
+        { q: "WAS IST DER MINDESTBETRAG ZUM STARTEN?", a: "Sie können mit dem konservativen Plan bereits ab 8,70 USD investieren." }
     ]
   }
 };
