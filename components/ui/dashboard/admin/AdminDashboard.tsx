@@ -1,7 +1,7 @@
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import type { User, Transaction, ChatMessage, PlatformSettings, AdminActionLog, Language, Notification, InvestmentPlan } from '../../../../types';
-import { TransactionStatus, UserStatus } from '../../../../types';
+import { TransactionStatus, UserStatus, TransactionType } from '../../../../types';
 import Sidebar from '../../../layout/Sidebar';
 import Header from '../../../layout/Header';
 import { ICONS } from '../../../../constants';
@@ -52,10 +52,19 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
 
   const t = TRANSLATIONS[language] || TRANSLATIONS['pt'];
 
+  // Calculate pending withdrawals for badge
+  const pendingWithdrawalsCount = useMemo(() => {
+      return allTransactions.filter(t => t.type === TransactionType.Withdrawal && t.status === TransactionStatus.Pending).length;
+  }, [allTransactions]);
+
   const navItems = [
     { label: t.dashboard, icon: ICONS.dashboard, view: 'dashboard' },
     { label: t.users, icon: ICONS.adminUsers, view: 'users' },
-    { label: t.transactions, icon: ICONS.transactions, view: 'transactions' },
+    { 
+        label: pendingWithdrawalsCount > 0 ? `${t.transactions} (${pendingWithdrawalsCount})` : t.transactions, 
+        icon: ICONS.transactions, 
+        view: 'transactions' 
+    },
     { label: t.logs, icon: ICONS.history, view: 'logs' },
     { label: t.support, icon: ICONS.support, view: 'support' },
     { label: t.plans, icon: ICONS.plans, view: 'plans' },

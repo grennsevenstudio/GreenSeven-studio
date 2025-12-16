@@ -170,7 +170,7 @@ const TransactionRow: React.FC<{
     };
 
     return (
-        <tr className="border-b border-gray-800 hover:bg-brand-gray/50">
+        <tr className={`border-b border-gray-800 hover:bg-brand-gray/50 transition-colors ${tx.status === TransactionStatus.Pending ? 'bg-yellow-500/5' : ''}`}>
             <td className="p-4">
                 <p className="font-semibold text-white">{user?.name || 'Usuário Desconhecido'}</p>
                 <p className="text-xs text-gray-500 font-mono">{tx.id.slice(0, 8)}...</p>
@@ -310,6 +310,10 @@ const ManageTransactions: React.FC<ManageTransactionsProps> = ({ transactions, a
     const sourceUserForModal = selectedTxForBonus ? allUsers.find(u => u.id === selectedTxForBonus.userId) : undefined;
     const withdrawalUserForModal = selectedTxForWithdrawal ? allUsers.find(u => u.id === selectedTxForWithdrawal.userId) : undefined;
 
+    const pendingWithdrawalsCount = useMemo(() => {
+        return transactions.filter(t => t.type === TransactionType.Withdrawal && t.status === TransactionStatus.Pending).length;
+    }, [transactions]);
+
     // Filter Logic
     const filteredTransactions = useMemo(() => {
         return transactions.filter(tx => {
@@ -354,9 +358,24 @@ const ManageTransactions: React.FC<ManageTransactionsProps> = ({ transactions, a
         )}
 
         <div className="space-y-8">
-            <div>
-                <h1 className="text-3xl font-bold">Gestão de Transações</h1>
-                <p className="text-gray-400">Aprove transações, visualize detalhes e gerencie repasses de bônus.</p>
+            <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
+                <div>
+                    <h1 className="text-3xl font-bold">Gestão de Transações</h1>
+                    <p className="text-gray-400">Aprove transações, visualize detalhes e gerencie repasses de bônus.</p>
+                </div>
+                {pendingWithdrawalsCount > 0 && (
+                    <div className="bg-red-500/10 border border-red-500/30 px-4 py-3 rounded-lg flex items-center gap-3 animate-pulse-slow">
+                        <div className="bg-red-500 rounded-full p-1 text-white">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                            </svg>
+                        </div>
+                        <div>
+                            <p className="text-red-400 text-xs font-bold uppercase">Atenção Necessária</p>
+                            <p className="text-white font-bold">{pendingWithdrawalsCount} Saques Pendentes</p>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Filters */}
