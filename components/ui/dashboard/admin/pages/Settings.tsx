@@ -111,7 +111,7 @@ CREATE TABLE IF NOT EXISTS public.transactions (
   amount_brl NUMERIC,
   status TEXT DEFAULT 'Pending', 
   date DATE,
-  scheduled_date DATE, -- Data para agendamento de saques
+  scheduled_date DATE,
   withdrawal_details JSONB,
   referral_level NUMERIC,
   source_user_id UUID,
@@ -120,8 +120,14 @@ CREATE TABLE IF NOT EXISTS public.transactions (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
--- Adiciona colunas faltantes de forma segura
+-- Adiciona colunas faltantes de forma segura (essencial para persistir os detalhes)
+ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS amount_brl NUMERIC;
 ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS scheduled_date DATE;
+ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS withdrawal_details JSONB;
+ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS wallet_source TEXT;
+ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS referral_level NUMERIC;
+ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS source_user_id UUID;
+ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS bonus_payout_handled BOOLEAN DEFAULT false;
 
 -- Cria índices para otimizar buscas.
 CREATE INDEX IF NOT EXISTS idx_transactions_user_id ON public.transactions(user_id);

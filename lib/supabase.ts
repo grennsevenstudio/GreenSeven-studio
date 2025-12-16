@@ -228,7 +228,7 @@ export const fetchTransactionsFromSupabase = async () => {
             withdrawalDetails: t.withdrawal_details,
             referralLevel: t.referral_level,
             sourceUserId: t.source_user_id,
-            bonusPayoutHandled: t.bonus_payout_handled,
+            bonus_payout_handled: t.bonus_payout_handled,
             walletSource: t.wallet_source 
         }));
 
@@ -397,15 +397,16 @@ export const syncTransactionToSupabase = async (tx: Transaction) => {
             user_id: tx.userId,
             type: tx.type,
             amount_usd: tx.amountUSD,
-            amount_brl: tx.amountBRL,
+            // Ensure values are explicitly passed as null if undefined to avoid DB issues
+            amount_brl: tx.amountBRL !== undefined ? tx.amountBRL : null,
             status: tx.status,
             date: tx.date,
-            scheduled_date: (tx as any).scheduledDate, 
-            withdrawal_details: tx.withdrawalDetails,
-            referral_level: tx.referralLevel,
-            source_user_id: tx.sourceUserId,
-            bonus_payout_handled: tx.bonusPayoutHandled,
-            wallet_source: tx.walletSource
+            scheduled_date: (tx as any).scheduledDate || null, 
+            withdrawal_details: tx.withdrawalDetails || null,
+            referral_level: tx.referralLevel || null,
+            source_user_id: tx.sourceUserId || null,
+            bonus_payout_handled: tx.bonusPayoutHandled || false,
+            wallet_source: tx.walletSource || null
         };
         const { error } = await supabase.from('transactions').upsert(dbTx, { onConflict: 'id' });
         if (error) return { error };
