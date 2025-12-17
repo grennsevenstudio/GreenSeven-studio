@@ -7,6 +7,7 @@ import type { Transaction, User } from '../../../../../types';
 import { TransactionStatus, TransactionType } from '../../../../../types';
 import { REFERRAL_BONUS_RATES, ICONS } from '../../../../../constants';
 import Input from '../../../../ui/Input';
+import { formatCurrency } from '../../../../../lib/utils';
 
 interface BonusPayoutDetails {
     level: number;
@@ -53,11 +54,11 @@ const WithdrawalReviewModal: React.FC<{
                     </div>
                     <div className="flex justify-between border-b border-gray-800 pb-2">
                         <span className="text-gray-400">Valor Solicitado (USD):</span>
-                        <span className="text-white font-bold">$ {Math.abs(tx.amountUSD).toFixed(2)}</span>
+                        <span className="text-white font-bold">{formatCurrency(Math.abs(tx.amountUSD), 'USD')}</span>
                     </div>
                     <div className="flex justify-between border-b border-gray-800 pb-2">
                         <span className="text-gray-400">Valor a Transferir (BRL):</span>
-                        <span className="text-brand-green font-black text-lg">R$ {tx.amountBRL ? tx.amountBRL.toFixed(2) : '0.00'}</span>
+                        <span className="text-brand-green font-black text-lg">{tx.amountBRL ? formatCurrency(tx.amountBRL, 'BRL') : '0.00'}</span>
                     </div>
                 </div>
 
@@ -165,6 +166,7 @@ const TransactionRow: React.FC<{
         if (tx.type === TransactionType.Withdrawal) {
             onOpenWithdrawalModal(tx);
         } else {
+            // For deposits, just approve.
             onUpdateTransaction(tx.id, TransactionStatus.Completed);
         }
     };
@@ -172,7 +174,7 @@ const TransactionRow: React.FC<{
     return (
         <tr className={`border-b border-gray-800 hover:bg-brand-gray/50 transition-colors ${tx.status === TransactionStatus.Pending ? 'bg-yellow-500/5' : ''}`}>
             <td className="p-4">
-                <p className="font-semibold text-white">{user?.name || 'Usuário Desconhecido'}</p>
+                <p className="font-semibold text-white">{user?.name || 'Usuário Removido'}</p>
                 <p className="text-xs text-gray-500 font-mono">{tx.id.slice(0, 8)}...</p>
             </td>
             <td className="p-4 text-sm text-gray-400">{new Date(tx.date).toLocaleDateString('pt-BR')}</td>
@@ -188,12 +190,16 @@ const TransactionRow: React.FC<{
                 )}
             </td>
             <td className={`p-4 font-bold`}>
-                <p className={amountColor}>
-                    {tx.type === TransactionType.Deposit && tx.amountBRL ? `R$ ${tx.amountBRL.toFixed(2)}` : `US$ ${tx.amountUSD.toFixed(2)}`}
-                </p>
-                {tx.type === TransactionType.Withdrawal && tx.status === TransactionStatus.Pending && tx.amountBRL && (
-                    <p className="text-xs font-normal text-yellow-500 mt-1">Pagar: R$ {tx.amountBRL.toFixed(2)}</p>
-                )}
+                <div className="flex flex-col">
+                    <span className={amountColor}>
+                        {formatCurrency(tx.amountUSD, 'USD')}
+                    </span>
+                    {tx.amountBRL && (
+                        <span className="text-xs text-gray-500 font-normal">
+                            {formatCurrency(tx.amountBRL, 'BRL')}
+                        </span>
+                    )}
+                </div>
             </td>
             <td className="p-4 text-xs text-gray-400">
                 {tx.withdrawalDetails ? (
@@ -201,7 +207,11 @@ const TransactionRow: React.FC<{
                         <p><span className="text-gray-600">PIX:</span> <span className="text-gray-300 select-all">{tx.withdrawalDetails.pixKey}</span></p>
                         <p><span className="text-gray-600">Banco:</span> {tx.withdrawalDetails.bank}</p>
                     </div>
-                ) : 'N/A'}
+                ) : (
+                    tx.type === TransactionType.Deposit && tx.status === TransactionStatus.Pending ? (
+                        <span className="text-yellow-500 italic">Verificar Recebimento</span>
+                    ) : 'N/A'
+                )}
             </td>
             <td className="p-4">
                 <span className={`px-2 py-1 text-[10px] font-bold uppercase rounded-full ${statusColors[tx.status]}`}>{tx.status}</span>
@@ -277,11 +287,8 @@ const ManageTransactions: React.FC<ManageTransactionsProps> = ({ transactions, a
         if (!user || !user.referredById) {
             return false;
         }
-        const userCompletedDeposits = allTransactions.filter(
-            t => t.userId === tx.userId && t.type === TransactionType.Deposit && t.status === TransactionStatus.Completed
-        );
-        const firstCompletedDeposit = userCompletedDeposits.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0];
-        return firstCompletedDeposit?.id === tx.id;
+        // Simplified check: allow payout if not handled
+        return !tx.bonusPayoutHandled;
     };
     
     const handleConfirmPayout = () => {

@@ -337,7 +337,10 @@ const App: React.FC = () => {
           id: faker.string.uuid(),
           date: new Date().toISOString(),
           bonusPayoutHandled: false,
-          ...newTx
+          ...newTx,
+          // CRITICAL SECURITY: Always enforce Pending status for new user transactions.
+          // This prevents client-side manipulation to auto-approve deposits/withdrawals.
+          status: TransactionStatus.Pending
       };
       
       let updatedUsers = [...dbState.users];
@@ -378,7 +381,9 @@ const App: React.FC = () => {
       const updatedTxs = [...dbState.transactions, transaction];
       setDbState(prev => ({ ...prev, transactions: updatedTxs, users: updatedUsers }));
       saveAllData({ ...dbState, transactions: updatedTxs, users: updatedUsers });
-      await syncTransactionToSupabase(transaction);
+      
+      // Sync to Supabase without blocking UI - connection is fast
+      syncTransactionToSupabase(transaction);
   };
 
   const handleUpdateTransaction = async (txId: string, newStatus: TransactionStatus) => {
@@ -447,7 +452,7 @@ const App: React.FC = () => {
               isRead: false
           };
           updatedNotifs = [...updatedNotifs, notif];
-          await syncNotificationToSupabase(notif);
+          syncNotificationToSupabase(notif);
       }
 
       setDbState(prev => ({ ...prev, transactions: updatedTxs, users: updatedUsers, notifications: updatedNotifs }));
@@ -694,9 +699,6 @@ const App: React.FC = () => {
       setDbState(prev => ({ ...prev, notifications: updatedNotifs }));
       saveAllData({ ...dbState, notifications: updatedNotifs });
       
-      // Batch update supabase? Or individually. 
-      // For simplicity in this fix, we just update local state visually or call sync individually.
-      // Ideally backend handles this.
       const myNotifs = updatedNotifs.filter(n => n.userId === loggedUser.id);
       for (const n of myNotifs) {
           await syncNotificationToSupabase(n);
