@@ -94,16 +94,19 @@ const DepositModalContent: React.FC<{
     const [isLoading, setIsLoading] = useState(false);
     
     const dollarRate = platformSettings.dollarRate || 5.50;
-    const adminPixKey = platformSettings.pixKey || "chave-nao-configurada";
+    // Updated to specific PIX Key requested
+    const adminPixKey = "40b383be-3df8-4bc2-88a5-be6c7b0a55a0";
     const beneficiaryName = "GREENNSEVEN TECNOLOGIA LTDA";
-    const cnpj = "40.840.653/0001-01";
+    
+    // Hidden CNPJ as requested
+    // const cnpj = "40.840.653/0001-01"; 
 
     const handleGeneratePix = (e: React.FormEvent) => {
         e.preventDefault();
         if (parseFloat(amountBRL) > 0) {
             setIsLoading(true);
             setTimeout(() => {
-                setPixKey(adminPixKey); // Use dynamic key from settings
+                setPixKey(adminPixKey); 
                 setStep(2);
                 setIsLoading(false);
             }, 1500);
@@ -118,7 +121,7 @@ const DepositModalContent: React.FC<{
             onAddTransaction({
                 userId: user.id,
                 type: TransactionType.Deposit,
-                status: TransactionStatus.Pending,
+                status: TransactionStatus.Pending, // Pending admin approval
                 amountUSD: usd,
                 amountBRL: brl,
             });
@@ -133,10 +136,13 @@ const DepositModalContent: React.FC<{
     
     if (step === 3) {
         return (
-            <SuccessDisplay title="Pagamento Recebido!" onClose={onClose}>
+            <SuccessDisplay title="Comprovante Enviado!" onClose={onClose}>
                 <p>
-                    Recebemos a confirmação do seu pagamento de {formatCurrency(parseFloat(amountBRL), 'BRL')}. A transação está agora pendente de aprovação final pelo nosso time.
-                    Assim que aprovado, o saldo em dólar será creditado na sua conta.
+                    Recebemos sua solicitação de depósito de {formatCurrency(parseFloat(amountBRL), 'BRL')}. 
+                    <br/><br/>
+                    <span className="text-yellow-400 font-bold">Aguardando Confirmação do Administrador.</span>
+                    <br/>
+                    Assim que aprovado, o saldo em dólar aparecerá automaticamente na sua carteira.
                 </p>
             </SuccessDisplay>
         );
@@ -144,33 +150,30 @@ const DepositModalContent: React.FC<{
     
     if (step === 2) {
         return (
-             <div>
-                <p className="text-center text-gray-400 mb-4">Utilize os dados abaixo para realizar o pagamento via PIX.</p>
+             <div className="space-y-4">
+                <p className="text-center text-gray-400">Use a chave abaixo para pagar.</p>
                 
-                <p className="text-center text-lg font-bold mt-4">{formatCurrency(parseFloat(amountBRL), 'BRL')}</p>
+                <p className="text-center text-lg font-bold text-brand-green">{formatCurrency(parseFloat(amountBRL), 'BRL')}</p>
                 
-                <div className="bg-brand-black p-4 rounded-lg mt-4 border border-gray-800">
+                <div className="bg-brand-black p-4 rounded-lg border border-gray-800">
                     <p className="text-xs text-gray-500 uppercase font-bold mb-2">Dados do Recebedor</p>
-                    <div className="flex justify-between text-sm">
+                    <div className="flex justify-between text-sm items-center">
                         <span className="text-gray-400">Nome:</span>
-                        <span className="text-white font-medium">{beneficiaryName}</span>
+                        <span className="text-white font-medium text-right">{beneficiaryName}</span>
                     </div>
-                     <div className="flex justify-between text-sm mt-1">
-                        <span className="text-gray-400">CNPJ:</span>
-                        <span className="text-white font-medium">{cnpj}</span>
-                    </div>
+                    {/* CNPJ Hidden per request */}
                 </div>
 
-                <div className="mt-4">
-                    <label className="text-sm font-medium text-gray-400">Chave PIX (Copia e Cola)</label>
-                    <div className="relative">
-                        <input type="text" readOnly value={pixKey} className="w-full bg-brand-black border border-gray-700 rounded-lg py-2 px-3 text-sm text-gray-300 pr-10"/>
-                        <button onClick={copyToClipboard} className="absolute inset-y-0 right-0 px-3 text-gray-400 hover:text-white">
+                <div>
+                    <label className="text-sm font-medium text-gray-400 mb-1 block">Chave Aleatória (Copia e Cola)</label>
+                    <div className="relative flex items-center">
+                        <input type="text" readOnly value={pixKey} className="w-full bg-brand-black border border-gray-700 rounded-lg py-3 px-3 text-sm text-gray-300 pr-12 font-mono"/>
+                        <button onClick={copyToClipboard} className="absolute inset-y-0 right-0 px-3 text-gray-400 hover:text-brand-green transition-colors">
                             {ICONS.copy}
                         </button>
                     </div>
                 </div>
-                <Button onClick={handleConfirmPayment} fullWidth className="mt-6" isLoading={isLoading}>Já Efetuei o Pagamento</Button>
+                <Button onClick={handleConfirmPayment} fullWidth className="mt-4" isLoading={isLoading}>Já Efetuei o Pagamento</Button>
             </div>
         )
     }
@@ -192,7 +195,7 @@ const DepositModalContent: React.FC<{
                 <span className="font-bold text-white"> {amountBRL ? formatCurrency(parseFloat(amountBRL) / dollarRate, 'USD') : formatCurrency(0, 'USD')}</span>
             </p>
             <div className="pt-2">
-                <Button type="submit" fullWidth isLoading={isLoading}>Gerar Chave PIX</Button>
+                <Button type="submit" fullWidth isLoading={isLoading}>Gerar Pagamento PIX</Button>
             </div>
         </form>
     );

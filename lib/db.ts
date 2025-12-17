@@ -109,7 +109,7 @@ export const initializeDB = () => {
     dollarRate: DOLLAR_RATE,
     withdrawalFeePercent: 0, // Zero fee by default
     signupBonusUSD: 10,
-    pixKey: 'seu-cnpj-ou-chave-aleatoria',
+    pixKey: '40b383be-3df8-4bc2-88a5-be6c7b0a55a0',
     isMaintenanceMode: false,
     maintenanceEndTime: undefined,
     allowNewRegistrations: true,
