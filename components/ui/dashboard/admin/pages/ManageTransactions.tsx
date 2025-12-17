@@ -241,8 +241,8 @@ const ManageTransactions: React.FC<ManageTransactionsProps> = ({ transactions, a
     const [selectedTxForWithdrawal, setSelectedTxForWithdrawal] = useState<Transaction | null>(null);
     const [toastMessage, setToastMessage] = useState<string | null>(null);
     
-    // Filters State
-    const [statusFilter, setStatusFilter] = useState<'All' | TransactionStatus>('Pending'); // Default to Pending for better admin focus
+    // Filters State - Default to 'All' to show full history
+    const [statusFilter, setStatusFilter] = useState<'All' | TransactionStatus>('All'); 
     const [typeFilter, setTypeFilter] = useState<'All' | TransactionType>('All');
     const [searchTerm, setSearchTerm] = useState('');
 

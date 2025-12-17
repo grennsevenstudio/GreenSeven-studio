@@ -94,39 +94,30 @@ const DepositModalContent: React.FC<{
     const [isLoading, setIsLoading] = useState(false);
     
     const dollarRate = platformSettings.dollarRate || 5.50;
-    // Updated to specific PIX Key requested
-    const adminPixKey = "40b383be-3df8-4bc2-88a5-be6c7b0a55a0";
+    const adminPixKey = platformSettings.pixKey || "40b383be-3df8-4bc2-88a5-be6c7b0a55a0";
     const beneficiaryName = "GREENNSEVEN TECNOLOGIA LTDA";
-    
-    // Hidden CNPJ as requested
-    // const cnpj = "40.840.653/0001-01"; 
 
     const handleGeneratePix = (e: React.FormEvent) => {
         e.preventDefault();
         if (parseFloat(amountBRL) > 0) {
-            setIsLoading(true);
-            setTimeout(() => {
-                setPixKey(adminPixKey); 
-                setStep(2);
-                setIsLoading(false);
-            }, 1500);
+            // Instant generation
+            setPixKey(adminPixKey); 
+            setStep(2);
         }
     };
 
     const handleConfirmPayment = () => {
-        setIsLoading(true);
-        setTimeout(() => {
-            const brl = parseFloat(amountBRL);
-            const usd = brl / dollarRate;
-            onAddTransaction({
-                userId: user.id,
-                type: TransactionType.Deposit,
-                status: TransactionStatus.Pending, // Pending admin approval
-                amountUSD: usd,
-                amountBRL: brl,
-            });
-            setStep(3);
-        }, 2000);
+        // Instant confirmation
+        const brl = parseFloat(amountBRL);
+        const usd = brl / dollarRate;
+        onAddTransaction({
+            userId: user.id,
+            type: TransactionType.Deposit,
+            status: TransactionStatus.Pending, // Pending admin approval
+            amountUSD: usd,
+            amountBRL: brl,
+        });
+        setStep(3);
     };
 
     const copyToClipboard = () => {
@@ -140,8 +131,8 @@ const DepositModalContent: React.FC<{
                 <p>
                     Recebemos sua solicitação de depósito de {formatCurrency(parseFloat(amountBRL), 'BRL')}. 
                     <br/><br/>
-                    <span className="text-yellow-400 font-bold">Aguardando Confirmação do Administrador.</span>
-                    <br/>
+                    <span className="text-yellow-400 font-bold bg-yellow-400/10 px-2 py-1 rounded">Aguardando Confirmação do Administrador.</span>
+                    <br/><br/>
                     Assim que aprovado, o saldo em dólar aparecerá automaticamente na sua carteira.
                 </p>
             </SuccessDisplay>
@@ -161,7 +152,6 @@ const DepositModalContent: React.FC<{
                         <span className="text-gray-400">Nome:</span>
                         <span className="text-white font-medium text-right">{beneficiaryName}</span>
                     </div>
-                    {/* CNPJ Hidden per request */}
                 </div>
 
                 <div>
@@ -248,15 +238,12 @@ const WithdrawModalContent: React.FC<{
     const handlePinSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         setPinError(false);
-        setIsLoading(true);
-        setTimeout(() => {
-            if (pin === user.transactionPin) {
-                setStep(3);
-            } else {
-                setPinError(true);
-            }
-            setIsLoading(false);
-        }, 1000);
+        // Instant check
+        if (pin === user.transactionPin) {
+            setStep(3);
+        } else {
+            setPinError(true);
+        }
     };
 
     const validatePixKey = (key: string): boolean => {
@@ -270,29 +257,28 @@ const WithdrawModalContent: React.FC<{
             setPixKeyError('Formato de chave PIX inválido. Verifique CPF, CNPJ, email, telefone ou chave aleatória.');
             return;
         }
-        setIsLoading(true);
-        setTimeout(() => {
-            // Prepare User Update to "crystallize" the live profit before deducting
-            let userUpdate: Partial<User> | undefined = undefined;
-            if (withdrawalSource === 'yield') {
-                userUpdate = {
-                    dailyWithdrawableUSD: currentLiveProfit, // Lock in the live amount to DB
-                    lastProfitUpdate: new Date().toISOString() // Reset the timer
-                };
-            }
+        
+        // Instant withdrawal request
+        // Prepare User Update to "crystallize" the live profit before deducting
+        let userUpdate: Partial<User> | undefined = undefined;
+        if (withdrawalSource === 'yield') {
+            userUpdate = {
+                dailyWithdrawableUSD: currentLiveProfit, // Lock in the live amount to DB
+                lastProfitUpdate: new Date().toISOString() // Reset the timer
+            };
+        }
 
-            onAddTransaction({
-                userId: user.id,
-                type: TransactionType.Withdrawal,
-                status: TransactionStatus.Pending,
-                amountUSD: -Math.abs(parseFloat(amountUSD)),
-                amountBRL: amountToReceiveBRL,
-                withdrawalDetails: pixDetails,
-                walletSource: withdrawalSource
-            }, userUpdate);
-            
-            setStep(4);
-        }, 2000);
+        onAddTransaction({
+            userId: user.id,
+            type: TransactionType.Withdrawal,
+            status: TransactionStatus.Pending,
+            amountUSD: -Math.abs(parseFloat(amountUSD)),
+            amountBRL: amountToReceiveBRL,
+            withdrawalDetails: pixDetails,
+            walletSource: withdrawalSource
+        }, userUpdate);
+        
+        setStep(4);
     };
 
     if (step === 4) {
