@@ -100,20 +100,18 @@ const DepositModalContent: React.FC<{
     const handleGeneratePix = (e: React.FormEvent) => {
         e.preventDefault();
         if (parseFloat(amountBRL) > 0) {
-            // Instant generation
             setPixKey(adminPixKey); 
             setStep(2);
         }
     };
 
     const handleConfirmPayment = () => {
-        // Instant confirmation
         const brl = parseFloat(amountBRL);
         const usd = brl / dollarRate;
         onAddTransaction({
             userId: user.id,
             type: TransactionType.Deposit,
-            status: TransactionStatus.Pending, // Pending admin approval
+            status: TransactionStatus.Pending, 
             amountUSD: usd,
             amountBRL: brl,
         });
@@ -215,7 +213,6 @@ const WithdrawModalContent: React.FC<{
     const amountToReceiveUSD = (parseFloat(amountUSD) || 0) - fee;
     const amountToReceiveBRL = amountToReceiveUSD * dollarRate;
     
-    // For Yield, we use the LIVE calculated total (db + generated since last update)
     const availableBalance = withdrawalSource === 'yield' 
         ? currentLiveProfit
         : (user.bonusBalanceUSD || 0);
@@ -238,7 +235,6 @@ const WithdrawModalContent: React.FC<{
     const handlePinSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         setPinError(false);
-        // Instant check
         if (pin === user.transactionPin) {
             setStep(3);
         } else {
@@ -258,13 +254,11 @@ const WithdrawModalContent: React.FC<{
             return;
         }
         
-        // Instant withdrawal request
-        // Prepare User Update to "crystallize" the live profit before deducting
         let userUpdate: Partial<User> | undefined = undefined;
         if (withdrawalSource === 'yield') {
             userUpdate = {
-                dailyWithdrawableUSD: currentLiveProfit, // Lock in the live amount to DB
-                lastProfitUpdate: new Date().toISOString() // Reset the timer
+                dailyWithdrawableUSD: currentLiveProfit, 
+                lastProfitUpdate: new Date().toISOString() 
             };
         }
 
@@ -326,12 +320,7 @@ const WithdrawModalContent: React.FC<{
                 <div className="text-center space-y-4">
                     <h3 className="text-lg font-bold text-yellow-400">PIN de Saque Necessário</h3>
                     <p className="text-gray-400">Para sua segurança, é necessário criar um PIN de 4 dígitos no seu perfil antes de solicitar o primeiro saque.</p>
-                    <Button 
-                        onClick={() => { onClose(); setActiveView('profile'); }}
-                        fullWidth
-                    >
-                        Criar PIN no Meu Perfil
-                    </Button>
+                    <Button onClick={() => { onClose(); setActiveView('profile'); }} fullWidth>Criar PIN no Meu Perfil</Button>
                 </div>
             );
         }
@@ -544,44 +533,29 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions, onAdd
     useEffect(() => {
         const calculateLiveProfit = () => {
             const plan = INVESTMENT_PLANS.find(p => p.name.toLowerCase() === (user.plan || 'conservador').toLowerCase()) || INVESTMENT_PLANS[0];
-            const monthlyRate = plan.returnRate; // e.g., 0.05
+            const monthlyRate = plan.returnRate; 
             const invested = user.capitalInvestedUSD;
-            
-            // Calculate daily earnings based on total invested
             const dailyProfitTotal = (invested * monthlyRate) / 30;
-            // Calculate earnings per second (86400 seconds in a day)
             const profitPerSecond = dailyProfitTotal / 86400;
-
             const now = new Date();
-            // IMPORTANT: Calculate time passed since the LAST UPDATE (withdrawal or reset), not just midnight
-            // If user.lastProfitUpdate is missing (legacy), fallback to start of day or joinedDate
             const lastUpdate = new Date(user.lastProfitUpdate || user.joinedDate);
-            
-            // Difference in seconds
             let secondsPassed = (now.getTime() - lastUpdate.getTime()) / 1000;
             if (secondsPassed < 0) secondsPassed = 0;
-            
-            // Profit generated since the last snapshot/withdrawal
             const generatedSinceLastUpdate = Math.max(0, profitPerSecond * secondsPassed);
 
             setLiveData({
-                daily: user.dailyWithdrawableUSD, // Base amount from DB
+                daily: user.dailyWithdrawableUSD, 
                 bonus: user.bonusBalanceUSD,
-                today: generatedSinceLastUpdate, // Just visual indicator of "recent" growth
-                combinedDaily: user.dailyWithdrawableUSD + generatedSinceLastUpdate // What is actually available
+                today: generatedSinceLastUpdate, 
+                combinedDaily: user.dailyWithdrawableUSD + generatedSinceLastUpdate 
             });
         };
 
-        // Initial Calculation
         calculateLiveProfit();
-
-        // 2 second delay interval
         const interval = setInterval(calculateLiveProfit, 2000);
-
         return () => clearInterval(interval);
     }, [user.capitalInvestedUSD, user.plan, user.dailyWithdrawableUSD, user.bonusBalanceUSD, user.lastProfitUpdate, user.joinedDate]);
 
-    // Updated Filter Logic
     const recentTransactions = transactions
         .filter(t => 
             t.type === TransactionType.Deposit || 
@@ -590,6 +564,13 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions, onAdd
         )
         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
         .slice(0, 10); 
+
+    // Pending Deposits Calculation for visual indicator
+    const pendingDepositAmount = useMemo(() => {
+        return transactions
+            .filter(tx => tx.type === TransactionType.Deposit && tx.status === TransactionStatus.Pending)
+            .reduce((acc, tx) => acc + tx.amountUSD, 0);
+    }, [transactions]);
 
     // Simulate stock updates
     useEffect(() => {
@@ -604,13 +585,12 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions, onAdd
         return () => clearInterval(interval);
     }, []);
 
-    // Estimate next 30 days profit
     const currentPlanObj = INVESTMENT_PLANS.find(p => p.name === user.plan) || INVESTMENT_PLANS[0];
     const estimatedProfit30DaysBRL = (user.capitalInvestedUSD * currentPlanObj.returnRate) * dollarRate;
 
     const bonusBalance = liveData.bonus; 
-    const dailyWithdrawableLive = liveData.combinedDaily; // This is the total available for withdrawal
-    const earningsTicker = liveData.today; // Show just the "new" money growing
+    const dailyWithdrawableLive = liveData.combinedDaily; 
+    const earningsTicker = liveData.today; 
 
     return (
         <div className="space-y-6 sm:space-y-8 animate-fade-in p-4 sm:p-0 pb-20">
@@ -661,6 +641,19 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions, onAdd
                     <p className="text-gray-400 text-sm sm:text-base">{t.dashboard_subtitle}</p>
                 </div>
             </div>
+
+            {/* Pending Deposit Warning */}
+            {pendingDepositAmount > 0 && (
+                <div className="bg-yellow-500/10 border border-yellow-500/30 p-4 rounded-xl flex items-center gap-4 animate-pulse">
+                    <div className="p-3 bg-yellow-500/20 rounded-full text-yellow-500">
+                        {ICONS.refresh}
+                    </div>
+                    <div>
+                        <p className="text-yellow-500 font-bold text-sm uppercase">Aguardando Aprovação</p>
+                        <p className="text-white text-xs">Você possui <span className="font-bold">{formatCurrency(pendingDepositAmount, 'USD')}</span> em depósitos sendo analisados.</p>
+                    </div>
+                </div>
+            )}
 
             {/* Wallet Cards Grid - Adjusted for Mobile Stacking */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">

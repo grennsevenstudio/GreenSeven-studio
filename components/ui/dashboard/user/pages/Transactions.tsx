@@ -82,7 +82,7 @@ const TransactionRow: React.FC<TransactionItemProps> = ({ tx, isExpanded, onTogg
     const amountColor = isWithdrawal ? 'text-red-500' : 'text-brand-green';
     
     const statusColors: {[key in TransactionStatus]: string} = {
-        [TransactionStatus.Completed]: 'bg-green-100 dark:bg-green-500/10 text-green-600 dark:text-green-400 border-green-200 dark:border-green-500/20',
+        [TransactionStatus.Completed]: 'bg-green-100 dark:bg-green-500/20 text-green-700 dark:text-green-400 border-green-200 dark:border-green-500/30 font-black',
         [TransactionStatus.Pending]: 'bg-yellow-100 dark:bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border-yellow-200 dark:border-yellow-500/20',
         [TransactionStatus.Failed]: 'bg-red-100 dark:bg-red-500/10 text-red-600 dark:text-red-400 border-red-200 dark:border-red-500/20',
         [TransactionStatus.Scheduled]: 'bg-blue-100 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-500/20',
@@ -112,7 +112,7 @@ const TransactionRow: React.FC<TransactionItemProps> = ({ tx, isExpanded, onTogg
                 </td>
                 <td className="p-4 text-gray-600 dark:text-gray-300">{tx.amountBRL ? formatCurrency(tx.amountBRL, 'BRL') : '-'}</td>
                 <td className="p-4">
-                    <span className={`px-2 py-1 text-xs font-semibold rounded-md border ${statusColors[tx.status]}`}>
+                    <span className={`px-2 py-1 text-xs font-semibold rounded-md border uppercase tracking-tighter ${statusColors[tx.status]}`}>
                         {tx.status === TransactionStatus.Completed ? 'Concluído' :
                          tx.status === TransactionStatus.Pending ? 'Pendente' :
                          tx.status === TransactionStatus.Failed ? 'Falhou' : tx.status}
@@ -153,10 +153,10 @@ const TransactionMobileCard: React.FC<TransactionItemProps> = ({ tx, isExpanded,
     }
 
     const statusColors: {[key in TransactionStatus]: string} = {
-        [TransactionStatus.Completed]: 'bg-green-100 dark:bg-green-500/20 text-green-600 dark:text-green-400',
-        [TransactionStatus.Pending]: 'bg-yellow-100 dark:bg-yellow-500/20 text-yellow-600 dark:text-yellow-400',
-        [TransactionStatus.Failed]: 'bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400',
-        [TransactionStatus.Scheduled]: 'bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400',
+        [TransactionStatus.Completed]: 'bg-green-100 dark:bg-green-500/20 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-500/30',
+        [TransactionStatus.Pending]: 'bg-yellow-100 dark:bg-yellow-500/20 text-yellow-600 dark:text-yellow-400 border border-yellow-200 dark:border-yellow-500/20',
+        [TransactionStatus.Failed]: 'bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-500/20',
+        [TransactionStatus.Scheduled]: 'bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-500/20',
     };
 
     const statusLabel = {
