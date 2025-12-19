@@ -21,6 +21,7 @@ import {
     fetchInvestmentPlansFromSupabase,
     syncInvestmentPlanToSupabase,
     checkSupabaseConnection,
+    deleteTransactionsByUserId,
 } from './lib/supabase';
 import { requestNotificationPermission, showSystemNotification, formatCurrency } from './lib/utils';
 import { faker } from '@faker-js/faker';
@@ -390,6 +391,35 @@ const App: React.FC = () => {
       await syncAdminLogToSupabase(adminLog);
   };
 
+  const handleDeleteUserTransactions = async (userId: string) => {
+      // 1. Remove from local state
+      const updatedTransactions = dbState.transactions.filter(tx => tx.userId !== userId);
+      
+      // 2. Log action
+      const user = dbState.users.find(u => u.id === userId);
+      const adminLog: AdminActionLog = {
+          id: faker.string.uuid(),
+          timestamp: new Date().toISOString(),
+          adminId: loggedUser?.id || 'system',
+          adminName: loggedUser?.name || 'Sistema',
+          actionType: AdminActionType.HistoryClear,
+          description: `Excluiu histórico de transações de ${user?.name || userId}`,
+          targetId: userId
+      };
+      const updatedLogs = [adminLog, ...dbState.adminActionLogs];
+
+      setDbState(prev => ({
+          ...prev,
+          transactions: updatedTransactions,
+          adminActionLogs: updatedLogs
+      }));
+      saveAllData({ ...dbState, transactions: updatedTransactions, adminActionLogs: updatedLogs });
+
+      // 3. Sync with Supabase
+      await deleteTransactionsByUserId(userId);
+      await syncAdminLogToSupabase(adminLog);
+  };
+
   const handlePayoutBonus = async (depositTx: Transaction) => {
       if (depositTx.bonusPayoutHandled) return;
       const user = dbState.users.find(u => u.id === depositTx.userId);
@@ -612,6 +642,7 @@ const App: React.FC = () => {
           investmentPlans={dbState.investmentPlans}
           onUpdatePlan={handleUpdatePlan}
           syncStatus={syncStatus}
+          onDeleteUserTransactions={handleDeleteUserTransactions}
         />
       )}
     </>

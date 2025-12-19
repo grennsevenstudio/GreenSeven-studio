@@ -1,3 +1,4 @@
+
 import React, { useMemo, useState, useRef, useEffect } from 'react';
 import type { User, Transaction } from '../../../../../types';
 import { InvestorRank, TransactionStatus, TransactionType } from '../../../../../types';
@@ -5,7 +6,7 @@ import Card from '../../../../ui/Card';
 import Input from '../../../../ui/Input';
 import Button from '../../../../ui/Button';
 import { ICONS, RANK_COLORS } from '../../../../../constants';
-import { formatCPF } from '../../../../../lib/utils';
+import { formatCPF, formatCurrency } from '../../../../../lib/utils';
 
 interface ProfileProps {
     user: User;
@@ -209,10 +210,27 @@ const Profile: React.FC<ProfileProps> = ({ user, allTransactions, setActiveView,
     // Safe access to rank details, defaulting to Bronze if rank is invalid/unknown
     const currentRankDetail = rankDetails[user.rank] || rankDetails[InvestorRank.Bronze];
 
-    const totalBonusEarned = useMemo(() => {
-        return allTransactions
-            .filter(tx => tx.userId === user.id && tx.type === TransactionType.Bonus && tx.status === TransactionStatus.Completed)
+    const financialStats = useMemo(() => {
+        const userTxs = allTransactions.filter(tx => tx.userId === user.id && tx.status === TransactionStatus.Completed);
+        
+        const totalBonusEarned = userTxs
+            .filter(tx => tx.type === TransactionType.Bonus)
             .reduce((sum, tx) => sum + tx.amountUSD, 0);
+
+        const totalDeposited = userTxs
+            .filter(tx => tx.type === TransactionType.Deposit)
+            .reduce((sum, tx) => sum + tx.amountUSD, 0);
+
+        // Separate withdrawals
+        const yieldsWithdrawn = userTxs
+            .filter(tx => tx.type === TransactionType.Withdrawal && (!tx.walletSource || tx.walletSource === 'yield'))
+            .reduce((sum, tx) => sum + Math.abs(tx.amountUSD), 0);
+
+        const bonusWithdrawn = userTxs
+            .filter(tx => tx.type === TransactionType.Withdrawal && tx.walletSource === 'bonus')
+            .reduce((sum, tx) => sum + Math.abs(tx.amountUSD), 0);
+
+        return { totalBonusEarned, totalDeposited, yieldsWithdrawn, bonusWithdrawn };
     }, [user.id, allTransactions]);
 
     return (
@@ -469,6 +487,29 @@ const Profile: React.FC<ProfileProps> = ({ user, allTransactions, setActiveView,
                         </div>
                     </Card>
 
+                    {/* NEW: Financial Detailed Summary */}
+                    <Card>
+                        <h2 className="text-xl font-bold mb-4">Resumo Financeiro Detalhado</h2>
+                        <div className="space-y-4">
+                            <div className="flex justify-between items-center pb-2 border-b border-gray-800">
+                                <span className="text-sm text-gray-400">Total Depositado</span>
+                                <span className="font-bold text-brand-green">{formatCurrency(financialStats.totalDeposited, 'USD')}</span>
+                            </div>
+                            <div className="flex justify-between items-center pb-2 border-b border-gray-800">
+                                <span className="text-sm text-gray-400">Saques (Rendimentos)</span>
+                                <span className="font-bold text-red-400">- {formatCurrency(financialStats.yieldsWithdrawn, 'USD')}</span>
+                            </div>
+                            <div className="flex justify-between items-center pb-2 border-b border-gray-800">
+                                <span className="text-sm text-gray-400">Saques (Bônus)</span>
+                                <span className="font-bold text-brand-blue">- {formatCurrency(financialStats.bonusWithdrawn, 'USD')}</span>
+                            </div>
+                            <div className="flex justify-between items-center pt-2">
+                                <span className="text-sm text-gray-300 font-bold">Total Sacado</span>
+                                <span className="font-bold text-white">{formatCurrency(financialStats.yieldsWithdrawn + financialStats.bonusWithdrawn, 'USD')}</span>
+                            </div>
+                        </div>
+                    </Card>
+
                     {/* Referral Earnings */}
                     <Card>
                         <h2 className="text-xl font-bold mb-4">Ganhos por Indicação</h2>
@@ -477,7 +518,7 @@ const Profile: React.FC<ProfileProps> = ({ user, allTransactions, setActiveView,
                             <div>
                                 <p className="text-gray-400 text-sm">Total de bônus recebidos</p>
                                 <p className="text-2xl font-bold text-white">
-                                    $ {totalBonusEarned.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    {formatCurrency(financialStats.totalBonusEarned, 'USD')}
                                 </p>
                             </div>
                         </div>

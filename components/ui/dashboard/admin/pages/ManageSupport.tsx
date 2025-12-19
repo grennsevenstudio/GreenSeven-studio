@@ -1,15 +1,18 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import type { User, ChatMessage, SupportStatus } from '../../../../../types';
+import type { User, ChatMessage, SupportStatus, Transaction } from '../../../../../types';
+import { TransactionType, TransactionStatus } from '../../../../../types';
 import Card from '../../../../ui/Card';
 import Input from '../../../../ui/Input';
 import Button from '../../../../ui/Button';
 import { ICONS } from '../../../../../constants';
+import { formatCurrency } from '../../../../../lib/utils';
 
 interface ManageSupportProps {
     adminUser: User;
     allUsers: User[];
     allMessages: ChatMessage[];
+    allTransactions: Transaction[];
     onSendMessage: (senderId: string, receiverId: string, text: string, attachment?: File) => void;
     onUpdateUser: (user: User) => void;
 }
@@ -27,7 +30,6 @@ const AttachmentDisplay: React.FC<{ attachment: NonNullable<ChatMessage['attachm
     const fileName = attachment.fileName || 'Unknown File';
     const isImage = fileType.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp)$/i.test(fileName);
     
-    // Safe extension extraction
     let extension = 'FILE';
     if (fileType && fileType.includes('/')) {
         extension = fileType.split('/')[1].toUpperCase();
@@ -101,7 +103,44 @@ const ChatBubble: React.FC<{ message: ChatMessage; isSender: boolean; avatarUrl:
     );
 };
 
-const ManageSupport: React.FC<ManageSupportProps> = ({ adminUser, allUsers, allMessages, onSendMessage, onUpdateUser }) => {
+const UserFinancialSummary: React.FC<{ transactions: Transaction[], userId: string }> = ({ transactions, userId }) => {
+    const stats = useMemo(() => {
+        const userTxs = transactions.filter(t => t.userId === userId && t.status === TransactionStatus.Completed);
+        
+        const deposits = userTxs
+            .filter(t => t.type === TransactionType.Deposit)
+            .reduce((acc, curr) => acc + curr.amountUSD, 0);
+            
+        const totalWithdrawals = userTxs
+            .filter(t => t.type === TransactionType.Withdrawal)
+            .reduce((acc, curr) => acc + Math.abs(curr.amountUSD), 0);
+
+        const bonusWithdrawals = userTxs
+            .filter(t => t.type === TransactionType.Withdrawal && t.walletSource === 'bonus')
+            .reduce((acc, curr) => acc + Math.abs(curr.amountUSD), 0);
+
+        return { deposits, totalWithdrawals, bonusWithdrawals };
+    }, [transactions, userId]);
+
+    return (
+        <div className="bg-brand-black/40 border-b border-gray-800 p-3 grid grid-cols-3 gap-2">
+            <div className="bg-brand-gray p-2 rounded border border-gray-800 text-center">
+                <p className="text-[10px] text-gray-500 uppercase font-bold">Depósitos</p>
+                <p className="text-brand-green font-bold text-xs sm:text-sm">{formatCurrency(stats.deposits, 'USD')}</p>
+            </div>
+            <div className="bg-brand-gray p-2 rounded border border-gray-800 text-center">
+                <p className="text-[10px] text-gray-500 uppercase font-bold">Total Saques</p>
+                <p className="text-red-400 font-bold text-xs sm:text-sm">{formatCurrency(stats.totalWithdrawals, 'USD')}</p>
+            </div>
+            <div className="bg-brand-gray p-2 rounded border border-gray-800 text-center">
+                <p className="text-[10px] text-gray-500 uppercase font-bold">Saque Bônus</p>
+                <p className="text-brand-blue font-bold text-xs sm:text-sm">{formatCurrency(stats.bonusWithdrawals, 'USD')}</p>
+            </div>
+        </div>
+    );
+};
+
+const ManageSupport: React.FC<ManageSupportProps> = ({ adminUser, allUsers, allMessages, allTransactions, onSendMessage, onUpdateUser }) => {
     const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
     const [newMessage, setNewMessage] = useState('');
     const [attachment, setAttachment] = useState<File | null>(null);
@@ -132,22 +171,19 @@ const ManageSupport: React.FC<ManageSupportProps> = ({ adminUser, allUsers, allM
                 const user = allUsers.find(u => u.id === userId);
                 return { userId, user, ...data };
             })
-            .filter(item => item.user); // Ensure user exists
+            .filter(item => item.user);
 
-        // Filter by Search Term
         if (searchTerm) {
             chats = chats.filter(c => c.user?.name.toLowerCase().includes(searchTerm.toLowerCase()));
         }
 
-        // Filter by Status
         if (filterStatus !== 'all') {
             chats = chats.filter(c => {
-                const status = c.user?.supportStatus || 'open'; // Default to open if undefined
+                const status = c.user?.supportStatus || 'open'; 
                 return status === filterStatus;
             });
         }
 
-        // Sort: Unread first, then by last message
         return chats.sort((a,b) => {
             if (a.unreadCount > 0 && b.unreadCount === 0) return -1;
             if (a.unreadCount === 0 && b.unreadCount > 0) return 1;
@@ -189,7 +225,6 @@ const ManageSupport: React.FC<ManageSupportProps> = ({ adminUser, allUsers, allM
             if (fileInputRef.current) {
                 fileInputRef.current.value = '';
             }
-            // If sending a message, ensure status is open
             if (selectedUser && selectedUser.supportStatus === 'resolved') {
                 onUpdateUser({ ...selectedUser, supportStatus: 'open' });
             }
@@ -271,7 +306,6 @@ const ManageSupport: React.FC<ManageSupportProps> = ({ adminUser, allUsers, allM
                                         <div className="flex justify-between items-center mb-1">
                                             <div className="flex items-center gap-2">
                                                 <h4 className={`font-bold text-sm ${isSelected ? 'text-white' : 'text-gray-300'}`}>{conv.user?.name}</h4>
-                                                {/* Status Indicator Dot */}
                                                 <div className={`w-2 h-2 rounded-full ${isResolved ? 'bg-gray-500' : 'bg-green-500 animate-pulse'}`} title={isResolved ? "Resolvido" : "Aberto"}></div>
                                             </div>
                                             {conv.unreadCount > 0 && <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">{conv.unreadCount}</span>}
@@ -309,6 +343,9 @@ const ManageSupport: React.FC<ManageSupportProps> = ({ adminUser, allUsers, allM
                                     </button>
                                 </div>
                             </div>
+                            
+                            {/* NEW: Financial Context Bar */}
+                            <UserFinancialSummary transactions={allTransactions} userId={selectedUser.id} />
 
                             <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-brand-black/10">
                                 {selectedConversationMessages.length > 0 ? (

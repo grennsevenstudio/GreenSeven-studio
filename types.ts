@@ -171,6 +171,7 @@ export enum AdminActionType {
     UserBalanceEdit = 'UserBalanceEdit',
     SettingsUpdate = 'SettingsUpdate',
     PaymentScheduled = 'PaymentScheduled',
+    HistoryClear = 'HistoryClear',
 }
 
 export interface AdminActionLog {

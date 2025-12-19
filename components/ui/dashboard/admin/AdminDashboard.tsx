@@ -15,6 +15,7 @@ import ManagePlans from './pages/ManagePlans';
 import Settings from './pages/Settings';
 import ManageSupport from './pages/ManageSupport';
 import AdminActionLogs from './pages/AdminActionLogs';
+import DeleteHistory from './pages/DeleteHistory';
 
 interface AdminDashboardProps {
   user: User;
@@ -43,10 +44,11 @@ interface AdminDashboardProps {
   onUpdatePlan: (updatedPlan: InvestmentPlan) => void;
   investmentPlans: InvestmentPlan[];
   syncStatus: any;
+  onDeleteUserTransactions: (userId: string) => void;
 }
 
 const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
-  const { user, allUsers, allTransactions, chatMessages, platformSettings, adminActionLogs, notifications, onLogout, onUpdateTransaction, onUpdateUserStatus, onPayoutBonus, onSendMessage, onUpdateSettings, onAdminUpdateUserBalance, onUpdateUser, onMarkAllNotificationsAsRead, isDarkMode, toggleTheme, language, setLanguage, onRefreshData, onBroadcastNotification, referralRates, investmentPlans, onUpdatePlan, syncStatus } = props;
+  const { user, allUsers, allTransactions, chatMessages, platformSettings, adminActionLogs, notifications, onLogout, onUpdateTransaction, onUpdateUserStatus, onPayoutBonus, onSendMessage, onUpdateSettings, onAdminUpdateUserBalance, onUpdateUser, onMarkAllNotificationsAsRead, isDarkMode, toggleTheme, language, setLanguage, onRefreshData, onBroadcastNotification, referralRates, investmentPlans, onUpdatePlan, syncStatus, onDeleteUserTransactions } = props;
   const [activeView, setActiveView] = useState('dashboard');
   const [isSidebarOpen, setSidebarOpen] = useState(false);
 
@@ -65,6 +67,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
         icon: ICONS.transactions, 
         view: 'transactions' 
     },
+    { label: 'Limpar Histórico', icon: ICONS.trash, view: 'delete_history' },
     { label: t.logs, icon: ICONS.history, view: 'logs' },
     { label: t.support, icon: ICONS.support, view: 'support' },
     { label: t.plans, icon: ICONS.plans, view: 'plans' },
@@ -79,10 +82,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
         return <ManageUsers allUsers={allUsers} onAdminUpdateUserBalance={onAdminUpdateUserBalance} onUpdateUserStatus={onUpdateUserStatus} />;
       case 'transactions':
         return <ManageTransactions allUsers={allUsers} transactions={allTransactions} onUpdateTransaction={onUpdateTransaction} onPayoutBonus={onPayoutBonus} referralRates={referralRates} />;
+      case 'delete_history':
+        return <DeleteHistory allUsers={allUsers} allTransactions={allTransactions} onDeleteUserTransactions={onDeleteUserTransactions} />;
       case 'logs':
         return <AdminActionLogs adminActionLogs={adminActionLogs} />;
       case 'support':
-        return <ManageSupport adminUser={user} allUsers={allUsers} allMessages={chatMessages} onSendMessage={onSendMessage} onUpdateUser={onUpdateUser} />;
+        return <ManageSupport adminUser={user} allUsers={allUsers} allMessages={chatMessages} allTransactions={allTransactions} onSendMessage={onSendMessage} onUpdateUser={onUpdateUser} />;
       case 'plans':
         return <ManagePlans investmentPlans={investmentPlans} onUpdatePlan={onUpdatePlan} />;
       case 'settings':
