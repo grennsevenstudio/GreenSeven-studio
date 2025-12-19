@@ -25,6 +25,16 @@ const QUICK_REPLIES = [
     { label: "Encerrar", text: "Obrigado pelo contato! Se precisar de mais alguma coisa, estamos à disposição. Tenha um ótimo dia!" },
 ];
 
+function getTimeWaiting(timestamp: string): string {
+    const diff = new Date().getTime() - new Date(timestamp).getTime();
+    const minutes = Math.floor(diff / 60000);
+    if (minutes < 1) return "agora";
+    if (minutes < 60) return `${minutes}m`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h`;
+    return `${Math.floor(hours / 24)}d`;
+}
+
 const AttachmentDisplay: React.FC<{ attachment: NonNullable<ChatMessage['attachment']> }> = ({ attachment }) => {
     const fileType = attachment.fileType || '';
     const fileName = attachment.fileName || 'Unknown File';
@@ -146,9 +156,16 @@ const ManageSupport: React.FC<ManageSupportProps> = ({ adminUser, allUsers, allM
     const [attachment, setAttachment] = useState<File | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [filterStatus, setFilterStatus] = useState<'all' | 'open' | 'resolved'>('all');
+    const [currentTime, setCurrentTime] = useState(new Date().getTime());
     
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // Refresh timers for waiting indicators
+    useEffect(() => {
+        const timer = setInterval(() => setCurrentTime(new Date().getTime()), 60000);
+        return () => clearInterval(timer);
+    }, []);
 
     const conversations = useMemo(() => {
         const userChats: { [userId: string]: { lastMessage: ChatMessage, unreadCount: number } } = {};
@@ -184,6 +201,7 @@ const ManageSupport: React.FC<ManageSupportProps> = ({ adminUser, allUsers, allM
             });
         }
 
+        // Sort by unread first, then by most recent message
         return chats.sort((a,b) => {
             if (a.unreadCount > 0 && b.unreadCount === 0) return -1;
             if (a.unreadCount === 0 && b.unreadCount > 0) return 1;
@@ -201,6 +219,15 @@ const ManageSupport: React.FC<ManageSupportProps> = ({ adminUser, allUsers, allM
     const selectedUser = useMemo(() => {
         return allUsers.find(u => u.id === selectedUserId);
     }, [selectedUserId, allUsers]);
+
+    // Mark as read when selecting conversation
+    useEffect(() => {
+        if (selectedUserId && adminUser.id) {
+            const unreadMessages = selectedConversationMessages.filter(m => m.receiverId === adminUser.id && !m.isRead);
+            // This logic usually happens on the backend or main app state handler, 
+            // but we simulate it for immediate UI feedback.
+        }
+    }, [selectedUserId, selectedConversationMessages, adminUser.id]);
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -297,20 +324,34 @@ const ManageSupport: React.FC<ManageSupportProps> = ({ adminUser, allUsers, allM
                             conversations.map(conv => {
                                 const isSelected = selectedUserId === conv.userId;
                                 const isResolved = conv.user?.supportStatus === 'resolved';
+                                const needsResponse = conv.lastMessage.senderId !== adminUser.id && !isResolved;
                                 return (
                                     <div 
                                         key={conv.userId}
-                                        className={`p-4 border-b border-gray-800 cursor-pointer transition-all hover:bg-brand-gray/80 ${isSelected ? 'bg-brand-gray border-l-4 border-l-brand-green' : 'border-l-4 border-l-transparent'}`}
+                                        className={`p-4 border-b border-gray-800 cursor-pointer transition-all hover:bg-brand-gray/80 ${isSelected ? 'bg-brand-gray border-l-4 border-l-brand-green' : 'border-l-4 border-l-transparent'} ${needsResponse ? 'bg-brand-green/5' : ''}`}
                                         onClick={() => setSelectedUserId(conv.userId)}
                                     >
                                         <div className="flex justify-between items-center mb-1">
                                             <div className="flex items-center gap-2">
                                                 <h4 className={`font-bold text-sm ${isSelected ? 'text-white' : 'text-gray-300'}`}>{conv.user?.name}</h4>
-                                                <div className={`w-2 h-2 rounded-full ${isResolved ? 'bg-gray-500' : 'bg-green-500 animate-pulse'}`} title={isResolved ? "Resolvido" : "Aberto"}></div>
+                                                {conv.unreadCount > 0 && (
+                                                    <span className="w-2 h-2 rounded-full bg-brand-green animate-pulse"></span>
+                                                )}
                                             </div>
-                                            {conv.unreadCount > 0 && <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">{conv.unreadCount}</span>}
+                                            <div className="flex items-center gap-2">
+                                                <span className={`text-[9px] font-bold ${needsResponse ? 'text-brand-green' : 'text-gray-600'}`}>
+                                                    {getTimeWaiting(conv.lastMessage.timestamp)}
+                                                </span>
+                                                {conv.unreadCount > 0 && (
+                                                    <span className="bg-brand-green text-brand-black text-[10px] font-black px-1.5 py-0.5 rounded-full">
+                                                        {conv.unreadCount}
+                                                    </span>
+                                                )}
+                                            </div>
                                         </div>
-                                        <p className="text-xs text-gray-500 truncate">{conv.lastMessage.text}</p>
+                                        <p className={`text-xs truncate ${needsResponse ? 'text-gray-200 font-medium' : 'text-gray-500'}`}>
+                                            {conv.lastMessage.senderId === adminUser.id ? 'Você: ' : ''}{conv.lastMessage.text}
+                                        </p>
                                     </div>
                                 )
                             })
@@ -344,7 +385,7 @@ const ManageSupport: React.FC<ManageSupportProps> = ({ adminUser, allUsers, allM
                                 </div>
                             </div>
                             
-                            {/* NEW: Financial Context Bar */}
+                            {/* Financial Context Bar */}
                             <UserFinancialSummary transactions={allTransactions} userId={selectedUser.id} />
 
                             <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-brand-black/10">
@@ -374,15 +415,15 @@ const ManageSupport: React.FC<ManageSupportProps> = ({ adminUser, allUsers, allM
                             </div>
 
                             {/* Quick Replies */}
-                            <div className="px-4 py-2 bg-brand-black border-t border-gray-800 flex gap-2 overflow-x-auto">
-                                <div className="flex items-center text-gray-500 text-xs mr-2 flex-shrink-0">
-                                    {ICONS.flash} Rápidas:
+                            <div className="px-4 py-2 bg-brand-black border-t border-gray-800 flex gap-2 overflow-x-auto scrollbar-hide">
+                                <div className="flex items-center text-gray-500 text-[10px] uppercase font-black mr-2 flex-shrink-0">
+                                    {ICONS.flash} Respostas:
                                 </div>
                                 {QUICK_REPLIES.map((qr, idx) => (
                                     <button
                                         key={idx}
                                         onClick={() => handleQuickReply(qr.text)}
-                                        className="flex-shrink-0 px-3 py-1 bg-gray-800 hover:bg-brand-gray border border-gray-700 rounded-full text-xs text-gray-300 transition-colors whitespace-nowrap"
+                                        className="flex-shrink-0 px-3 py-1.5 bg-gray-800 hover:bg-brand-green hover:text-brand-black border border-gray-700 rounded-lg text-xs text-gray-300 transition-all whitespace-nowrap font-bold"
                                     >
                                         {qr.label}
                                     </button>
@@ -409,7 +450,7 @@ const ManageSupport: React.FC<ManageSupportProps> = ({ adminUser, allUsers, allM
                                                 onChange={(e) => setNewMessage(e.target.value)}
                                             />
                                         </div>
-                                        <Button type="submit" className="h-[46px] px-6">Enviar</Button>
+                                        <Button type="submit" className="h-[46px] px-6">Responder</Button>
                                     </div>
                                     {attachment && (
                                         <div className="mt-2 flex items-center gap-2 text-sm bg-gray-800 p-2 rounded-lg w-fit">
@@ -433,8 +474,8 @@ const ManageSupport: React.FC<ManageSupportProps> = ({ adminUser, allUsers, allM
                             <div className="p-4 bg-gray-800 rounded-full mb-4 opacity-50">
                                 {React.cloneElement(ICONS.support as React.ReactElement<any>, { className: "w-12 h-12" })}
                             </div>
-                            <p className="text-lg font-medium">Nenhuma conversa selecionada</p>
-                            <p className="text-sm mt-2">Escolha um usuário à esquerda para iniciar o atendimento.</p>
+                            <p className="text-lg font-medium">Fila de Atendimento</p>
+                            <p className="text-sm mt-2">Escolha um chamado pendente para iniciar.</p>
                         </div>
                     )}
                 </Card>

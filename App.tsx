@@ -585,8 +585,29 @@ const App: React.FC = () => {
       }
       const newMessage: ChatMessage = { id: faker.string.uuid(), senderId, receiverId, text, timestamp: new Date().toISOString(), isRead: false, attachment: attachmentData };
       const updatedMessages = [...dbState.chatMessages, newMessage];
-      setDbState(prev => ({ ...prev, chatMessages: updatedMessages }));
-      saveAllData({ ...dbState, chatMessages: updatedMessages });
+      
+      let updatedNotifs = [...dbState.notifications];
+      const sender = dbState.users.find(u => u.id === senderId);
+      const receiver = dbState.users.find(u => u.id === receiverId);
+
+      // Notify Admin if User sends a message
+      if (receiver && receiver.isAdmin && sender && !sender.isAdmin) {
+          const adminNotif: Notification = {
+              id: faker.string.uuid(),
+              userId: receiver.id,
+              message: `Suporte: Nova mensagem de ${sender.name}.`,
+              date: new Date().toISOString(),
+              isRead: false,
+              isAdmin: true
+          };
+          updatedNotifs.push(adminNotif);
+          await syncNotificationToSupabase(adminNotif);
+          // High Priority Browser notification
+          showSystemNotification('Suporte GreennSeven', `Nova mensagem de ${sender.name}: ${text.slice(0, 50)}...`);
+      }
+
+      setDbState(prev => ({ ...prev, chatMessages: updatedMessages, notifications: updatedNotifs }));
+      saveAllData({ ...dbState, chatMessages: updatedMessages, notifications: updatedNotifs });
       await syncMessageToSupabase(newMessage);
   };
 
