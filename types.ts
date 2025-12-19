@@ -135,6 +135,7 @@ export interface Notification {
     message: string;
     date: string;
     isRead: boolean;
+    isAdmin?: boolean; // Optional flag to mark if it's an admin notification (system alert)
 }
 
 export interface ChatMessage {
@@ -172,6 +173,7 @@ export enum AdminActionType {
     SettingsUpdate = 'SettingsUpdate',
     PaymentScheduled = 'PaymentScheduled',
     HistoryClear = 'HistoryClear',
+    TransactionDelete = 'TransactionDelete',
 }
 
 export interface AdminActionLog {

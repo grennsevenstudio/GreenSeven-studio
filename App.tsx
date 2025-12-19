@@ -21,7 +21,7 @@ import {
     fetchInvestmentPlansFromSupabase,
     syncInvestmentPlanToSupabase,
     checkSupabaseConnection,
-    deleteTransactionsByUserId,
+    deleteTransactionById,
 } from './lib/supabase';
 import { requestNotificationPermission, showSystemNotification, formatCurrency } from './lib/utils';
 import { faker } from '@faker-js/faker';
@@ -391,20 +391,21 @@ const App: React.FC = () => {
       await syncAdminLogToSupabase(adminLog);
   };
 
-  const handleDeleteUserTransactions = async (userId: string) => {
+  const handleDeleteTransaction = async (txId: string) => {
       // 1. Remove from local state
-      const updatedTransactions = dbState.transactions.filter(tx => tx.userId !== userId);
+      const updatedTransactions = dbState.transactions.filter(tx => tx.id !== txId);
+      const tx = dbState.transactions.find(t => t.id === txId);
       
       // 2. Log action
-      const user = dbState.users.find(u => u.id === userId);
+      const user = tx ? dbState.users.find(u => u.id === tx.userId) : null;
       const adminLog: AdminActionLog = {
           id: faker.string.uuid(),
           timestamp: new Date().toISOString(),
           adminId: loggedUser?.id || 'system',
           adminName: loggedUser?.name || 'Sistema',
-          actionType: AdminActionType.HistoryClear,
-          description: `Excluiu histórico de transações de ${user?.name || userId}`,
-          targetId: userId
+          actionType: AdminActionType.TransactionDelete,
+          description: `Excluiu transação ${txId.slice(0,8)} de ${user?.name || 'desconhecido'}`,
+          targetId: txId
       };
       const updatedLogs = [adminLog, ...dbState.adminActionLogs];
 
@@ -416,7 +417,7 @@ const App: React.FC = () => {
       saveAllData({ ...dbState, transactions: updatedTransactions, adminActionLogs: updatedLogs });
 
       // 3. Sync with Supabase
-      await deleteTransactionsByUserId(userId);
+      await deleteTransactionById(txId);
       await syncAdminLogToSupabase(adminLog);
   };
 
@@ -642,7 +643,7 @@ const App: React.FC = () => {
           investmentPlans={dbState.investmentPlans}
           onUpdatePlan={handleUpdatePlan}
           syncStatus={syncStatus}
-          onDeleteUserTransactions={handleDeleteUserTransactions}
+          onDeleteUserTransactions={handleDeleteTransaction}
         />
       )}
     </>

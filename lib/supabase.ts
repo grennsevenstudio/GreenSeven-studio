@@ -425,6 +425,15 @@ export const deleteTransactionsByUserId = async (userId: string) => {
     }
 }
 
+export const deleteTransactionById = async (txId: string) => {
+    try {
+        const { error } = await supabase.from('transactions').delete().eq('id', txId);
+        return { error };
+    } catch (e) {
+        return { error: e };
+    }
+}
+
 export const syncMessageToSupabase = async (msg: ChatMessage) => {
     try {
          const dbMsg = {

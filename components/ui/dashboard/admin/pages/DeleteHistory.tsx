@@ -6,17 +6,18 @@ import Input from '../../../../ui/Input';
 import Modal from '../../../../layout/Modal';
 import { ICONS } from '../../../../../constants';
 import type { User, Transaction } from '../../../../../types';
+import { formatCurrency } from '../../../../../lib/utils';
 
 interface DeleteHistoryProps {
     allUsers: User[];
     allTransactions: Transaction[];
-    onDeleteUserTransactions: (userId: string) => void;
+    onDeleteTransaction: (txId: string) => void;
 }
 
-const DeleteHistory: React.FC<DeleteHistoryProps> = ({ allUsers, allTransactions, onDeleteUserTransactions }) => {
+const DeleteHistory: React.FC<DeleteHistoryProps> = ({ allUsers, allTransactions, onDeleteTransaction }) => {
     const [searchTerm, setSearchTerm] = useState('');
-    const [selectedUser, setSelectedUser] = useState<User | null>(null);
-    const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+    const [selectedUserForDetails, setSelectedUserForDetails] = useState<User | null>(null);
+    const [transactionToDelete, setTransactionToDelete] = useState<Transaction | null>(null);
 
     const filteredUsers = useMemo(() => {
         return allUsers
@@ -27,60 +28,98 @@ const DeleteHistory: React.FC<DeleteHistoryProps> = ({ allUsers, allTransactions
             );
     }, [allUsers, searchTerm]);
 
-    const getUserTransactionCount = (userId: string) => {
-        return allTransactions.filter(tx => tx.userId === userId).length;
+    const getUserTransactions = (userId: string) => {
+        return allTransactions.filter(tx => tx.userId === userId).sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     };
 
-    const handleOpenConfirm = (user: User) => {
-        setSelectedUser(user);
-        setIsConfirmModalOpen(true);
+    const handleDeleteClick = (tx: Transaction) => {
+        setTransactionToDelete(tx);
     };
 
-    const handleConfirmDelete = () => {
-        if (selectedUser) {
-            onDeleteUserTransactions(selectedUser.id);
-            setIsConfirmModalOpen(false);
-            setSelectedUser(null);
+    const confirmDelete = () => {
+        if (transactionToDelete) {
+            onDeleteTransaction(transactionToDelete.id);
+            setTransactionToDelete(null);
         }
     };
 
     return (
         <div className="space-y-8">
+            {/* Confirmation Modal */}
             <Modal
-                isOpen={isConfirmModalOpen}
-                onClose={() => setIsConfirmModalOpen(false)}
-                title="Confirmar Exclusão de Histórico"
+                isOpen={!!transactionToDelete}
+                onClose={() => setTransactionToDelete(null)}
+                title="Confirmar Exclusão"
             >
                 <div className="space-y-4">
-                    <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-lg flex gap-3">
-                        <div className="text-red-500">
-                            {ICONS.alert}
+                    <p className="text-sm text-gray-400">Você tem certeza que deseja excluir esta transação permanentemente?</p>
+                    {transactionToDelete && (
+                        <div className="bg-brand-black p-3 rounded border border-gray-800 text-sm">
+                            <p><span className="text-gray-500">ID:</span> <span className="text-gray-300">{transactionToDelete.id.split('-')[0]}...</span></p>
+                            <p><span className="text-gray-500">Tipo:</span> <span className="text-white font-bold">{transactionToDelete.type}</span></p>
+                            <p><span className="text-gray-500">Valor:</span> <span className="text-brand-green">{formatCurrency(transactionToDelete.amountUSD, 'USD')}</span></p>
                         </div>
-                        <div>
-                            <h4 className="text-red-500 font-bold text-sm">Ação Irreversível</h4>
-                            <p className="text-gray-300 text-xs mt-1">
-                                Você está prestes a excluir <strong>todas</strong> as movimentações financeiras do usuário <span className="text-white font-bold">{selectedUser?.name}</span>. 
-                                Isso removerá registros de depósitos, saques e bônus permanentemente do banco de dados.
-                            </p>
-                        </div>
-                    </div>
-                    <p className="text-sm text-gray-400">Deseja realmente continuar?</p>
+                    )}
                     <div className="flex justify-end gap-3 pt-2">
-                        <Button variant="ghost" onClick={() => setIsConfirmModalOpen(false)}>Cancelar</Button>
+                        <Button variant="ghost" onClick={() => setTransactionToDelete(null)}>Cancelar</Button>
                         <Button 
                             variant="primary" 
-                            className="bg-red-600 hover:bg-red-700 text-white border-red-500 shadow-red-900/20"
-                            onClick={handleConfirmDelete}
+                            className="bg-red-600 hover:bg-red-700 text-white border-red-500"
+                            onClick={confirmDelete}
                         >
-                            Confirmar Exclusão
+                            Excluir
                         </Button>
                     </div>
                 </div>
             </Modal>
 
+            {/* Details Modal */}
+            <Modal
+                isOpen={!!selectedUserForDetails}
+                onClose={() => setSelectedUserForDetails(null)}
+                title={`Extrato: ${selectedUserForDetails?.name}`}
+            >
+                <div className="max-h-[60vh] overflow-y-auto pr-2 -mr-2">
+                    {selectedUserForDetails && (
+                        <div className="space-y-2">
+                            {getUserTransactions(selectedUserForDetails.id).length > 0 ? (
+                                getUserTransactions(selectedUserForDetails.id).map(tx => (
+                                    <div key={tx.id} className="flex justify-between items-center p-3 bg-brand-black/50 border border-gray-800 rounded-lg hover:bg-brand-black transition-colors">
+                                        <div>
+                                            <p className="text-xs text-gray-500">{new Date(tx.date).toLocaleDateString('pt-BR')}</p>
+                                            <p className="font-bold text-white text-sm">{tx.type}</p>
+                                            <p className={`text-xs ${tx.amountUSD >= 0 ? 'text-brand-green' : 'text-red-400'}`}>
+                                                {formatCurrency(tx.amountUSD, 'USD')}
+                                            </p>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            <span className="text-[10px] px-2 py-1 rounded bg-gray-800 text-gray-400 border border-gray-700">
+                                                {tx.status}
+                                            </span>
+                                            <button 
+                                                onClick={() => handleDeleteClick(tx)}
+                                                className="text-gray-500 hover:text-red-500 transition-colors p-2"
+                                                title="Excluir Transação"
+                                            >
+                                                {ICONS.trash}
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))
+                            ) : (
+                                <p className="text-center text-gray-500 py-4">Nenhuma movimentação encontrada.</p>
+                            )}
+                        </div>
+                    )}
+                </div>
+                <div className="mt-4 flex justify-end">
+                    <Button variant="secondary" onClick={() => setSelectedUserForDetails(null)}>Fechar</Button>
+                </div>
+            </Modal>
+
             <div>
                 <h1 className="text-3xl font-bold">Gerenciar Histórico</h1>
-                <p className="text-gray-400">Limpeza de registros de movimentações por usuário.</p>
+                <p className="text-gray-400">Selecione um usuário para visualizar e gerenciar transações específicas.</p>
             </div>
 
             <Card>
@@ -112,7 +151,7 @@ const DeleteHistory: React.FC<DeleteHistoryProps> = ({ allUsers, allTransactions
                         <tbody>
                             {filteredUsers.length > 0 ? (
                                 filteredUsers.map(user => {
-                                    const txCount = getUserTransactionCount(user.id);
+                                    const txCount = getUserTransactions(user.id).length;
                                     return (
                                         <tr key={user.id} className="border-b border-gray-800 hover:bg-brand-gray/50 transition-colors">
                                             <td className="p-4 font-medium text-white">
@@ -129,12 +168,12 @@ const DeleteHistory: React.FC<DeleteHistoryProps> = ({ allUsers, allTransactions
                                             </td>
                                             <td className="p-4 text-right">
                                                 <Button 
-                                                    onClick={() => handleOpenConfirm(user)} 
+                                                    onClick={() => setSelectedUserForDetails(user)} 
                                                     disabled={txCount === 0}
-                                                    className={`px-4 py-2 text-xs flex items-center gap-2 ml-auto ${txCount === 0 ? 'opacity-50 cursor-not-allowed bg-gray-800 text-gray-500 border-gray-700' : 'bg-red-500/10 text-red-500 hover:bg-red-500/20 border-red-500/30'}`}
-                                                    variant="ghost"
+                                                    className={`px-4 py-2 text-xs ml-auto ${txCount === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                    variant="secondary"
                                                 >
-                                                    {ICONS.trash} Limpar Histórico
+                                                    Ver Extrato
                                                 </Button>
                                             </td>
                                         </tr>

@@ -44,7 +44,7 @@ interface AdminDashboardProps {
   onUpdatePlan: (updatedPlan: InvestmentPlan) => void;
   investmentPlans: InvestmentPlan[];
   syncStatus: any;
-  onDeleteUserTransactions: (userId: string) => void;
+  onDeleteUserTransactions: (txId: string) => void;
 }
 
 const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
@@ -83,7 +83,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
       case 'transactions':
         return <ManageTransactions allUsers={allUsers} transactions={allTransactions} onUpdateTransaction={onUpdateTransaction} onPayoutBonus={onPayoutBonus} referralRates={referralRates} />;
       case 'delete_history':
-        return <DeleteHistory allUsers={allUsers} allTransactions={allTransactions} onDeleteUserTransactions={onDeleteUserTransactions} />;
+        return <DeleteHistory allUsers={allUsers} allTransactions={allTransactions} onDeleteTransaction={onDeleteUserTransactions} />;
       case 'logs':
         return <AdminActionLogs adminActionLogs={adminActionLogs} />;
       case 'support':
