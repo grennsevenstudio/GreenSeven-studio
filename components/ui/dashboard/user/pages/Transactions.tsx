@@ -29,9 +29,9 @@ const TransactionDetails: React.FC<{ tx: Transaction, statusColors: any }> = ({ 
              <div className="flex justify-between pb-1">
                 <span className="text-gray-500 dark:text-gray-400">Status Atual:</span>
                 <span className={`font-bold ${statusColors[tx.status].split(' ')[1]}`}>
-                    {tx.status === TransactionStatus.Completed ? 'Concluído' :
-                     tx.status === TransactionStatus.Pending ? 'Pendente' :
-                     tx.status === TransactionStatus.Failed ? 'Falhou' : tx.status}
+                    {tx.status === TransactionStatus.Completed ? 'Autorizado/Concluído' :
+                     tx.status === TransactionStatus.Pending ? 'Pendente de Análise' :
+                     tx.status === TransactionStatus.Failed ? 'Recusado' : tx.status}
                 </span>
             </div>
         </div>
@@ -82,7 +82,7 @@ const TransactionRow: React.FC<TransactionItemProps> = ({ tx, isExpanded, onTogg
     const amountColor = isWithdrawal ? 'text-red-500' : 'text-brand-green';
     
     const statusColors: {[key in TransactionStatus]: string} = {
-        [TransactionStatus.Completed]: 'bg-green-100 dark:bg-green-500/20 text-green-700 dark:text-green-400 border-green-200 dark:border-green-500/30 font-black',
+        [TransactionStatus.Completed]: 'bg-green-100 dark:bg-green-500/20 text-green-700 dark:text-brand-green border-green-500/40 ring-2 ring-brand-green/20 font-black',
         [TransactionStatus.Pending]: 'bg-yellow-100 dark:bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border-yellow-200 dark:border-yellow-500/20',
         [TransactionStatus.Failed]: 'bg-red-100 dark:bg-red-500/10 text-red-600 dark:text-red-400 border-red-200 dark:border-red-500/20',
         [TransactionStatus.Scheduled]: 'bg-blue-100 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-500/20',
@@ -108,14 +108,14 @@ const TransactionRow: React.FC<TransactionItemProps> = ({ tx, isExpanded, onTogg
                      tx.type === TransactionType.Bonus ? 'Bônus' : tx.type}
                 </td>
                 <td className={`p-4 font-bold ${amountColor}`}>
-                    {tx.status === TransactionStatus.Pending && tx.type === TransactionType.Deposit ? `(~ ${formatCurrency(tx.amountUSD, 'USD')})` : (isWithdrawal ? '-' : '+') + ' ' + formatCurrency(Math.abs(tx.amountUSD), 'USD')}
+                    {(isWithdrawal ? '-' : '+') + ' ' + formatCurrency(Math.abs(tx.amountUSD), 'USD')}
                 </td>
                 <td className="p-4 text-gray-600 dark:text-gray-300">{tx.amountBRL ? formatCurrency(tx.amountBRL, 'BRL') : '-'}</td>
                 <td className="p-4">
-                    <span className={`px-2 py-1 text-xs font-semibold rounded-md border uppercase tracking-tighter ${statusColors[tx.status]}`}>
-                        {tx.status === TransactionStatus.Completed ? 'Concluído' :
+                    <span className={`px-2 py-1 text-[10px] font-bold rounded-md border uppercase tracking-tighter ${statusColors[tx.status]}`}>
+                        {tx.status === TransactionStatus.Completed ? 'Autorizado' :
                          tx.status === TransactionStatus.Pending ? 'Pendente' :
-                         tx.status === TransactionStatus.Failed ? 'Falhou' : tx.status}
+                         tx.status === TransactionStatus.Failed ? 'Recusado' : tx.status}
                     </span>
                 </td>
             </tr>
@@ -153,16 +153,16 @@ const TransactionMobileCard: React.FC<TransactionItemProps> = ({ tx, isExpanded,
     }
 
     const statusColors: {[key in TransactionStatus]: string} = {
-        [TransactionStatus.Completed]: 'bg-green-100 dark:bg-green-500/20 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-500/30',
+        [TransactionStatus.Completed]: 'bg-green-100 dark:bg-green-500/20 text-green-700 dark:text-brand-green border border-brand-green/30 ring-1 ring-brand-green/10',
         [TransactionStatus.Pending]: 'bg-yellow-100 dark:bg-yellow-500/20 text-yellow-600 dark:text-yellow-400 border border-yellow-200 dark:border-yellow-500/20',
         [TransactionStatus.Failed]: 'bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-500/20',
         [TransactionStatus.Scheduled]: 'bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-500/20',
     };
 
     const statusLabel = {
-        [TransactionStatus.Completed]: 'Concluído',
+        [TransactionStatus.Completed]: 'Autorizado',
         [TransactionStatus.Pending]: 'Pendente',
-        [TransactionStatus.Failed]: 'Falhou',
+        [TransactionStatus.Failed]: 'Recusado',
         [TransactionStatus.Scheduled]: 'Agendado',
     }[tx.status] || tx.status;
 
@@ -191,7 +191,7 @@ const TransactionMobileCard: React.FC<TransactionItemProps> = ({ tx, isExpanded,
                         {isWithdrawal ? '-' : '+'} {formatCurrency(Math.abs(tx.amountUSD), 'USD')}
                     </p>
                     <div className="flex items-center justify-end gap-1 mt-1">
-                        <span className={`px-2 py-[2px] text-[9px] font-bold uppercase tracking-wider rounded-md ${statusColors[tx.status]}`}>
+                        <span className={`px-2 py-[2px] text-[9px] font-black uppercase tracking-wider rounded-md ${statusColors[tx.status]}`}>
                             {statusLabel}
                         </span>
                         <svg xmlns="http://www.w3.org/2000/svg" className={`h-3 w-3 text-gray-400 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -294,8 +294,8 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions }) => {
             `}</style>
             
             <div className="px-4 sm:px-0">
-                <h1 className="text-2xl sm:text-3xl font-bold">Extrato</h1>
-                <p className="text-gray-500 dark:text-gray-400 text-sm sm:text-base">Histórico completo de suas operações financeiras.</p>
+                <h1 className="text-2xl sm:text-3xl font-bold">Extrato Financeiro</h1>
+                <p className="text-gray-500 dark:text-gray-400 text-sm sm:text-base">Histórico completo de solicitações e autorizações.</p>
             </div>
             
             <div className="sticky top-[64px] z-20 bg-gray-50 dark:bg-brand-black pt-2 pb-4 px-4 sm:px-0 -mx-4 sm:mx-0 border-b border-gray-200 dark:border-gray-800/50 sm:static sm:bg-transparent sm:border-0 sm:pt-0 sm:pb-0 transition-colors duration-300">

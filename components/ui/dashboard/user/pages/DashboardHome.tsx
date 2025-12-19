@@ -125,13 +125,13 @@ const DepositModalContent: React.FC<{
     
     if (step === 3) {
         return (
-            <SuccessDisplay title="Comprovante Enviado!" onClose={onClose}>
+            <SuccessDisplay title="Solicitação Enviada!" onClose={onClose}>
                 <p>
                     Recebemos sua solicitação de depósito de {formatCurrency(parseFloat(amountBRL), 'BRL')}. 
                     <br/><br/>
-                    <span className="text-yellow-400 font-bold bg-yellow-400/10 px-2 py-1 rounded">Aguardando Confirmação do Administrador.</span>
+                    <span className="text-yellow-400 font-bold bg-yellow-400/10 px-2 py-1 rounded">Aguardando Autorização do Administrador.</span>
                     <br/><br/>
-                    Assim que aprovado, o saldo em dólar aparecerá automaticamente na sua carteira.
+                    Assim que autorizado, o valor aparecerá como "Capital Investido" no seu dashboard.
                 </p>
             </SuccessDisplay>
         );
@@ -277,10 +277,10 @@ const WithdrawModalContent: React.FC<{
 
     if (step === 4) {
         return (
-            <SuccessDisplay title="Solicitação Enviada!" onClose={onClose}>
+            <SuccessDisplay title="Saque em Processamento!" onClose={onClose}>
                 <p>
-                    Sua solicitação de saque de <span className="font-bold text-white">{formatCurrency(parseFloat(amountUSD), 'USD')}</span> foi enviada para análise.
-                    Assim que aprovada, o valor de <span className="font-bold text-white">{formatCurrency(amountToReceiveBRL, 'BRL')}</span> será enviado para a chave PIX informada.
+                    Sua solicitação de saque de <span className="font-bold text-white">{formatCurrency(parseFloat(amountUSD), 'USD')}</span> foi enviada.
+                    Assim que autorizada pelo administrador, o valor de <span className="font-bold text-white">{formatCurrency(amountToReceiveBRL, 'BRL')}</span> será enviado via PIX.
                 </p>
             </SuccessDisplay>
         );
@@ -448,9 +448,9 @@ const TransactionRow: React.FC<{ tx: Transaction }> = ({ tx }) => {
             label = tx.type;
     }
     const statusMap: {[key in TransactionStatus]: { text: string, color: string }} = {
-        [TransactionStatus.Completed]: { text: 'Concluído', color: 'bg-brand-green/20 text-brand-green' },
+        [TransactionStatus.Completed]: { text: 'Autorizado', color: 'bg-brand-green/20 text-brand-green border border-brand-green/30' },
         [TransactionStatus.Pending]: { text: 'Pendente', color: 'bg-yellow-500/20 text-yellow-400' },
-        [TransactionStatus.Failed]: { text: 'Falhou', color: 'bg-red-500/20 text-red-400' },
+        [TransactionStatus.Failed]: { text: 'Recusado', color: 'bg-red-500/20 text-red-400' },
         [TransactionStatus.Scheduled]: { text: 'Agendado', color: 'bg-blue-500/20 text-brand-blue' },
     };
     const statusInfo = statusMap[tx.status] || { text: tx.status, color: 'bg-gray-800 text-gray-400' };
@@ -468,7 +468,7 @@ const TransactionRow: React.FC<{ tx: Transaction }> = ({ tx }) => {
                 <p className={`font-bold text-sm ${tx.type === TransactionType.Withdrawal ? 'text-red-400' : 'text-brand-green'}`}>
                     {tx.type === TransactionType.Withdrawal ? '-' : '+'} {formatCurrency(Math.abs(tx.amountUSD), 'USD')}
                 </p>
-                <span className={`mt-1 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase ${statusInfo.color}`}>
+                <span className={`mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-tighter ${statusInfo.color}`}>
                     {statusInfo.text}
                 </span>
             </div>
@@ -642,15 +642,15 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions, onAdd
                 </div>
             </div>
 
-            {/* Pending Deposit Warning */}
+            {/* Visual Indicator of Pending Deposits - REQUESTED FEATURE */}
             {pendingDepositAmount > 0 && (
-                <div className="bg-yellow-500/10 border border-yellow-500/30 p-4 rounded-xl flex items-center gap-4 animate-pulse">
+                <div className="bg-yellow-500/10 border border-yellow-500/30 p-4 rounded-xl flex items-center gap-4 animate-pulse-slow">
                     <div className="p-3 bg-yellow-500/20 rounded-full text-yellow-500">
                         {ICONS.refresh}
                     </div>
                     <div>
-                        <p className="text-yellow-500 font-bold text-sm uppercase">Aguardando Aprovação</p>
-                        <p className="text-white text-xs">Você possui <span className="font-bold">{formatCurrency(pendingDepositAmount, 'USD')}</span> em depósitos sendo analisados.</p>
+                        <p className="text-yellow-500 font-bold text-sm uppercase">Depósitos Aguardando Autorização</p>
+                        <p className="text-white text-xs">O administrador está analisando <span className="font-black text-brand-green">{formatCurrency(pendingDepositAmount, 'USD')}</span> enviados por você.</p>
                     </div>
                 </div>
             )}
