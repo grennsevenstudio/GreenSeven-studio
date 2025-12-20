@@ -177,12 +177,23 @@ const SupportChat: React.FC<SupportChatProps> = ({ user, admin, messages, onSend
                 onChange={handleFileChange} 
                 className="hidden" 
             />
-            <div className="flex justify-between items-end flex-shrink-0">
-                <div>
-                    <h1 className="text-3xl font-bold">Suporte ao Cliente</h1>
-                    <p className="text-gray-400">Precisa de ajuda? Fale com nossa equipe ou veja o FAQ.</p>
+            <div className="flex flex-col sm:flex-row justify-between sm:items-end gap-4 flex-shrink-0">
+                <div className="flex items-center gap-4">
+                    <div>
+                        <h1 className="text-3xl font-bold">Suporte ao Cliente</h1>
+                        <p className="text-gray-400">Precisa de ajuda? Fale com nossa equipe ou veja o FAQ.</p>
+                    </div>
+                    <a 
+                        href="https://wa.me/13434355021" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="p-3 bg-green-500/10 border border-green-500/30 text-green-400 rounded-full hover:bg-green-500/20 transition-all duration-300 transform hover:scale-110 flex-shrink-0"
+                        title="Fale conosco no WhatsApp"
+                    >
+                        {React.cloneElement(ICONS.whatsapp as React.ReactElement<any>, { className: "h-6 w-6" })}
+                    </a>
                 </div>
-                <div className={`px-4 py-2 rounded-lg border ${isResolved ? 'bg-gray-800 border-gray-700 text-gray-400' : 'bg-green-500/10 border-green-500/30 text-brand-green'} flex items-center gap-2`}>
+                <div className={`px-4 py-2 rounded-lg border ${isResolved ? 'bg-gray-800 border-gray-700 text-gray-400' : 'bg-green-500/10 border-green-500/30 text-brand-green'} flex items-center gap-2 flex-shrink-0`}>
                     <div className={`w-2 h-2 rounded-full ${isResolved ? 'bg-gray-500' : 'bg-green-500 animate-pulse'}`}></div>
                     <span className="text-sm font-bold uppercase">{isResolved ? 'Chamado Encerrado' : 'Chamado Aberto'}</span>
                 </div>
