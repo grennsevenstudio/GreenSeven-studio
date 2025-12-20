@@ -11,7 +11,7 @@ import { TRANSLATIONS } from '../../lib/translations';
 
 interface LoginPageProps {
   setView: (view: View) => void;
-  onLogin: (email: string, password?: string) => boolean;
+  onLogin: (email: string, password?: string) => Promise<boolean>;
   language: Language;
   setLanguage: (lang: Language) => void;
 }
@@ -30,6 +30,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ setView, onLogin, language, setLa
   const [errors, setErrors] = useState<{ email: boolean | string; password: boolean }>({ email: false, password: false });
   const [rememberMe, setRememberMe] = useState(false);
   const [modalContent, setModalContent] = useState<{ title: string; content: React.ReactNode } | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Forgot Password State
   const [isForgotModalOpen, setIsForgotModalOpen] = useState(false);
@@ -74,7 +75,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ setView, onLogin, language, setLa
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     let emailError: boolean | string = false;
@@ -91,17 +92,20 @@ const LoginPage: React.FC<LoginPageProps> = ({ setView, onLogin, language, setLa
       return;
     }
 
+    setIsLoading(true);
+
     if (rememberMe) {
       localStorage.setItem('rememberedEmail', email);
     } else {
       localStorage.removeItem('rememberedEmail');
     }
     
-    // onLogin now returns a boolean indicating success
-    const loginSuccess = onLogin(email, password);
+    const loginSuccess = await onLogin(email, password);
     if (!loginSuccess) {
-        // Optionally handle specific UI feedback here if needed
+      setIsLoading(false);
+      setErrors({ email: 'Credenciais inválidas. Verifique seu email e senha.', password: true });
     }
+    // On success, the component unmounts and isLoading state is gone.
   };
 
   const handleForgotPassword = (e: React.FormEvent) => {
@@ -137,6 +141,16 @@ const LoginPage: React.FC<LoginPageProps> = ({ setView, onLogin, language, setLa
 
   return (
     <>
+      {isLoading && (
+        <div className="fixed inset-0 bg-brand-black/90 backdrop-blur-sm z-50 flex flex-col items-center justify-center animate-fade-in">
+            <svg className="animate-spin h-12 w-12 text-brand-green" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <p className="text-xl font-bold text-white mt-4 tracking-wider">Conectando...</p>
+        </div>
+      )}
+
       {/* Terms Modal */}
       <Modal 
         isOpen={!!modalContent}

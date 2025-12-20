@@ -201,16 +201,24 @@ const App: React.FC = () => {
       loadRemoteData();
   }, []);
 
-  const handleLogin = (email: string, password?: string) => {
-      const user = dbState.users.find(u => u.email === email);
-      if (user) {
-          if (password && user.password && user.password !== password) return false;
-          setLoggedUser(user);
-          setSessionUser(user.id);
-          setView(user.isAdmin ? View.AdminDashboard : View.UserDashboard);
-          return true;
-      }
-      return false;
+  const handleLogin = (email: string, password?: string): Promise<boolean> => {
+      return new Promise(resolve => {
+        setTimeout(() => {
+            const user = dbState.users.find(u => u.email === email);
+            if (user) {
+                if (password && user.password && user.password !== password) {
+                    resolve(false);
+                    return;
+                }
+                setLoggedUser(user);
+                setSessionUser(user.id);
+                setView(user.isAdmin ? View.AdminDashboard : View.UserDashboard);
+                resolve(true);
+                return;
+            }
+            resolve(false);
+        }, 1500); // 1.5 second delay
+    });
   };
 
   const handleRegister = async (data: ExtendedRegisterData) => {
@@ -707,7 +715,7 @@ const App: React.FC = () => {
   const handleBroadcastNotification = async (message: string) => {
       const notifications: Notification[] = dbState.users.map(u => ({ id: faker.string.uuid(), userId: u.id, message: message, date: new Date().toISOString(), isRead: false }));
       setDbState(prev => ({ ...prev, notifications: [...prev.notifications, ...notifications] }));
-      saveAllData({ ...dbState, notifications: [...dbState.notifications, ...notifications] });
+      saveAllData({ ...dbState, notifications: [...prev.notifications, ...notifications] });
       for (const n of notifications) await syncNotificationToSupabase(n);
   };
 
@@ -779,7 +787,7 @@ const App: React.FC = () => {
           isDarkMode={isDarkMode}
           toggleTheme={toggleTheme}
           language={language}
-          setLanguage={handleSetLanguage}
+          setLanguage={setLanguage}
           onRefreshData={loadRemoteData}
           onBroadcastNotification={handleBroadcastNotification}
           referralRates={referralRates}
