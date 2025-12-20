@@ -329,6 +329,8 @@ const App: React.FC = () => {
           if (tx.type === TransactionType.Deposit) {
               if (newStatus === TransactionStatus.Completed) {
                   user.capitalInvestedUSD += tx.amountUSD;
+                  const plan = dbState.investmentPlans.find(p => p.name === user.plan) || dbState.investmentPlans[0];
+                  user.monthlyProfitUSD = user.capitalInvestedUSD * plan.returnRate;
                   user.balanceUSD = user.capitalInvestedUSD + user.dailyWithdrawableUSD + user.bonusBalanceUSD;
                   user.rank = calculateRank(user.balanceUSD);
                   notifMessage = `Depósito de ${formatCurrency(tx.amountUSD, 'USD')} confirmado! O valor já está no seu saldo.`;
@@ -480,6 +482,7 @@ const App: React.FC = () => {
       const updatedUser = { 
           ...user, 
           capitalInvestedUSD: newCapital,
+          monthlyProfitUSD: newCapital * ((dbState.investmentPlans.find(p => p.name === user.plan) || dbState.investmentPlans[0]).returnRate),
           balanceUSD: newCapital + user.dailyWithdrawableUSD + user.bonusBalanceUSD,
           rank: calculateRank(newCapital + user.dailyWithdrawableUSD + user.bonusBalanceUSD)
       };
@@ -503,6 +506,37 @@ const App: React.FC = () => {
       saveAllData({ ...dbState, users: updatedUsers, adminActionLogs: updatedLogs });
       await syncUserToSupabase(updatedUser);
       await syncAdminLogToSupabase(adminLog);
+  };
+
+  const handleAdminUpdateUserProfit = async (userId: string, newProfit: number) => {
+    const userIndex = dbState.users.findIndex(u => u.id === userId);
+    if (userIndex === -1) return;
+    
+    const user = dbState.users[userIndex];
+    const updatedUser = { 
+        ...user, 
+        monthlyProfitUSD: newProfit
+    };
+
+    const updatedUsers = [...dbState.users];
+    updatedUsers[userIndex] = updatedUser;
+
+    const adminLog: AdminActionLog = {
+        id: faker.string.uuid(),
+        timestamp: new Date().toISOString(),
+        adminId: loggedUser?.id || 'system',
+        adminName: loggedUser?.name || 'Sistema',
+        actionType: AdminActionType.UserProfitEdit,
+        description: `Ajustou a projeção de lucro de ${user.name} para ${formatCurrency(newProfit, 'USD')}/mês`,
+        targetId: userId
+    };
+    
+    const updatedLogs = [adminLog, ...dbState.adminActionLogs];
+
+    setDbState(prev => ({ ...prev, users: updatedUsers, adminActionLogs: updatedLogs }));
+    saveAllData({ ...dbState, users: updatedUsers, adminActionLogs: updatedLogs });
+    await syncUserToSupabase(updatedUser);
+    await syncAdminLogToSupabase(adminLog);
   };
 
   const handlePayoutBonus = async (depositTx: Transaction) => {
@@ -738,6 +772,7 @@ const App: React.FC = () => {
           onAdminUpdateUserBalance={handleAdminUpdateUserBalance}
           onAdminUpdateUserBonus={handleAdminUpdateUserBonus}
           onAdminUpdateUserCapital={handleAdminUpdateUserCapital}
+          onAdminUpdateUserProfit={handleAdminUpdateUserProfit}
           onUpdateUser={handleUpdateUser}
           onMarkAllNotificationsAsRead={handleMarkAllNotificationsAsRead}
           isDarkMode={isDarkMode}

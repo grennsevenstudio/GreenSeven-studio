@@ -18,6 +18,7 @@ import AdminActionLogs from './pages/AdminActionLogs';
 import DeleteHistory from './pages/DeleteHistory';
 import ManageBonus from './pages/ManageBonus';
 import ManageInvestments from './pages/ManageInvestments';
+import ProfitProjection from './pages/ProfitProjection';
 
 interface AdminDashboardProps {
   user: User;
@@ -36,6 +37,7 @@ interface AdminDashboardProps {
   onAdminUpdateUserBalance: (userId: string, newBalance: number) => void;
   onAdminUpdateUserBonus: (userId: string, amount: number, operation: 'add' | 'remove') => void;
   onAdminUpdateUserCapital: (userId: string, amount: number, operation: 'add' | 'remove') => void;
+  onAdminUpdateUserProfit: (userId: string, newProfit: number) => void;
   onUpdateUser: (updatedUser: User) => void;
   onMarkAllNotificationsAsRead: () => void;
   isDarkMode: boolean;
@@ -52,7 +54,7 @@ interface AdminDashboardProps {
 }
 
 const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
-  const { user, allUsers, allTransactions, chatMessages, platformSettings, adminActionLogs, notifications, onLogout, onUpdateTransaction, onUpdateUserStatus, onPayoutBonus, onSendMessage, onUpdateSettings, onAdminUpdateUserBalance, onAdminUpdateUserBonus, onAdminUpdateUserCapital, onUpdateUser, onMarkAllNotificationsAsRead, isDarkMode, toggleTheme, language, setLanguage, onRefreshData, onBroadcastNotification, referralRates, investmentPlans, onUpdatePlan, syncStatus, onDeleteUserTransactions } = props;
+  const { user, allUsers, allTransactions, chatMessages, platformSettings, adminActionLogs, notifications, onLogout, onUpdateTransaction, onUpdateUserStatus, onPayoutBonus, onSendMessage, onUpdateSettings, onAdminUpdateUserBalance, onAdminUpdateUserBonus, onAdminUpdateUserCapital, onAdminUpdateUserProfit, onUpdateUser, onMarkAllNotificationsAsRead, isDarkMode, toggleTheme, language, setLanguage, onRefreshData, onBroadcastNotification, referralRates, investmentPlans, onUpdatePlan, syncStatus, onDeleteUserTransactions } = props;
   const [activeView, setActiveView] = useState('dashboard');
   const [isSidebarOpen, setSidebarOpen] = useState(false);
 
@@ -67,6 +69,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
     { label: t.dashboard, icon: ICONS.dashboard, view: 'dashboard' },
     { label: t.users, icon: ICONS.adminUsers, view: 'users' },
     { label: 'Gerenciar Investimentos', icon: ICONS.deposit, view: 'manage_investments' },
+    { label: 'Projeção de Lucros', icon: ICONS.trendingUp, view: 'profit_projection' },
     { label: 'Gerenciar Bônus', icon: ICONS.userPlus, view: 'manage_bonus' },
     { 
         label: pendingWithdrawalsCount > 0 ? `${t.transactions} (${pendingWithdrawalsCount})` : t.transactions, 
@@ -88,6 +91,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
         return <ManageUsers allUsers={allUsers} onAdminUpdateUserBalance={onAdminUpdateUserBalance} onUpdateUserStatus={onUpdateUserStatus} />;
       case 'manage_investments':
         return <ManageInvestments allUsers={allUsers} onAdminUpdateUserCapital={onAdminUpdateUserCapital} />;
+      case 'profit_projection':
+        return <ProfitProjection allUsers={allUsers} investmentPlans={investmentPlans} onAdminUpdateUserProfit={onAdminUpdateUserProfit} />;
       case 'manage_bonus':
         return <ManageBonus allUsers={allUsers} onAdminUpdateUserBonus={onAdminUpdateUserBonus} />;
       case 'transactions':
