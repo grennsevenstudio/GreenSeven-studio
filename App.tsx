@@ -236,7 +236,8 @@ const App: React.FC = () => {
           joinedDate: new Date().toISOString(),
           lastProfitUpdate: new Date().toISOString(),
           referralCode: faker.string.alphanumeric(8).toUpperCase(),
-          kycAnalysis: data.kycAnalysis
+          kycAnalysis: data.kycAnalysis,
+          hasSeenWelcomePopup: false,
       };
 
       if (data.referralCode) {

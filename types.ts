@@ -68,6 +68,7 @@ export interface User {
   transactionPin?: string; // 4-digit PIN for withdrawals
   supportStatus?: SupportStatus; // Status of the support ticket
   kycAnalysis?: string;
+  hasSeenWelcomePopup?: boolean;
 }
 
 export interface InvestmentPlan {

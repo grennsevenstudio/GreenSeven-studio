@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { User, Transaction, Notification, ChatMessage, InvestmentPlan, Language, SyncStatus, PlatformSettings } from '../../../../types';
 import Sidebar from '../../../layout/Sidebar';
 import Header from '../../../layout/Header';
@@ -15,6 +15,7 @@ import CareerPlan from './pages/CareerPlan';
 import Profile from './pages/Profile';
 import SupportChat from './pages/SupportChat';
 import FAQPage from './pages/FAQPage';
+import WelcomePopup from './WelcomePopup';
 
 interface UserDashboardProps {
   user: User;
@@ -67,8 +68,34 @@ const UserDashboard: React.FC<UserDashboardProps> = (props) => {
 
   const [activeView, setActiveView] = useState('dashboard');
   const [isSidebarOpen, setSidebarOpen] = useState(false);
+  const [isWelcomePopupOpen, setIsWelcomePopupOpen] = useState(false);
+  const [welcomePopupType, setWelcomePopupType] = useState<'new' | 'returning' | null>(null);
 
   const t = TRANSLATIONS[language];
+
+  useEffect(() => {
+    // Use a short delay to let the dashboard render first, making the popup feel less intrusive.
+    const timer = setTimeout(() => {
+        if (user.hasSeenWelcomePopup === false) {
+            setWelcomePopupType('new');
+            setIsWelcomePopupOpen(true);
+        } else if (!sessionStorage.getItem('welcomePopupShownThisSession')) {
+            setWelcomePopupType('returning');
+            setIsWelcomePopupOpen(true);
+        }
+    }, 1000); // 1-second delay
+
+    return () => clearTimeout(timer);
+  }, [user.hasSeenWelcomePopup]);
+
+  const handleCloseWelcomePopup = () => {
+      setIsWelcomePopupOpen(false);
+      if (welcomePopupType === 'new') {
+          onUpdateUser({ ...user, hasSeenWelcomePopup: true });
+      }
+      // Set session storage for both types to avoid showing again on refresh
+      sessionStorage.setItem('welcomePopupShownThisSession', 'true');
+  };
 
   const navItems = [
     { label: t.dashboard, icon: ICONS.dashboard, view: 'dashboard' },
@@ -145,6 +172,16 @@ const UserDashboard: React.FC<UserDashboardProps> = (props) => {
 
   return (
     <div className="flex min-h-[100dvh] w-full overflow-x-hidden bg-gray-100 dark:bg-brand-black text-gray-900 dark:text-white transition-colors duration-300">
+      <WelcomePopup
+        isOpen={isWelcomePopupOpen}
+        onClose={handleCloseWelcomePopup}
+        userName={user.name.split(' ')[0]}
+        type={welcomePopupType}
+        onCallToAction={() => {
+            handleCloseWelcomePopup();
+            setActiveView('dashboard');
+        }}
+      />
       <Sidebar
         user={user}
         navItems={navItems}
