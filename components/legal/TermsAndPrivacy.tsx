@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { ICONS } from '../../constants';
 
 export const TERMS_OF_USE_CONTENT = (
     <>
@@ -114,13 +115,32 @@ export const CONTACT_CONTENT = (
     <div className="space-y-4">
         <h3 className="text-xl font-bold text-brand-green">Fale Conosco</h3>
         <p>Estamos aqui para ajudar. Entre em contato através dos nossos canais oficiais.</p>
-        <div className="bg-brand-gray p-4 rounded-lg border border-gray-700">
-            <p className="mb-2"><strong>Email de Suporte:</strong></p>
-            <p className="text-brand-green">suporte@greennseven.online</p>
-        </div>
-        <div className="bg-brand-gray p-4 rounded-lg border border-gray-700">
-            <p className="mb-2"><strong>Horário de Atendimento:</strong></p>
-            <p className="text-gray-300">Segunda a Sexta: 09:00 - 18:00 (Horário de Brasília)</p>
+        <div className="bg-brand-gray p-4 rounded-lg border border-gray-700 space-y-4">
+            <div>
+                <p className="text-xs font-bold text-gray-500 uppercase mb-1">Email de Suporte:</p>
+                <p className="text-brand-green font-medium">greennseven@gmail.com</p>
+            </div>
+            <div>
+                <p className="text-xs font-bold text-gray-500 uppercase mb-1">WhatsApp de Suporte:</p>
+                <a 
+                    href="https://wa.me/13434355021" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 text-white hover:text-brand-green transition-colors group"
+                >
+                    <span className="p-1.5 bg-brand-green/20 rounded text-brand-green group-hover:scale-110 transition-transform">
+                        {ICONS.whatsapp}
+                    </span>
+                    <span className="font-bold">+1 (343) 435-5021</span>
+                </a>
+            </div>
+            <div>
+                <p className="text-xs font-bold text-gray-500 uppercase mb-1">Horário de Atendimento:</p>
+                <div className="flex items-center gap-2 text-gray-300">
+                    <span className="w-2 h-2 bg-brand-green rounded-full animate-pulse"></span>
+                    <p className="font-medium">Atendimento 24 Horas Disponível</p>
+                </div>
+            </div>
         </div>
     </div>
 );

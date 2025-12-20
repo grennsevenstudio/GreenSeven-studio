@@ -536,7 +536,7 @@ const HomePage: React.FC<HomePageProps> = ({ setView, language, setLanguage }) =
                             {t.footer_desc}
                         </p>
                         <div className="flex gap-4">
-                            <a href="#" className="text-gray-500 hover:text-brand-green transition-colors">{ICONS.twitter}</a>
+                            <a href="https://wa.me/13434355021" target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-brand-green transition-colors" title="WhatsApp Suporte">{ICONS.whatsapp}</a>
                             <a href="https://www.instagram.com/greennseven?igsh=amhsM2N6MWw1MzIx" target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-brand-green transition-colors">{ICONS.instagram}</a>
                             <a href="#" className="text-gray-500 hover:text-brand-green transition-colors">{ICONS.facebook}</a>
                         </div>
@@ -585,6 +585,10 @@ const HomePage: React.FC<HomePageProps> = ({ setView, language, setLanguage }) =
                                 ✓ Obrigado! Enviamos um guia exclusivo sobre a GreennSeven para seu e-mail.
                             </p>
                         )}
+                        <div className="mt-4 text-[10px] text-gray-600 flex flex-col gap-1">
+                            <p>Suporte: greennseven@gmail.com</p>
+                            <p>Disponibilidade: 24 Horas</p>
+                        </div>
                     </div>
                 </div>
                 

@@ -161,12 +161,40 @@ export const getAllData = (): AppDB => {
   }
 };
 
-// Function to save all data to the database
+/**
+ * Robust save function to handle QuotaExceededError by pruning old logs and notifications
+ */
 export const saveAllData = (data: AppDB) => {
   try {
     localStorage.setItem(DB_KEY, JSON.stringify(data));
   } catch (e) {
-    console.error("Error saving to DB", e);
+    if (e instanceof DOMException && e.name === 'QuotaExceededError') {
+      console.warn("Storage quota exceeded. Pruning logs and notifications...");
+      
+      // Pruning strategy: keep only the 20 most recent logs and 50 most recent notifications/messages
+      const prunedData: AppDB = {
+          ...data,
+          adminActionLogs: data.adminActionLogs.slice(0, 20), // Newest are at the start
+          notifications: data.notifications.slice(-50), // Newest are at the end
+          chatMessages: data.chatMessages.slice(-50) // Newest are at the end
+      };
+      
+      try {
+          localStorage.setItem(DB_KEY, JSON.stringify(prunedData));
+          console.log("Data saved successfully after pruning.");
+      } catch (retryError) {
+          console.error("Failed to save even after pruning non-essential data.", retryError);
+          // Last resort: clear logs entirely
+          const minimalData = { ...prunedData, adminActionLogs: [], notifications: [], chatMessages: [] };
+          try {
+              localStorage.setItem(DB_KEY, JSON.stringify(minimalData));
+          } catch(lastError) {
+              console.error("Critical failure: unable to save minimal data to localStorage.");
+          }
+      }
+    } else {
+      console.error("Error saving to DB:", e);
+    }
   }
 };
 
