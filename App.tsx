@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useRef } from 'react';
 import type { User, Transaction, Notification, ChatMessage, PlatformSettings, AdminActionLog, Language, InvestmentPlan, SyncStatus } from './types';
 import { View, TransactionStatus, TransactionType, AdminActionType, UserStatus, InvestorRank } from './types';
@@ -720,12 +721,22 @@ const App: React.FC = () => {
   };
 
   const handleUpdatePlan = async (updatedPlan: InvestmentPlan) => {
-      const planIndex = dbState.investmentPlans.findIndex(p => p.id === updatedPlan.id);
-      let newPlans = [...dbState.investmentPlans];
-      if (planIndex !== -1) newPlans[planIndex] = updatedPlan; else newPlans.push(updatedPlan);
-      setDbState(prev => ({ ...prev, investmentPlans: newPlans }));
-      saveAllData({ ...dbState, investmentPlans: newPlans });
-      await syncInvestmentPlanToSupabase(updatedPlan);
+    // FIX: "Cannot find name 'prev'" error on line 719
+    // This is a more robust way to update state that depends on the previous state,
+    // and also fixes the bug where saveAllData would use stale state.
+    setDbState(prevState => {
+      const planIndex = prevState.investmentPlans.findIndex(p => p.id === updatedPlan.id);
+      const newPlans = [...prevState.investmentPlans];
+      if (planIndex !== -1) {
+        newPlans[planIndex] = updatedPlan;
+      } else {
+        newPlans.push(updatedPlan);
+      }
+      const newDbState = { ...prevState, investmentPlans: newPlans };
+      saveAllData(newDbState);
+      return newDbState;
+    });
+    await syncInvestmentPlanToSupabase(updatedPlan);
   };
 
   if (dbState.platformSettings.isMaintenanceMode && (!loggedUser || !loggedUser.isAdmin)) {
@@ -787,7 +798,7 @@ const App: React.FC = () => {
           isDarkMode={isDarkMode}
           toggleTheme={toggleTheme}
           language={language}
-          setLanguage={setLanguage}
+          setLanguage={handleSetLanguage}
           onRefreshData={loadRemoteData}
           onBroadcastNotification={handleBroadcastNotification}
           referralRates={referralRates}

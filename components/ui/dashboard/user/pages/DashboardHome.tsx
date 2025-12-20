@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import type { User, Transaction, WithdrawalDetails, Stock, Language, PlatformSettings } from '../../../../../types';
 import { TransactionType, TransactionStatus } from '../../../../../types';
@@ -13,7 +14,8 @@ import { formatCurrency } from '../../../../../lib/utils';
 interface DashboardHomeProps {
     user: User;
     transactions: Transaction[];
-    onAddTransaction: (newTransaction: Omit<Transaction, 'id' | 'date' | 'bonusPayoutHandled'>, userUpdate?: Partial<User>) => void;
+    // FIX: Replaced Omit with Pick/Exclude to resolve "requires 2 type argument(s)" error.
+    onAddTransaction: (newTransaction: Pick<Transaction, Exclude<keyof Transaction, 'id' | 'date' | 'bonusPayoutHandled'>>, userUpdate?: Partial<User>) => void;
     setActiveView: (view: string) => void;
     language: Language;
     onRefreshData?: () => Promise<void>;
@@ -63,10 +65,24 @@ const StatCard: React.FC<{ title: string; value: React.ReactNode; icon: React.Re
 const SuccessDisplay: React.FC<{ title: string; children: React.ReactNode; onClose: () => void; }> = ({ title, children, onClose }) => {
     return (
         <div className="text-center animate-scale-in">
+            <style>{`
+                @keyframes draw-circle { from { stroke-dashoffset: 264; } to { stroke-dashoffset: 0; } }
+                @keyframes draw-check { from { stroke-dashoffset: 48; } to { stroke-dashoffset: 0; } }
+                .success-circle-anim {
+                    stroke-dasharray: 264;
+                    stroke-dashoffset: 264;
+                    animation: draw-circle 0.8s ease-out forwards;
+                }
+                .success-check-anim {
+                    stroke-dasharray: 48;
+                    stroke-dashoffset: 48;
+                    animation: draw-check 0.4s ease-out 0.5s forwards; /* Delay to start after circle */
+                }
+            `}</style>
             <svg className="h-24 w-24 mx-auto mb-4" viewBox="0 0 88 88" xmlns="http://www.w3.org/2000/svg">
               <g fill="none" fillRule="evenodd">
-                <circle className="success-circle" cx="44" cy="44" r="42" stroke="url(#success-gradient)" strokeWidth="4" />
-                <path className="success-check" d="M25 45l14 14 24-24" stroke="#00FF9C" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
+                <circle className="success-circle-anim" cx="44" cy="44" r="42" stroke="url(#success-gradient)" strokeWidth="4" />
+                <path className="success-check-anim" d="M25 45l14 14 24-24" stroke="#00FF9C" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
               </g>
               <defs>
                 <linearGradient id="success-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -85,7 +101,8 @@ const SuccessDisplay: React.FC<{ title: string; children: React.ReactNode; onClo
 const DepositModalContent: React.FC<{
     user: User;
     onClose: () => void;
-    onAddTransaction: (newTransaction: Omit<Transaction, 'id' | 'date' | 'bonusPayoutHandled'>) => void;
+    // FIX: Replaced Omit with Pick/Exclude to resolve "requires 2 type argument(s)" error.
+    onAddTransaction: (newTransaction: Pick<Transaction, Exclude<keyof Transaction, 'id' | 'date' | 'bonusPayoutHandled'>>) => void;
     platformSettings: PlatformSettings;
 }> = ({ user, onClose, onAddTransaction, platformSettings }) => {
     const [step, setStep] = useState(1);
@@ -129,7 +146,7 @@ const DepositModalContent: React.FC<{
                 <p>
                     Recebemos sua solicitação de depósito de {formatCurrency(parseFloat(amountBRL), 'BRL')}. 
                     <br/><br/>
-                    <span className="text-yellow-400 font-bold bg-yellow-400/10 px-2 py-1 rounded">Aguardando Autorização do Administrador.</span>
+                    <span className="text-yellow-400 font-bold bg-yellow-400/10 px-2 py-1 rounded">Valor pendente de aprovação.</span>
                     <br/><br/>
                     Assim que autorizado, o valor aparecerá como "Capital Investido" no seu dashboard.
                 </p>
@@ -192,7 +209,8 @@ const DepositModalContent: React.FC<{
 const WithdrawModalContent: React.FC<{
     user: User;
     onClose: () => void;
-    onAddTransaction: (newTransaction: Omit<Transaction, 'id' | 'date' | 'bonusPayoutHandled'>, userUpdate?: Partial<User>) => void;
+    // FIX: Replaced Omit with Pick/Exclude to resolve "requires 2 type argument(s)" error.
+    onAddTransaction: (newTransaction: Pick<Transaction, Exclude<keyof Transaction, 'id' | 'date' | 'bonusPayoutHandled'>>, userUpdate?: Partial<User>) => void;
     setActiveView: (view: string) => void;
     currentLiveProfit: number;
     platformSettings: PlatformSettings;
