@@ -171,6 +171,7 @@ export enum AdminActionType {
     BonusPayout = 'BonusPayout',
     UserBalanceEdit = 'UserBalanceEdit',
     UserBonusEdit = 'UserBonusEdit',
+    UserCapitalEdit = 'UserCapitalEdit',
     SettingsUpdate = 'SettingsUpdate',
     PaymentScheduled = 'PaymentScheduled',
     HistoryClear = 'HistoryClear',

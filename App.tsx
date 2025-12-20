@@ -463,6 +463,48 @@ const App: React.FC = () => {
       await syncAdminLogToSupabase(adminLog);
   };
 
+  const handleAdminUpdateUserCapital = async (userId: string, amount: number, operation: 'add' | 'remove') => {
+      const userIndex = dbState.users.findIndex(u => u.id === userId);
+      if (userIndex === -1) return;
+      
+      const user = dbState.users[userIndex];
+      const actualAmount = Math.abs(amount);
+      let newCapital = user.capitalInvestedUSD;
+      
+      if (operation === 'add') {
+          newCapital += actualAmount;
+      } else {
+          newCapital = Math.max(0, newCapital - actualAmount);
+      }
+
+      const updatedUser = { 
+          ...user, 
+          capitalInvestedUSD: newCapital,
+          balanceUSD: newCapital + user.dailyWithdrawableUSD + user.bonusBalanceUSD,
+          rank: calculateRank(newCapital + user.dailyWithdrawableUSD + user.bonusBalanceUSD)
+      };
+
+      const updatedUsers = [...dbState.users];
+      updatedUsers[userIndex] = updatedUser;
+
+      const adminLog: AdminActionLog = {
+          id: faker.string.uuid(),
+          timestamp: new Date().toISOString(),
+          adminId: loggedUser?.id || 'system',
+          adminName: loggedUser?.name || 'Sistema',
+          actionType: AdminActionType.UserCapitalEdit,
+          description: `${operation === 'add' ? 'Adicionou' : 'Removeu'} US$ ${actualAmount.toFixed(2)} de capital investido para ${user.name}`,
+          targetId: userId
+      };
+      
+      const updatedLogs = [adminLog, ...dbState.adminActionLogs];
+
+      setDbState(prev => ({ ...prev, users: updatedUsers, adminActionLogs: updatedLogs }));
+      saveAllData({ ...dbState, users: updatedUsers, adminActionLogs: updatedLogs });
+      await syncUserToSupabase(updatedUser);
+      await syncAdminLogToSupabase(adminLog);
+  };
+
   const handlePayoutBonus = async (depositTx: Transaction) => {
       if (depositTx.bonusPayoutHandled) return;
       const user = dbState.users.find(u => u.id === depositTx.userId);
@@ -695,6 +737,7 @@ const App: React.FC = () => {
           onUpdateSettings={handleUpdateSettings}
           onAdminUpdateUserBalance={handleAdminUpdateUserBalance}
           onAdminUpdateUserBonus={handleAdminUpdateUserBonus}
+          onAdminUpdateUserCapital={handleAdminUpdateUserCapital}
           onUpdateUser={handleUpdateUser}
           onMarkAllNotificationsAsRead={handleMarkAllNotificationsAsRead}
           isDarkMode={isDarkMode}
