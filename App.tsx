@@ -268,7 +268,8 @@ const App: React.FC = () => {
               userId: admin.id,
               message: `Novo usuário registrado: ${newUser.name}. Verifique os documentos.`,
               date: new Date().toISOString(),
-              isRead: false
+              isRead: false,
+              isAdmin: true,
           };
           const updatedNotifs = [...dbState.notifications, notif];
           setDbState(prev => ({...prev, notifications: updatedNotifs}));
@@ -314,10 +315,47 @@ const App: React.FC = () => {
           }
       }
 
+      let adminNotif: Notification | null = null;
+      const admin = dbState.users.find(u => u.isAdmin);
+      const user = dbState.users.find(u => u.id === newTx.userId);
+
+      if (admin && user) {
+          let message = '';
+          if (transaction.type === TransactionType.Deposit) {
+              message = `Novo depósito de ${formatCurrency(transaction.amountUSD, 'USD')} solicitado por ${user.name}.`;
+          } else if (transaction.type === TransactionType.Withdrawal) {
+              message = `Novo saque de ${formatCurrency(Math.abs(transaction.amountUSD), 'USD')} solicitado por ${user.name}.`;
+          }
+
+          if (message) {
+              adminNotif = {
+                  id: faker.string.uuid(),
+                  userId: admin.id,
+                  message,
+                  date: new Date().toISOString(),
+                  isRead: false,
+                  isAdmin: true,
+              };
+          }
+      }
+
       const updatedTxs = [...dbState.transactions, transaction];
-      setDbState(prev => ({ ...prev, transactions: updatedTxs, users: updatedUsers }));
-      saveAllData({ ...dbState, transactions: updatedTxs, users: updatedUsers });
-      syncTransactionToSupabase(transaction);
+      const updatedNotifs = adminNotif ? [...dbState.notifications, adminNotif] : dbState.notifications;
+      
+      const newDbState = {
+          ...dbState,
+          transactions: updatedTxs,
+          users: updatedUsers,
+          notifications: updatedNotifs,
+      };
+
+      setDbState(newDbState);
+      saveAllData(newDbState);
+      
+      await syncTransactionToSupabase(transaction);
+      if (adminNotif) {
+          await syncNotificationToSupabase(adminNotif);
+      }
   };
 
   const handleUpdateTransaction = async (txId: string, newStatus: TransactionStatus) => {
@@ -557,7 +595,9 @@ const App: React.FC = () => {
 
       const newTransactions: Transaction[] = [];
       const updatedUsers = [...dbState.users];
-      const notifications: Notification[] = [];
+      const notifications: Notification[] = []; // For users
+      const adminNotifications: Notification[] = []; // For admin
+      const admin = dbState.users.find(u => u.isAdmin);
       let currentUser = user;
 
       for (let level = 1; level <= 3 && currentUser.referredById; level++) {
@@ -570,6 +610,7 @@ const App: React.FC = () => {
               referrer.bonusBalanceUSD += bonusAmount;
               referrer.balanceUSD = referrer.capitalInvestedUSD + referrer.dailyWithdrawableUSD + referrer.bonusBalanceUSD;
               referrer.rank = calculateRank(referrer.balanceUSD);
+              
               const bonusTx: Transaction = {
                   id: faker.string.uuid(),
                   userId: referrer.id,
@@ -581,14 +622,29 @@ const App: React.FC = () => {
                   sourceUserId: user.id
               };
               newTransactions.push(bonusTx);
+              
               const notif: Notification = {
                   id: faker.string.uuid(),
                   userId: referrer.id,
-                  message: `Bônus de US$ ${bonusAmount.toFixed(2)} recebido (Depósito de ${user.name}, Nível ${level}).`,
+                  message: `Bônus de ${formatCurrency(bonusAmount, 'USD')} recebido (Depósito de ${user.name}, Nível ${level}).`,
                   date: new Date().toISOString(),
                   isRead: false
               };
               notifications.push(notif);
+              
+              // Admin Notification
+              if (admin) {
+                  const adminNotif: Notification = {
+                      id: faker.string.uuid(),
+                      userId: admin.id,
+                      message: `Bônus Nv.${level} (${formatCurrency(bonusAmount, 'USD')}) pago a ${referrer.name} (Ref: ${user.name}).`,
+                      date: new Date().toISOString(),
+                      isRead: false,
+                      isAdmin: true
+                  };
+                  adminNotifications.push(adminNotif);
+              }
+
               updatedUsers[referrerIdx] = referrer;
               await syncUserToSupabase(referrer);
               await syncTransactionToSupabase(bonusTx);
@@ -596,14 +652,19 @@ const App: React.FC = () => {
           }
           currentUser = referrer;
       }
+      
+      for (const n of adminNotifications) {
+        await syncNotificationToSupabase(n);
+      }
 
       const updatedDepositTx = { ...depositTx, bonusPayoutHandled: true };
       const txIndex = dbState.transactions.findIndex(t => t.id === depositTx.id);
       const updatedTxs = [...dbState.transactions];
       updatedTxs[txIndex] = updatedDepositTx;
       
-      setDbState(prev => ({ ...prev, users: updatedUsers, transactions: [...updatedTxs, ...newTransactions], notifications: [...prev.notifications, ...notifications] }));
-      saveAllData({ ...dbState, users: updatedUsers, transactions: [...updatedTxs, ...newTransactions], notifications: [...dbState.notifications, ...notifications] });
+      const allNewNotifications = [...notifications, ...adminNotifications];
+      setDbState(prev => ({ ...prev, users: updatedUsers, transactions: [...updatedTxs, ...newTransactions], notifications: [...prev.notifications, ...allNewNotifications] }));
+      saveAllData({ ...dbState, users: updatedUsers, transactions: [...updatedTxs, ...newTransactions], notifications: [...dbState.notifications, ...allNewNotifications] });
       await syncTransactionToSupabase(updatedDepositTx);
   };
 
