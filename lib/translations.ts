@@ -1,4 +1,5 @@
 
+
 import { Language } from '../types';
 
 export const TRANSLATIONS = {
@@ -11,6 +12,7 @@ export const TRANSLATIONS = {
     support: 'Suporte',
     faq_menu: 'Perguntas Frequentes',
     users: 'Usuários',
+    delete_user: 'Excluir Usuário',
     logs: 'Logs de Ações',
     settings: 'Configurações',
     welcome: 'Bem-vindo',
@@ -271,6 +273,7 @@ export const TRANSLATIONS = {
     support: 'Support',
     faq_menu: 'FAQ',
     users: 'Users',
+    delete_user: 'Delete User',
     logs: 'Action Logs',
     settings: 'Settings',
     welcome: 'Welcome',
@@ -484,6 +487,7 @@ export const TRANSLATIONS = {
     support: 'Soporte',
     faq_menu: 'Preguntas Frecuentes',
     users: 'Usuarios',
+    delete_user: 'Eliminar Usuario',
     logs: 'Registros',
     settings: 'Configuración',
     welcome: 'Bienvenido',
@@ -697,6 +701,7 @@ export const TRANSLATIONS = {
     support: 'Support',
     faq_menu: 'FAQ',
     users: 'Utilisateurs',
+    delete_user: 'Supprimer l\'Utilisateur',
     logs: 'Journaux',
     settings: 'Paramètres',
     welcome: 'Bienvenue',
@@ -907,6 +912,7 @@ export const TRANSLATIONS = {
     support: 'Support',
     faq_menu: 'FAQ',
     users: 'Benutzer',
+    delete_user: 'Benutzer Löschen',
     logs: 'Protokolle',
     settings: 'Einstellungen',
     welcome: 'Willkommen',

@@ -1,4 +1,5 @@
 
+
 import React, { useState, useMemo } from 'react';
 import type { User, Transaction, ChatMessage, PlatformSettings, AdminActionLog, Language, Notification, InvestmentPlan } from '../../../../types';
 import { TransactionStatus, UserStatus, TransactionType } from '../../../../types';
@@ -19,6 +20,7 @@ import DeleteHistory from './pages/DeleteHistory';
 import ManageBonus from './pages/ManageBonus';
 import ManageInvestments from './pages/ManageInvestments';
 import ProfitProjection from './pages/ProfitProjection';
+import DeleteUser from './pages/DeleteUser';
 
 interface AdminDashboardProps {
   user: User;
@@ -50,11 +52,12 @@ interface AdminDashboardProps {
   onUpdatePlan: (updatedPlan: InvestmentPlan) => void;
   investmentPlans: InvestmentPlan[];
   syncStatus: any;
-  onDeleteUserTransactions: (txId: string) => void;
+  onDeleteTransaction: (txId: string) => void;
+  onDeleteUser: (userId: string) => void;
 }
 
 const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
-  const { user, allUsers, allTransactions, chatMessages, platformSettings, adminActionLogs, notifications, onLogout, onUpdateTransaction, onUpdateUserStatus, onPayoutBonus, onSendMessage, onUpdateSettings, onAdminUpdateUserBalance, onAdminUpdateUserBonus, onAdminUpdateUserCapital, onAdminUpdateUserProfit, onUpdateUser, onMarkAllNotificationsAsRead, isDarkMode, toggleTheme, language, setLanguage, onRefreshData, onBroadcastNotification, referralRates, investmentPlans, onUpdatePlan, syncStatus, onDeleteUserTransactions } = props;
+  const { user, allUsers, allTransactions, chatMessages, platformSettings, adminActionLogs, notifications, onLogout, onUpdateTransaction, onUpdateUserStatus, onPayoutBonus, onSendMessage, onUpdateSettings, onAdminUpdateUserBalance, onAdminUpdateUserBonus, onAdminUpdateUserCapital, onAdminUpdateUserProfit, onUpdateUser, onMarkAllNotificationsAsRead, isDarkMode, toggleTheme, language, setLanguage, onRefreshData, onBroadcastNotification, referralRates, investmentPlans, onUpdatePlan, syncStatus, onDeleteTransaction, onDeleteUser } = props;
   const [activeView, setActiveView] = useState('dashboard');
   const [isSidebarOpen, setSidebarOpen] = useState(false);
 
@@ -76,7 +79,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
         icon: ICONS.transactions, 
         view: 'transactions' 
     },
-    { label: 'Limpar Histórico', icon: ICONS.trash, view: 'delete_history' },
+    { label: t.delete_user, icon: ICONS.trash, view: 'delete_user'},
+    { label: 'Limpar Histórico', icon: ICONS.archive, view: 'delete_history' },
     { label: t.logs, icon: ICONS.history, view: 'logs' },
     { label: t.support, icon: ICONS.support, view: 'support' },
     { label: t.plans, icon: ICONS.plans, view: 'plans' },
@@ -97,8 +101,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
         return <ManageBonus allUsers={allUsers} onAdminUpdateUserBonus={onAdminUpdateUserBonus} />;
       case 'transactions':
         return <ManageTransactions allUsers={allUsers} transactions={allTransactions} onUpdateTransaction={onUpdateTransaction} onPayoutBonus={onPayoutBonus} referralRates={referralRates} />;
+      case 'delete_user':
+        return <DeleteUser allUsers={allUsers} onDeleteUser={onDeleteUser} />;
       case 'delete_history':
-        return <DeleteHistory allUsers={allUsers} allTransactions={allTransactions} onDeleteTransaction={onDeleteUserTransactions} />;
+        return <DeleteHistory allUsers={allUsers} allTransactions={allTransactions} onDeleteTransaction={onDeleteTransaction} />;
       case 'logs':
         return <AdminActionLogs adminActionLogs={adminActionLogs} />;
       case 'support':

@@ -1,4 +1,5 @@
 
+
 export enum View {
   Home,
   Login,
@@ -178,6 +179,7 @@ export enum AdminActionType {
     PaymentScheduled = 'PaymentScheduled',
     HistoryClear = 'HistoryClear',
     TransactionDelete = 'TransactionDelete',
+    UserDelete = 'UserDelete',
 }
 
 export interface AdminActionLog {

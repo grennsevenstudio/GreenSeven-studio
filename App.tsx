@@ -23,6 +23,7 @@ import {
     syncInvestmentPlanToSupabase,
     checkSupabaseConnection,
     deleteTransactionById,
+    deleteUserById,
 } from './lib/supabase';
 import { requestNotificationPermission, showSystemNotification, formatCurrency } from './lib/utils';
 import { faker } from '@faker-js/faker';
@@ -726,6 +727,7 @@ const App: React.FC = () => {
     // and also fixes the bug where saveAllData would use stale state.
     setDbState(prevState => {
       const planIndex = prevState.investmentPlans.findIndex(p => p.id === updatedPlan.id);
+      // FIX: Corrected a typo. `prev` should be `prevState` as defined in the arrow function parameter.
       const newPlans = [...prevState.investmentPlans];
       if (planIndex !== -1) {
         newPlans[planIndex] = updatedPlan;
@@ -737,6 +739,42 @@ const App: React.FC = () => {
       return newDbState;
     });
     await syncInvestmentPlanToSupabase(updatedPlan);
+  };
+
+  const handleDeleteUser = async (userId: string) => {
+      const userToDelete = dbState.users.find(u => u.id === userId);
+      if (!userToDelete) return;
+
+      if (userToDelete.isAdmin) {
+          alert("A conta de administrador não pode ser excluída.");
+          return;
+      }
+      
+      const adminLog: AdminActionLog = {
+          id: faker.string.uuid(),
+          timestamp: new Date().toISOString(),
+          adminId: loggedUser?.id || 'system_delete',
+          adminName: loggedUser?.name || 'Sistema',
+          actionType: AdminActionType.UserDelete,
+          description: `Excluiu o usuário ${userToDelete.name} (ID: ${userToDelete.id.slice(0, 8)})`,
+          targetId: userId
+      };
+
+      setDbState(prev => {
+          const newState = {
+              ...prev,
+              users: prev.users.filter(u => u.id !== userId),
+              transactions: prev.transactions.filter(t => t.userId !== userId),
+              notifications: prev.notifications.filter(n => n.userId !== userId),
+              chatMessages: prev.chatMessages.filter(m => m.senderId !== userId && m.receiverId !== userId),
+              adminActionLogs: [adminLog, ...prev.adminActionLogs],
+          };
+          saveAllData(newState);
+          return newState;
+      });
+
+      await deleteUserById(userId);
+      await syncAdminLogToSupabase(adminLog);
   };
 
   if (dbState.platformSettings.isMaintenanceMode && (!loggedUser || !loggedUser.isAdmin)) {
@@ -805,7 +843,8 @@ const App: React.FC = () => {
           investmentPlans={dbState.investmentPlans}
           onUpdatePlan={handleUpdatePlan}
           syncStatus={syncStatus}
-          onDeleteUserTransactions={handleDeleteTransaction}
+          onDeleteTransaction={handleDeleteTransaction}
+          onDeleteUser={handleDeleteUser}
         />
       )}
     </>

@@ -1,4 +1,5 @@
 
+
 import { createClient } from '@supabase/supabase-js';
 import type { User, Transaction, ChatMessage, PlatformSettings, AdminActionLog, Notification, InvestmentPlan } from '../types';
 import { InvestorRank } from '../types';
@@ -429,6 +430,35 @@ export const deleteTransactionById = async (txId: string) => {
     try {
         const { error } = await supabase.from('transactions').delete().eq('id', txId);
         return { error };
+    } catch (e) {
+        return { error: e };
+    }
+}
+
+export const deleteUserById = async (userId: string) => {
+    try {
+        // First, delete related messages (since they are SET NULL on delete)
+        const { error: messagesError } = await supabase
+            .from('messages')
+            .delete()
+            .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`);
+            
+        if (messagesError) {
+            console.error("Error deleting user's messages:", messagesError);
+            return { error: messagesError };
+        }
+
+        // Then, delete the user. Cascade should handle transactions and notifications.
+        const { error: userError } = await supabase
+            .from('users')
+            .delete()
+            .eq('id', userId);
+
+        if (userError) {
+             console.error("Error deleting user:", userError);
+        }
+
+        return { error: userError };
     } catch (e) {
         return { error: e };
     }
