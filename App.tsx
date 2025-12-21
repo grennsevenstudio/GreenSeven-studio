@@ -788,8 +788,6 @@ const App: React.FC = () => {
     // and also fixes the bug where saveAllData would use stale state.
     setDbState(prevState => {
       const planIndex = prevState.investmentPlans.findIndex(p => p.id === updatedPlan.id);
-      // FIX: Corrected a typo. `prev` should be `prevState` as defined in the arrow function parameter.
-      // FIX: Corrected typo from `prev` to `prevState` to fix reference error.
       const newPlans = [...prevState.investmentPlans];
       if (planIndex !== -1) {
         newPlans[planIndex] = updatedPlan;
