@@ -783,16 +783,16 @@ const App: React.FC = () => {
   };
 
   const handleUpdatePlan = async (updatedPlan: InvestmentPlan) => {
-    // FIX: Fixed a reference error by using `prevState` instead of `prev` inside the `setDbState` callback.
-    setDbState(prevState => {
-      const planIndex = prevState.investmentPlans.findIndex(p => p.id === updatedPlan.id);
-      const newPlans = [...prevState.investmentPlans];
+    // FIX: Renamed `prevState` to `prev` for consistency with other `setDbState` calls in the component.
+    setDbState(prev => {
+      const planIndex = prev.investmentPlans.findIndex(p => p.id === updatedPlan.id);
+      const newPlans = [...prev.investmentPlans];
       if (planIndex !== -1) {
         newPlans[planIndex] = updatedPlan;
       } else {
         newPlans.push(updatedPlan);
       }
-      const newDbState = { ...prevState, investmentPlans: newPlans };
+      const newDbState = { ...prev, investmentPlans: newPlans };
       saveAllData(newDbState);
       return newDbState;
     });
