@@ -21,6 +21,68 @@ const LANGUAGE_OPTIONS: { code: Language; flag: string; label: string }[] = [
   { code: 'de', flag: '🇩🇪', label: 'Deutsch' },
 ];
 
+const AnimatedWalletUI = () => {
+  const [liveProfit, setLiveProfit] = useState(12450.75);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setLiveProfit(prev => prev + Math.random() * 0.021);
+    }, 1500); // Update every 1.5 seconds
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const formattedString = liveProfit.toLocaleString('pt-BR', {
+    minimumFractionDigits: 4,
+    maximumFractionDigits: 4,
+  });
+  const parts = formattedString.split(',');
+  const integerPart = parts[0];
+  const decimalPart = parts[1] || '0000';
+
+  return (
+    <div className="relative bg-gradient-to-br from-gray-900 via-brand-black to-black border-2 border-brand-green/30 rounded-3xl p-6 shadow-2xl shadow-brand-green/10 overflow-hidden backdrop-blur-sm transform-gpu">
+        <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_top_right,rgba(0,255,156,0.15),transparent_50%)] opacity-70"></div>
+        <div className="relative z-10">
+            <div className="flex justify-between items-center">
+                <p className="text-sm font-bold uppercase tracking-widest text-brand-green">Minha Carteira Dolarizada</p>
+                <div className="flex gap-1.5">
+                    <div className="w-2.5 h-2.5 rounded-full bg-red-500/50"></div>
+                    <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/50"></div>
+                    <div className="w-2.5 h-2.5 rounded-full bg-green-500/50"></div>
+                </div>
+            </div>
+            
+            <div className="my-6 text-center">
+                <p className="text-base text-gray-400 mb-1">Lucro Disponível (AO VIVO)</p>
+                <div className="font-mono text-5xl font-black text-white tracking-tighter">
+                    <span className="text-gray-400">$</span>{integerPart},<span className="text-4xl text-brand-green animate-pulse">{decimalPart}</span>
+                </div>
+            </div>
+
+            <div className="flex justify-between items-center bg-black/30 p-4 rounded-xl border border-white/10">
+                <div>
+                    <p className="text-xs text-gray-500 uppercase font-bold">Capital Investido</p>
+                    <p className="font-bold text-white text-lg">$ {(15000).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                </div>
+                <div>
+                    <p className="text-xs text-gray-500 uppercase font-bold text-right">Patente</p>
+                    <p className="font-bold text-yellow-300 text-lg text-right">🥇 Ouro</p>
+                </div>
+            </div>
+            
+            <div className="h-1px bg-gradient-to-r from-transparent via-brand-green/30 to-transparent my-5"></div>
+
+            <div className="mt-6 grid grid-cols-2 gap-3">
+                <button className="bg-brand-green text-black font-bold py-3 rounded-lg hover:opacity-90 transition text-sm shadow-[0_0_15px_rgba(0,255,156,0.2)]">Depositar</button>
+                <button className="bg-white/10 text-white font-bold py-3 rounded-lg border border-white/20 hover:bg-white/20 transition text-sm">Sacar Lucro</button>
+            </div>
+        </div>
+    </div>
+  );
+};
+
+
 const HomePage: React.FC<HomePageProps> = ({ setView, language, setLanguage }) => {
   const [isLangMenuOpen, setIsLangMenuOpen] = useState(false);
   const langMenuRef = useRef<HTMLDivElement>(null);
@@ -304,47 +366,9 @@ const HomePage: React.FC<HomePageProps> = ({ setView, language, setLanguage }) =
                         </div>
                     </div>
 
-                    {/* Hero Visual (Mock Dashboard) */}
-                    <div className="flex-1 w-full max-w-[600px] relative animate-float hidden lg:block">
-                        <div className="absolute inset-0 bg-brand-green/20 blur-[100px] rounded-full"></div>
-                        <div className="relative bg-[#0A0A0A] border border-white/10 rounded-2xl p-6 shadow-2xl overflow-hidden backdrop-blur-sm">
-                            {/* Fake UI Header */}
-                            <div className="flex justify-between items-center mb-6">
-                                <div className="flex gap-2">
-                                    <div className="w-3 h-3 rounded-full bg-red-500"></div>
-                                    <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-                                    <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                                </div>
-                                <div className="h-2 w-20 bg-gray-800 rounded-full"></div>
-                            </div>
-                            {/* Balance Card */}
-                            <div className="bg-gradient-to-r from-brand-green/20 to-brand-blue/20 rounded-xl p-6 border border-white/5 mb-4">
-                                <p className="text-sm text-gray-400 mb-1">Saldo Total (USD)</p>
-                                <p className="text-3xl font-bold text-white">$ 12,450.00</p>
-                                <div className="mt-4 flex gap-2">
-                                    <div className="h-8 w-24 bg-brand-green rounded text-black font-bold text-xs flex items-center justify-center">DEPOSITAR</div>
-                                    <div className="h-8 w-24 bg-white/10 rounded text-white font-bold text-xs flex items-center justify-center border border-white/10">SACAR</div>
-                                </div>
-                            </div>
-                            {/* Chart Placeholder */}
-                            <div className="flex items-end justify-between h-24 gap-2 px-2">
-                                {[30, 45, 35, 60, 50, 75, 60, 90, 80].map((h, i) => (
-                                    <div key={i} className="w-full bg-gray-800 rounded-t-sm relative overflow-hidden group">
-                                        <div style={{height: `${h}%`}} className="absolute bottom-0 w-full bg-brand-green/50 group-hover:bg-brand-green transition-all duration-500"></div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                        {/* Floating Element */}
-                        <div className="absolute -bottom-10 -left-10 bg-[#111] p-4 rounded-xl border border-white/10 shadow-xl flex items-center gap-3 animate-pulse-slow">
-                            <div className="bg-brand-green/20 p-2 rounded-lg text-brand-green">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
-                            </div>
-                            <div>
-                                <p className="text-xs text-gray-400">Rendimento Hoje</p>
-                                <p className="font-bold text-brand-green">+ $ 145.20</p>
-                            </div>
-                        </div>
+                    {/* Animated Wallet UI */}
+                    <div className="flex-1 w-full max-w-[500px] lg:max-w-none relative animate-float">
+                        <AnimatedWalletUI />
                     </div>
                 </div>
             </div>

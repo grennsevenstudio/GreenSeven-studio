@@ -783,9 +783,7 @@ const App: React.FC = () => {
   };
 
   const handleUpdatePlan = async (updatedPlan: InvestmentPlan) => {
-    // FIX: Replaced `prev` with `prevState` to resolve "Cannot find name 'prev'" error.
-    // This is a more robust way to update state that depends on the previous state,
-    // and also fixes the bug where saveAllData would use stale state.
+    // FIX: Fixed a reference error by using `prevState` instead of `prev` inside the `setDbState` callback.
     setDbState(prevState => {
       const planIndex = prevState.investmentPlans.findIndex(p => p.id === updatedPlan.id);
       const newPlans = [...prevState.investmentPlans];
