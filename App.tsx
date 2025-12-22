@@ -203,25 +203,46 @@ const App: React.FC = () => {
       loadRemoteData();
   }, []);
 
-  const handleLogin = (email: string, password?: string): Promise<boolean> => {
-      return new Promise(resolve => {
+  const handleLogin = (email: string, password?: string): Promise<{ success: boolean; message?: string; }> => {
+    return new Promise(resolve => {
         setTimeout(() => {
             const user = dbState.users.find(u => u.email === email);
-            if (user) {
-                if (password && user.password && user.password !== password) {
-                    resolve(false);
-                    return;
-                }
-                setLoggedUser(user);
-                setSessionUser(user.id);
-                setView(user.isAdmin ? View.AdminDashboard : View.UserDashboard);
-                resolve(true);
+            
+            if (!user || (password && user.password && user.password !== password)) {
+                resolve({ success: false, message: 'Credenciais inválidas. Verifique seu email e senha.' });
                 return;
             }
-            resolve(false);
-        }, 1500); // 1.5 second delay
+
+            // Admin can always log in regardless of status (useful for recovery)
+            if (user.isAdmin) {
+                setLoggedUser(user);
+                setSessionUser(user.id);
+                setView(View.AdminDashboard);
+                resolve({ success: true });
+                return;
+            }
+            
+            // Check user status for non-admins
+            switch (user.status) {
+                case UserStatus.Approved:
+                    setLoggedUser(user);
+                    setSessionUser(user.id);
+                    setView(View.UserDashboard);
+                    resolve({ success: true });
+                    break;
+                case UserStatus.Pending:
+                    resolve({ success: false, message: 'Sua conta está em análise. Você será notificado após a aprovação.' });
+                    break;
+                case UserStatus.Rejected:
+                    resolve({ success: false, message: `Seu cadastro foi rejeitado. Motivo: ${user.rejectionReason || 'Não especificado'}` });
+                    break;
+                default:
+                    resolve({ success: false, message: 'Status de conta desconhecido. Contate o suporte.' });
+                    break;
+            }
+        }, 1500);
     });
-  };
+};
 
   const handleRegister = async (data: ExtendedRegisterData) => {
       const newUser: User = {
@@ -783,16 +804,16 @@ const App: React.FC = () => {
   };
 
   const handleUpdatePlan = async (updatedPlan: InvestmentPlan) => {
-    // FIX: Renamed `prevState` to `prev` for consistency with other `setDbState` calls in the component.
-    setDbState(prev => {
-      const planIndex = prev.investmentPlans.findIndex(p => p.id === updatedPlan.id);
-      const newPlans = [...prev.investmentPlans];
+    // FIX: Renamed parameter to `prevState` to resolve a potential scoping issue.
+    setDbState(prevState => {
+      const planIndex = prevState.investmentPlans.findIndex(p => p.id === updatedPlan.id);
+      const newPlans = [...prevState.investmentPlans];
       if (planIndex !== -1) {
         newPlans[planIndex] = updatedPlan;
       } else {
         newPlans.push(updatedPlan);
       }
-      const newDbState = { ...prev, investmentPlans: newPlans };
+      const newDbState = { ...prevState, investmentPlans: newPlans };
       saveAllData(newDbState);
       return newDbState;
     });

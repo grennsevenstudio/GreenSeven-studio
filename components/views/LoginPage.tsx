@@ -11,7 +11,7 @@ import { TRANSLATIONS } from '../../lib/translations';
 
 interface LoginPageProps {
   setView: (view: View) => void;
-  onLogin: (email: string, password?: string) => Promise<boolean>;
+  onLogin: (email: string, password?: string) => Promise<{ success: boolean; message?: string }>;
   language: Language;
   setLanguage: (lang: Language) => void;
 }
@@ -100,10 +100,10 @@ const LoginPage: React.FC<LoginPageProps> = ({ setView, onLogin, language, setLa
       localStorage.removeItem('rememberedEmail');
     }
     
-    const loginSuccess = await onLogin(email, password);
-    if (!loginSuccess) {
-      setIsLoading(false);
-      setErrors({ email: 'Credenciais inválidas. Verifique seu email e senha.', password: true });
+    const result = await onLogin(email, password);
+    if (!result.success) {
+        setIsLoading(false);
+        setErrors({ email: result.message || 'Credenciais inválidas.', password: true });
     }
     // On success, the component unmounts and isLoading state is gone.
   };
