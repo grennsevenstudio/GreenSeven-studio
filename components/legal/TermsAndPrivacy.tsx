@@ -123,7 +123,7 @@ export const CONTACT_CONTENT = (
             <div>
                 <p className="text-xs font-bold text-gray-500 uppercase mb-1">WhatsApp de Suporte:</p>
                 <a 
-                    href="https://wa.me/18199409102" 
+                    href="https://wa.me/12497557581" 
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="flex items-center gap-2 text-white hover:text-brand-green transition-colors group"
@@ -131,7 +131,7 @@ export const CONTACT_CONTENT = (
                     <span className="p-1.5 bg-brand-green/20 rounded text-brand-green group-hover:scale-110 transition-transform">
                         {ICONS.whatsapp}
                     </span>
-                    <span className="font-bold">+1 (819) 940-9102</span>
+                    <span className="font-bold">+1 (249) 755-7581</span>
                 </a>
             </div>
             <div>

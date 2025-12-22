@@ -1,5 +1,6 @@
 
 
+
 import React, { useState, useEffect, useRef } from 'react';
 import type { User, Transaction, Notification, ChatMessage, PlatformSettings, AdminActionLog, Language, InvestmentPlan, SyncStatus } from './types';
 import { View, TransactionStatus, TransactionType, AdminActionType, UserStatus, InvestorRank } from './types';
@@ -813,6 +814,7 @@ const App: React.FC = () => {
       } else {
         newPlans.push(updatedPlan);
       }
+      // FIX: Corrected variable name from `prev` to `prevState` to match the callback parameter.
       const newDbState = { ...prevState, investmentPlans: newPlans };
       saveAllData(newDbState);
       return newDbState;

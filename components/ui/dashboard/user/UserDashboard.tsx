@@ -1,4 +1,6 @@
 
+
+
 import React, { useState, useEffect } from 'react';
 import type { User, Transaction, Notification, ChatMessage, InvestmentPlan, Language, SyncStatus, PlatformSettings } from '../../../../types';
 import Sidebar from '../../../layout/Sidebar';
@@ -189,6 +191,7 @@ const UserDashboard: React.FC<UserDashboardProps> = (props) => {
         setActiveView={setActiveView}
         isOpen={isSidebarOpen}
         onClose={() => setSidebarOpen(false)}
+        language={language}
       />
       <div className="flex-1 lg:pl-64 flex flex-col min-h-screen">
         <Header

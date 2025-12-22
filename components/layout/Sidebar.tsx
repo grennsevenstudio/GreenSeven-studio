@@ -1,7 +1,9 @@
 
+
 import React from 'react';
-import type { User } from '../../types';
+import type { User, Language } from '../../types';
 import { ICONS } from '../../constants';
+import { TRANSLATIONS } from '../../lib/translations';
 
 interface NavItem {
   label: string;
@@ -18,9 +20,13 @@ interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
   logoUrl?: string;
+  onLogout?: () => void;
+  language: Language;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ user, navItems, activeView, setActiveView, isOpen, onClose, logoUrl }) => {
+const Sidebar: React.FC<SidebarProps> = ({ user, navItems, activeView, setActiveView, isOpen, onClose, logoUrl, onLogout, language }) => {
+  const t = TRANSLATIONS[language] || TRANSLATIONS.pt;
+
   return (
     <>
       {/* Overlay for mobile */}
@@ -73,6 +79,21 @@ const Sidebar: React.FC<SidebarProps> = ({ user, navItems, activeView, setActive
               <p className="text-sm text-gray-500 dark:text-gray-400">{user.isAdmin ? 'Administrator' : 'Investor'}</p>
             </div>
            </div>
+           {user.isAdmin && onLogout && (
+                <a
+                href="#"
+                onClick={(e) => {
+                    e.preventDefault();
+                    onLogout();
+                }}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-red-500 hover:bg-red-500/10 mt-4`}
+                >
+                <div className={'text-red-500'}>
+                    {ICONS.logout}
+                </div>
+                <span className="font-bold">{t.logout}</span>
+                </a>
+           )}
         </div>
       </aside>
     </>

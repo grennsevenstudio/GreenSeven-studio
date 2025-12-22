@@ -1,5 +1,6 @@
 
 
+
 import React, { useState, useMemo } from 'react';
 import type { User, Transaction, ChatMessage, PlatformSettings, AdminActionLog, Language, Notification, InvestmentPlan } from '../../../../types';
 import { TransactionStatus, UserStatus, TransactionType } from '../../../../types';
@@ -128,6 +129,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
         isOpen={isSidebarOpen}
         onClose={() => setSidebarOpen(false)}
         logoUrl={platformSettings.logoUrl}
+        onLogout={onLogout}
+        language={language}
       />
       <div className="flex-1 lg:pl-64">
         <Header 

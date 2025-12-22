@@ -184,7 +184,7 @@ const SupportChat: React.FC<SupportChatProps> = ({ user, admin, messages, onSend
                         <p className="text-gray-400">Precisa de ajuda? Fale com nossa equipe ou veja o FAQ.</p>
                     </div>
                     <a 
-                        href="https://wa.me/18199409102" 
+                        href="https://wa.me/12497557581" 
                         target="_blank" 
                         rel="noopener noreferrer"
                         className="p-3 bg-green-500/10 border border-green-500/30 text-green-400 rounded-full hover:bg-green-500/20 transition-all duration-300 transform hover:scale-110 flex-shrink-0"
