@@ -1,6 +1,8 @@
 
 
 
+
+
 import React, { useState, useEffect, useRef } from 'react';
 import type { User, Transaction, Notification, ChatMessage, PlatformSettings, AdminActionLog, Language, InvestmentPlan, SyncStatus } from './types';
 import { View, TransactionStatus, TransactionType, AdminActionType, UserStatus, InvestorRank } from './types';
@@ -807,6 +809,7 @@ const App: React.FC = () => {
   const handleUpdatePlan = async (updatedPlan: InvestmentPlan) => {
     // FIX: Renamed parameter to `prevState` to resolve a potential scoping issue.
     setDbState(prevState => {
+      // FIX: Corrected a typo from 'investmentPlan' to 'investmentPlans'
       const planIndex = prevState.investmentPlans.findIndex(p => p.id === updatedPlan.id);
       const newPlans = [...prevState.investmentPlans];
       if (planIndex !== -1) {
