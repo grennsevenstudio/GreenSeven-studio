@@ -1,7 +1,8 @@
+
 import React, { useState, useEffect } from 'react';
 import Card from '../../../../ui/Card';
 import Button from '../../../../ui/Button';
-import { INVESTMENT_PLANS, ICONS } from '../../../../../constants';
+import { ICONS } from '../../../../../constants';
 import type { InvestmentPlan, User, Language } from '../../../../../types';
 import { TRANSLATIONS } from '../../../../../lib/translations';
 
@@ -137,7 +138,7 @@ const PlanCard: React.FC<{
             <div className="flex items-center justify-between border-t border-gray-800 pt-4 mb-4">
                 <span className="text-gray-400 text-sm">{translations?.min_deposit || "Mínimo"}</span>
                 <span className={`text-lg font-bold ${hasMinimumBalance ? 'text-white' : 'text-red-400'}`}>
-                    US$ {plan.minDepositUSD}
+                    US$ {plan.minDepositUSD.toFixed(2)}
                 </span>
             </div>
 
@@ -173,11 +174,12 @@ interface PlansProps {
     user: User;
     onUpdateUser: (user: User) => void;
     language: Language;
+    investmentPlans: InvestmentPlan[];
 }
 
-const Plans: React.FC<PlansProps> = ({ user, onUpdateUser, language }) => {
+const Plans: React.FC<PlansProps> = ({ user, onUpdateUser, language, investmentPlans }) => {
     const userPlanName = user.plan || 'Conservador';
-    const currentPlanObj = INVESTMENT_PLANS.find(p => p.name.toLowerCase() === userPlanName.toLowerCase());
+    const currentPlanObj = investmentPlans.find(p => p.name.toLowerCase() === userPlanName.toLowerCase());
     const currentPlanId = currentPlanObj ? currentPlanObj.id : '1';
     
     // Robust fallback: if language is undefined or invalid key, default to 'pt'
@@ -232,7 +234,7 @@ const Plans: React.FC<PlansProps> = ({ user, onUpdateUser, language }) => {
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-                {INVESTMENT_PLANS.map(plan => (
+                {investmentPlans.map(plan => (
                     <PlanCard 
                         key={plan.id} 
                         plan={plan} 

@@ -1,6 +1,8 @@
 
 
 
+
+
 import React, { useState, useEffect } from 'react';
 import type { User, Transaction, Notification, ChatMessage, InvestmentPlan, Language, SyncStatus, PlatformSettings } from '../../../../types';
 import Sidebar from '../../../layout/Sidebar';
@@ -126,7 +128,7 @@ const UserDashboard: React.FC<UserDashboardProps> = (props) => {
       case 'transactions':
         return <Transactions transactions={transactions} />;
       case 'plans':
-        return <Plans user={user} onUpdateUser={onUpdateUser} language={language} />;
+        return <Plans user={user} onUpdateUser={onUpdateUser} language={language} investmentPlans={investmentPlans} />;
       case 'career':
         return <CareerPlan user={user} allUsers={allUsers} allTransactions={allTransactions} language={language} />;
       case 'profile':

@@ -1,9 +1,10 @@
 
+
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Language } from '../../types';
+import { View, Language, InvestmentPlan } from '../../types';
 import Button from '../ui/Button';
 import Modal from '../layout/Modal';
-import { ICONS, INVESTMENT_PLANS } from '../../constants';
+import { ICONS } from '../../constants';
 import { TRANSLATIONS } from '../../lib/translations';
 import { SECURITY_CONTENT, ABOUT_CONTENT, CONTACT_CONTENT, CAREERS_CONTENT, TERMS_OF_USE_CONTENT, PRIVACY_POLICY_CONTENT } from '../legal/TermsAndPrivacy';
 
@@ -11,6 +12,7 @@ interface HomePageProps {
   setView: (view: View) => void;
   language: Language;
   setLanguage: (lang: Language) => void;
+  investmentPlans: InvestmentPlan[];
 }
 
 const LANGUAGE_OPTIONS: { code: Language; flag: string; label: string }[] = [
@@ -83,7 +85,7 @@ const AnimatedWalletUI = () => {
 };
 
 
-const HomePage: React.FC<HomePageProps> = ({ setView, language, setLanguage }) => {
+const HomePage: React.FC<HomePageProps> = ({ setView, language, setLanguage, investmentPlans }) => {
   const [isLangMenuOpen, setIsLangMenuOpen] = useState(false);
   const langMenuRef = useRef<HTMLDivElement>(null);
   const [modalContent, setModalContent] = useState<{ title: string; content: React.ReactNode } | null>(null);
@@ -464,7 +466,7 @@ const HomePage: React.FC<HomePageProps> = ({ setView, language, setLanguage }) =
                 </div>
 
                 <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    {INVESTMENT_PLANS.map((plan, idx) => (
+                    {investmentPlans.map((plan, idx) => (
                         <div key={idx} className="bg-[#121212] border border-white/5 rounded-2xl p-6 flex flex-col hover:border-brand-green transition-all duration-300 hover:shadow-[0_0_30px_rgba(0,255,156,0.1)] group relative overflow-hidden">
                             {idx === 1 && (
                                 <div className="absolute top-0 right-0 bg-brand-green text-black text-[10px] font-bold px-3 py-1 rounded-bl-lg uppercase">
@@ -482,7 +484,7 @@ const HomePage: React.FC<HomePageProps> = ({ setView, language, setLanguage }) =
                             <div className="space-y-4 mb-8 flex-1">
                                 <div className="flex items-center gap-3 text-sm text-gray-400">
                                     <div className="w-5 h-5 rounded-full bg-brand-green/10 flex items-center justify-center text-brand-green text-xs">✓</div>
-                                    <span className="text-gray-300">{t.plan_deposit_label}: <strong className="text-white">US$ {plan.minDepositUSD}</strong></span>
+                                    <span className="text-gray-300">{t.plan_deposit_label}: <strong className="text-white">US$ {plan.minDepositUSD.toFixed(2)}</strong></span>
                                 </div>
                                 <div className="flex items-center gap-3 text-sm text-gray-400">
                                     <div className="w-5 h-5 rounded-full bg-brand-green/10 flex items-center justify-center text-brand-green text-xs">✓</div>

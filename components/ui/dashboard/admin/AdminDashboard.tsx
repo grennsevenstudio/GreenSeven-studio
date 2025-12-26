@@ -1,6 +1,8 @@
 
 
 
+
+
 import React, { useState, useMemo } from 'react';
 import type { User, Transaction, ChatMessage, PlatformSettings, AdminActionLog, Language, Notification, InvestmentPlan } from '../../../../types';
 import { TransactionStatus, UserStatus, TransactionType } from '../../../../types';
@@ -111,7 +113,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
       case 'support':
         return <ManageSupport adminUser={user} allUsers={allUsers} allMessages={chatMessages} allTransactions={allTransactions} onSendMessage={onSendMessage} onUpdateUser={onUpdateUser} />;
       case 'plans':
-        return <ManagePlans investmentPlans={investmentPlans} onUpdatePlan={onUpdatePlan} />;
+        return <ManagePlans investmentPlans={investmentPlans} onUpdatePlan={onUpdatePlan} platformSettings={platformSettings} />;
       case 'settings':
         return <Settings platformSettings={platformSettings} onUpdateSettings={onUpdateSettings} allUsers={allUsers} />;
       default:

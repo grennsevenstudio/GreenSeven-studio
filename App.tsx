@@ -1,8 +1,4 @@
 
-
-
-
-
 import React, { useState, useEffect, useRef } from 'react';
 import type { User, Transaction, Notification, ChatMessage, PlatformSettings, AdminActionLog, Language, InvestmentPlan, SyncStatus } from './types';
 import { View, TransactionStatus, TransactionType, AdminActionType, UserStatus, InvestorRank } from './types';
@@ -818,6 +814,7 @@ const App: React.FC = () => {
         newPlans.push(updatedPlan);
       }
       // FIX: Corrected variable name from `prev` to `prevState` to match the callback parameter.
+      // FIX: Changed `prev` to `prevState` to fix a reference error.
       const newDbState = { ...prevState, investmentPlans: newPlans };
       saveAllData(newDbState);
       return newDbState;
@@ -867,7 +864,7 @@ const App: React.FC = () => {
 
   return (
     <>
-      {view === View.Home && <HomePage setView={setView} language={language} setLanguage={handleSetLanguage} />}
+      {view === View.Home && <HomePage setView={setView} language={language} setLanguage={handleSetLanguage} investmentPlans={dbState.investmentPlans} />}
       {view === View.Login && <LoginPage setView={setView} onLogin={handleLogin} language={language} setLanguage={handleSetLanguage} />}
       {view === View.Register && <RegisterPage setView={setView} onRegister={handleRegister} language={language} setLanguage={handleSetLanguage} />}
       {view === View.ForgotPassword && <ForgotPasswordPage setView={setView} language={language} setLanguage={handleSetLanguage} />}
