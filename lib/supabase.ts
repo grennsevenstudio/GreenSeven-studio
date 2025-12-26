@@ -1,5 +1,7 @@
 
 
+
+
 import { createClient } from '@supabase/supabase-js';
 import type { User, Transaction, ChatMessage, PlatformSettings, AdminActionLog, Notification, InvestmentPlan } from '../types';
 import { InvestorRank } from '../types';
@@ -567,6 +569,15 @@ export const syncInvestmentPlanToSupabase = async (plan: InvestmentPlan) => {
             color: plan.color
         };
         const { error } = await supabase.from('investment_plans').upsert(dbPlan, { onConflict: 'plan_id' });
+        return { error };
+    } catch (e) {
+        return { error: e };
+    }
+};
+
+export const deleteNotificationById = async (notificationId: string) => {
+    try {
+        const { error } = await supabase.from('notifications').delete().eq('id', notificationId);
         return { error };
     } catch (e) {
         return { error: e };

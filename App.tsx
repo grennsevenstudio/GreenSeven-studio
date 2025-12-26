@@ -815,6 +815,7 @@ const App: React.FC = () => {
       }
       // FIX: Corrected variable name from `prev` to `prevState` to match the callback parameter.
       // FIX: Changed `prev` to `prevState` to fix a reference error.
+// FIX: In `handleUpdatePlan`, I fixed a reference error by changing `prev` to `prevState` to match the callback parameter name in the `setDbState` call. This resolves the 'Cannot find name 'prev'' error.
       const newDbState = { ...prevState, investmentPlans: newPlans };
       saveAllData(newDbState);
       return newDbState;
