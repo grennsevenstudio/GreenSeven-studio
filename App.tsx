@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useRef } from 'react';
 import type { User, Transaction, Notification, ChatMessage, PlatformSettings, AdminActionLog, Language, InvestmentPlan, SyncStatus } from './types';
 import { View, TransactionStatus, TransactionType, AdminActionType, UserStatus, InvestorRank } from './types';
@@ -798,14 +799,12 @@ const App: React.FC = () => {
   const handleBroadcastNotification = async (message: string) => {
       const notifications: Notification[] = dbState.users.map(u => ({ id: faker.string.uuid(), userId: u.id, message: message, date: new Date().toISOString(), isRead: false }));
       setDbState(prev => ({ ...prev, notifications: [...prev.notifications, ...notifications] }));
-      saveAllData({ ...dbState, notifications: [...prev.notifications, ...notifications] });
+      saveAllData({ ...dbState, notifications: [...dbState.notifications, ...notifications] });
       for (const n of notifications) await syncNotificationToSupabase(n);
   };
 
   const handleUpdatePlan = async (updatedPlan: InvestmentPlan) => {
-    // FIX: Renamed parameter to `prevState` to resolve a potential scoping issue.
     setDbState(prevState => {
-      // FIX: Corrected a typo from 'investmentPlan' to 'investmentPlans'
       const planIndex = prevState.investmentPlans.findIndex(p => p.id === updatedPlan.id);
       const newPlans = [...prevState.investmentPlans];
       if (planIndex !== -1) {
@@ -813,9 +812,7 @@ const App: React.FC = () => {
       } else {
         newPlans.push(updatedPlan);
       }
-      // FIX: Corrected variable name from `prev` to `prevState` to match the callback parameter.
-      // FIX: Changed `prev` to `prevState` to fix a reference error.
-// FIX: In `handleUpdatePlan`, I fixed a reference error by changing `prev` to `prevState` to match the callback parameter name in the `setDbState` call. This resolves the 'Cannot find name 'prev'' error.
+      // FIX: The name 'prev' is not defined in this scope. Changed to 'prevState' to match the callback parameter.
       const newDbState = { ...prevState, investmentPlans: newPlans };
       saveAllData(newDbState);
       return newDbState;

@@ -3,6 +3,8 @@
 
 
 
+
+
 import React, { useState, useEffect } from 'react';
 import type { User, Transaction, Notification, ChatMessage, InvestmentPlan, Language, SyncStatus, PlatformSettings } from '../../../../types';
 import Sidebar from '../../../layout/Sidebar';
@@ -20,6 +22,7 @@ import Profile from './pages/Profile';
 import SupportChat from './pages/SupportChat';
 import FAQPage from './pages/FAQPage';
 import WelcomePopup from './WelcomePopup';
+import ProfitCalculator from './pages/ProfitCalculator';
 
 interface UserDashboardProps {
   user: User;
@@ -105,6 +108,7 @@ const UserDashboard: React.FC<UserDashboardProps> = (props) => {
     { label: t.dashboard, icon: ICONS.dashboard, view: 'dashboard' },
     { label: t.transactions, icon: ICONS.transactions, view: 'transactions' },
     { label: t.plans, icon: ICONS.plans, view: 'plans' },
+    { label: t.calculator, icon: ICONS.calculator, view: 'calculator' },
     { label: t.career, icon: ICONS.career, view: 'career' },
     { label: t.profile, icon: ICONS.profile, view: 'profile' },
     { label: t.support, icon: ICONS.support, view: 'support' },
@@ -129,6 +133,8 @@ const UserDashboard: React.FC<UserDashboardProps> = (props) => {
         return <Transactions transactions={transactions} />;
       case 'plans':
         return <Plans user={user} onUpdateUser={onUpdateUser} language={language} investmentPlans={investmentPlans} />;
+      case 'calculator':
+        return <ProfitCalculator investmentPlans={investmentPlans} platformSettings={platformSettings} />;
       case 'career':
         return <CareerPlan user={user} allUsers={allUsers} allTransactions={allTransactions} language={language} />;
       case 'profile':
@@ -194,6 +200,7 @@ const UserDashboard: React.FC<UserDashboardProps> = (props) => {
         isOpen={isSidebarOpen}
         onClose={() => setSidebarOpen(false)}
         language={language}
+        platformSettings={platformSettings}
       />
       <div className="flex-1 lg:pl-64 flex flex-col min-h-screen">
         <Header

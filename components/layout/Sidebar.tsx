@@ -1,9 +1,12 @@
 
 
+
+
 import React from 'react';
-import type { User, Language } from '../../types';
+import type { User, Language, PlatformSettings } from '../../types';
 import { ICONS } from '../../constants';
 import { TRANSLATIONS } from '../../lib/translations';
+import { formatCurrency } from '../../lib/utils';
 
 interface NavItem {
   label: string;
@@ -22,9 +25,10 @@ interface SidebarProps {
   logoUrl?: string;
   onLogout?: () => void;
   language: Language;
+  platformSettings?: PlatformSettings;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ user, navItems, activeView, setActiveView, isOpen, onClose, logoUrl, onLogout, language }) => {
+const Sidebar: React.FC<SidebarProps> = ({ user, navItems, activeView, setActiveView, isOpen, onClose, logoUrl, onLogout, language, platformSettings }) => {
   const t = TRANSLATIONS[language] || TRANSLATIONS.pt;
 
   return (
@@ -71,7 +75,16 @@ const Sidebar: React.FC<SidebarProps> = ({ user, navItems, activeView, setActive
             </a>
           ))}
         </nav>
-        <div className="p-4 border-t border-gray-200 dark:border-gray-800">
+        
+        {/* Dollar Rate Display for non-admins */}
+        {!user.isAdmin && platformSettings && (
+            <div className="px-4 py-3 border-t border-gray-800 flex-shrink-0">
+                <p className="text-xs text-gray-500 uppercase font-bold tracking-wider">Cotação do Dólar</p>
+                <p className="text-lg font-bold text-brand-green mt-1">{formatCurrency(platformSettings.dollarRate, 'BRL')}</p>
+            </div>
+        )}
+
+        <div className="p-4 border-t border-gray-200 dark:border-gray-800 flex-shrink-0">
            <div className="flex items-center gap-3">
             <img src={user.avatarUrl} alt="User Avatar" className="w-10 h-10 rounded-full border-2 border-brand-green" />
             <div>

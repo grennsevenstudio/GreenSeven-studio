@@ -1,5 +1,7 @@
 
 
+
+
 import { Language } from '../types';
 
 export const TRANSLATIONS = {
@@ -11,6 +13,7 @@ export const TRANSLATIONS = {
     profile: 'Meu Perfil',
     support: 'Suporte',
     faq_menu: 'Perguntas Frequentes',
+    calculator: 'Calculadora',
     users: 'Usuários',
     delete_user: 'Excluir Usuário',
     logs: 'Logs de Ações',
@@ -249,6 +252,7 @@ export const TRANSLATIONS = {
     dashboard: 'Dashboard',
     plans: 'Plans',
     career: 'Career Plan',
+    calculator: 'Calculator',
     career_title: 'Career Plan',
     career_subtitle: 'Expand your network and maximize your earnings with our affiliate system.',
     unilevel_system: 'Unilevel System',
@@ -463,6 +467,7 @@ export const TRANSLATIONS = {
     dashboard: 'Panel',
     plans: 'Planes',
     career: 'Plan de Carrera',
+    calculator: 'Calculadora',
     career_title: 'Plan de Carrera',
     career_subtitle: 'Expande tu red y maximiza tus ganancias con nuestro sistema de afiliados.',
     unilevel_system: 'Sistema Unilevel',
@@ -677,6 +682,7 @@ export const TRANSLATIONS = {
     dashboard: 'Tableau de Bord',
     plans: 'Plans',
     career: 'Plan de Carrière',
+    calculator: 'Calculatrice',
     career_title: 'Plan de Carrière',
     career_subtitle: 'Développez votre réseau et maximisez vos gains avec notre système d\'affiliation.',
     unilevel_system: 'Système Unilevel',
@@ -888,6 +894,7 @@ export const TRANSLATIONS = {
     dashboard: 'Dashboard',
     plans: 'Pläne',
     career: 'Karriereplan',
+    calculator: 'Rechner',
     career_title: 'Karriereplan',
     career_subtitle: 'Erweitern Sie Ihr Netzwerk und maximieren Sie Ihre Einnahmen mit unserem Affiliate-System.',
     unilevel_system: 'Unilevel-System',
