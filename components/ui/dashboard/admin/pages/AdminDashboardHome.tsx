@@ -98,6 +98,13 @@ const AdminDashboardHome: React.FC<AdminDashboardHomeProps> = ({ allUsers, allTr
     const [isBroadcastOpen, setIsBroadcastOpen] = useState(false);
     const [loginEvents, setLoginEvents] = useState<{ user: User; time: Date }[]>([]);
 
+    const recentSignups = useMemo(() => {
+        return allUsers
+            .filter(u => !u.isAdmin)
+            .sort((a,b) => new Date(b.joinedDate).getTime() - new Date(a.joinedDate).getTime())
+            .slice(0, 5);
+    }, [allUsers]);
+
     // Simulate user logins
     useEffect(() => {
         const nonAdminUsers = allUsers.filter(u => !u.isAdmin);
@@ -179,6 +186,36 @@ const AdminDashboardHome: React.FC<AdminDashboardHomeProps> = ({ allUsers, allTr
 
                 {/* Side Column */}
                 <div className="lg:col-span-1 space-y-8">
+                    {/* Recent Registrations */}
+                    <Card>
+                        <div className="flex items-center gap-3 mb-4">
+                           <div className="p-2 bg-brand-green/10 rounded-lg text-brand-green">{ICONS.userPlus}</div>
+                           <h2 className="text-xl font-bold">Registros Recentes</h2>
+                        </div>
+                        <div className="space-y-3">
+                            {recentSignups.length > 0 ? recentSignups.map(user => {
+                                const referrer = user.referredById ? allUsers.find(u => u.id === user.referredById) : null;
+                                return (
+                                <div key={user.id} className="flex items-center gap-3 p-2 bg-brand-black/40 rounded-lg">
+                                    <img src={user.avatarUrl} alt={user.name} className="w-8 h-8 rounded-full" />
+                                    <div className="flex-1">
+                                        <p className="text-sm font-semibold text-white">{user.name}</p>
+                                        <p className="text-[10px] text-gray-500">
+                                            {new Date(user.joinedDate).toLocaleDateString('pt-BR')}
+                                            {referrer && <span className="text-brand-blue"> (por {referrer.name.split(' ')[0]})</span>}
+                                        </p>
+                                    </div>
+                                    <span className={`text-[9px] font-bold px-2 py-0.5 rounded ${user.status === 'Pending' ? 'bg-yellow-500/20 text-yellow-400' : 'bg-gray-700 text-gray-300'}`}>
+                                        {user.status}
+                                    </span>
+                                </div>
+                                )
+                            }) : (
+                                <p className="text-sm text-gray-500 text-center py-4">Nenhum novo registro.</p>
+                            )}
+                        </div>
+                    </Card>
+
                     {/* Whale Mode */}
                     <Card>
                         <div className="flex items-center gap-3 mb-4">

@@ -1,10 +1,4 @@
 
-
-
-
-
-
-
 import React, { useState, useEffect } from 'react';
 import type { User, Transaction, Notification, ChatMessage, InvestmentPlan, Language, SyncStatus, PlatformSettings } from '../../../../types';
 import Sidebar from '../../../layout/Sidebar';
@@ -46,6 +40,7 @@ interface UserDashboardProps {
   investmentPlans: InvestmentPlan[];
   syncStatus: SyncStatus;
   platformSettings: PlatformSettings;
+  referralRates: { [key: number]: number };
 }
 
 const UserDashboard: React.FC<UserDashboardProps> = (props) => {
@@ -70,7 +65,8 @@ const UserDashboard: React.FC<UserDashboardProps> = (props) => {
     onRefreshData,
     investmentPlans,
     syncStatus,
-    platformSettings
+    platformSettings,
+    referralRates,
   } = props;
 
   const [activeView, setActiveView] = useState('dashboard');
@@ -136,7 +132,7 @@ const UserDashboard: React.FC<UserDashboardProps> = (props) => {
       case 'calculator':
         return <ProfitCalculator investmentPlans={investmentPlans} platformSettings={platformSettings} />;
       case 'career':
-        return <CareerPlan user={user} allUsers={allUsers} allTransactions={allTransactions} language={language} />;
+        return <CareerPlan user={user} allUsers={allUsers} allTransactions={allTransactions} language={language} referralRates={referralRates} />;
       case 'profile':
         return (
           <Profile

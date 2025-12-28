@@ -449,6 +449,18 @@ const App: React.FC = () => {
                   user.balanceUSD = user.capitalInvestedUSD + user.dailyWithdrawableUSD + user.bonusBalanceUSD;
                   user.rank = calculateRank(user.balanceUSD);
                   notifMessage = `Depósito de ${formatCurrency(tx.amountUSD, 'USD')} confirmado! O valor já está no seu saldo.`;
+
+                  // NEW LOGIC: Trigger bonus payout on first completed deposit
+                  if (user.referredById) {
+                      const priorCompletedDeposits = dbState.transactions.filter(
+                          t => t.userId === user.id && t.type === TransactionType.Deposit && t.status === TransactionStatus.Completed
+                      );
+                      // If there are no previously completed deposits (in the old state), this is the first one.
+                      if (priorCompletedDeposits.length === 0) {
+                          await handlePayoutBonus(updatedTx);
+                      }
+                  }
+
               } else if (newStatus === TransactionStatus.Failed) {
                   notifMessage = `Depósito de ${formatCurrency(tx.amountUSD, 'USD')} rejeitado.`;
               }
@@ -977,6 +989,7 @@ const App: React.FC = () => {
           investmentPlans={dbState.investmentPlans}
           syncStatus={syncStatus}
           platformSettings={dbState.platformSettings}
+          referralRates={referralRates}
         />
       )}
       {view === View.AdminDashboard && loggedUser && loggedUser.isAdmin && (
@@ -991,7 +1004,6 @@ const App: React.FC = () => {
           onLogout={handleLogout}
           onUpdateTransaction={handleUpdateTransaction}
           onUpdateUserStatus={handleUpdateUserStatus}
-          onPayoutBonus={handlePayoutBonus}
           onSendMessage={handleSendMessage}
           onUpdateSettings={handleUpdateSettings}
           onAdminUpdateUserBalance={handleAdminUpdateUserBalance}
