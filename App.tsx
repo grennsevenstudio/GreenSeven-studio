@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect, useRef } from 'react';
 import type { User, Transaction, Notification, ChatMessage, PlatformSettings, AdminActionLog, Language, InvestmentPlan, SyncStatus } from './types';
 import { View, TransactionStatus, TransactionType, AdminActionType, UserStatus, InvestorRank } from './types';
@@ -24,6 +23,7 @@ import {
     checkSupabaseConnection,
     deleteTransactionById,
     deleteUserById,
+    deleteNotificationById,
 } from './lib/supabase';
 import { requestNotificationPermission, showSystemNotification, formatCurrency } from './lib/utils';
 import { faker } from '@faker-js/faker';
@@ -71,12 +71,14 @@ const App: React.FC = () => {
 
   const [isLoading, setIsLoading] = useState(true);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('idle');
+  const [initialReferralCode, setInitialReferralCode] = useState<string | null>(null);
 
   // View State - Synchronously check session on initialization
   const [view, setView] = useState<View>(() => {
       const path = window.location.pathname;
-      if (path === '/register') return View.Register;
-      if (path === '/login') return View.Login;
+      const params = new URLSearchParams(window.location.search);
+      if (path.includes('/register') || params.has('ref')) return View.Register;
+      if (path.includes('/login')) return View.Login;
       
       const storedUserId = getSessionUser();
       if (storedUserId && initialLocalData.users) {
@@ -93,6 +95,25 @@ const App: React.FC = () => {
   const [referralRates, setReferralRates] = useState<{[key:number]: number}>(REFERRAL_BONUS_RATES);
 
   const previousNotificationsCountRef = useRef(0);
+  
+  // This useEffect will run only once on mount to capture referral codes
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const refCode = params.get('ref');
+    if (refCode) {
+        localStorage.setItem('referral_code', refCode);
+        setInitialReferralCode(refCode);
+        // Force view to register page if ref link is used
+        setView(View.Register);
+        // Clean the URL to avoid confusion on refresh, keeping the path
+        window.history.replaceState({}, document.title, '/register');
+    } else {
+        const storedCode = localStorage.getItem('referral_code');
+        if (storedCode) {
+            setInitialReferralCode(storedCode);
+        }
+    }
+  }, []); // Empty dependency array means it runs once on mount
 
   useEffect(() => {
       requestNotificationPermission();
@@ -244,7 +265,25 @@ const App: React.FC = () => {
     });
 };
 
-  const handleRegister = async (data: ExtendedRegisterData) => {
+  const handleRegister = async (data: ExtendedRegisterData): Promise<{ success: boolean; message?: string; }> => {
+      // 1. Validate referral code if provided
+      if (data.referralCode) {
+          const referrer = dbState.users.find(u => u.referralCode?.toUpperCase() === data.referralCode?.toUpperCase());
+          if (!referrer) {
+              return { success: false, message: 'Código de indicação inválido.' };
+          }
+      }
+
+      // 2. Generate unique referral code for the new user
+      let newReferralCode = '';
+      let isUnique = false;
+      while (!isUnique) {
+          newReferralCode = faker.string.alphanumeric(8).toUpperCase();
+          if (!dbState.users.some(u => u.referralCode === newReferralCode)) {
+              isUnique = true;
+          }
+      }
+      
       const newUser: User = {
           id: faker.string.uuid(),
           name: data.name,
@@ -266,13 +305,13 @@ const App: React.FC = () => {
           isAdmin: false,
           joinedDate: new Date().toISOString(),
           lastProfitUpdate: new Date().toISOString(),
-          referralCode: faker.string.alphanumeric(8).toUpperCase(),
+          referralCode: newReferralCode, // Use the unique code
           kycAnalysis: data.kycAnalysis,
           hasSeenWelcomePopup: false,
       };
 
       if (data.referralCode) {
-          const referrer = dbState.users.find(u => u.referralCode === data.referralCode);
+          const referrer = dbState.users.find(u => u.referralCode?.toUpperCase() === data.referralCode?.toUpperCase());
           if (referrer) newUser.referredById = referrer.id;
       }
 
@@ -297,6 +336,12 @@ const App: React.FC = () => {
           saveAllData({...newDbState, notifications: updatedNotifs});
           await syncNotificationToSupabase(notif);
       }
+      
+      // Clear the referral code from storage after successful registration
+      localStorage.removeItem('referral_code');
+      setInitialReferralCode(null);
+
+      return { success: true };
   };
 
   const handleLogout = () => {
@@ -796,11 +841,55 @@ const App: React.FC = () => {
       }
   };
 
-  const handleBroadcastNotification = async (message: string) => {
-      const notifications: Notification[] = dbState.users.map(u => ({ id: faker.string.uuid(), userId: u.id, message: message, date: new Date().toISOString(), isRead: false }));
-      setDbState(prev => ({ ...prev, notifications: [...prev.notifications, ...notifications] }));
-      saveAllData({ ...dbState, notifications: [...dbState.notifications, ...notifications] });
-      for (const n of notifications) await syncNotificationToSupabase(n);
+  const handleAddNotification = async (targetUserIds: string[], message: string) => {
+      const newNotifications: Notification[] = targetUserIds.map(userId => ({
+          id: faker.string.uuid(),
+          userId,
+          message,
+          date: new Date().toISOString(),
+          isRead: false
+      }));
+
+      const adminLog: AdminActionLog = {
+          id: faker.string.uuid(),
+          timestamp: new Date().toISOString(),
+          adminId: loggedUser?.id || 'system',
+          adminName: loggedUser?.name || 'Sistema',
+          actionType: AdminActionType.NotificationAdd,
+          description: `Enviou notificação "${message.slice(0, 30)}..." para ${targetUserIds.length} usuário(s).`,
+          targetId: targetUserIds.join(',')
+      };
+
+      setDbState(prev => ({
+          ...prev,
+          notifications: [...prev.notifications, ...newNotifications],
+          adminActionLogs: [adminLog, ...prev.adminActionLogs]
+      }));
+      saveAllData({ ...dbState, notifications: [...dbState.notifications, ...newNotifications], adminActionLogs: [adminLog, ...dbState.adminActionLogs] });
+
+      for (const n of newNotifications) await syncNotificationToSupabase(n);
+      await syncAdminLogToSupabase(adminLog);
+  };
+
+  const handleDeleteNotification = async (notificationId: string) => {
+      const adminLog: AdminActionLog = {
+          id: faker.string.uuid(),
+          timestamp: new Date().toISOString(),
+          adminId: loggedUser?.id || 'system',
+          adminName: loggedUser?.name || 'Sistema',
+          actionType: AdminActionType.NotificationDelete,
+          description: `Excluiu notificação ID: ${notificationId.slice(0, 8)}`,
+          targetId: notificationId
+      };
+
+      setDbState(prev => ({
+          ...prev,
+          notifications: prev.notifications.filter(n => n.id !== notificationId),
+          adminActionLogs: [adminLog, ...prev.adminActionLogs]
+      }));
+      saveAllData({ ...dbState, notifications: dbState.notifications.filter(n => n.id !== notificationId), adminActionLogs: [adminLog, ...dbState.adminActionLogs] });
+      await deleteNotificationById(notificationId);
+      await syncAdminLogToSupabase(adminLog);
   };
 
   const handleUpdatePlan = async (updatedPlan: InvestmentPlan) => {
@@ -812,7 +901,6 @@ const App: React.FC = () => {
       } else {
         newPlans.push(updatedPlan);
       }
-      // FIX: The name 'prev' is not defined in this scope. Changed to 'prevState' to match the callback parameter.
       const newDbState = { ...prevState, investmentPlans: newPlans };
       saveAllData(newDbState);
       return newDbState;
@@ -864,7 +952,7 @@ const App: React.FC = () => {
     <>
       {view === View.Home && <HomePage setView={setView} language={language} setLanguage={handleSetLanguage} investmentPlans={dbState.investmentPlans} />}
       {view === View.Login && <LoginPage setView={setView} onLogin={handleLogin} language={language} setLanguage={handleSetLanguage} />}
-      {view === View.Register && <RegisterPage setView={setView} onRegister={handleRegister} language={language} setLanguage={handleSetLanguage} />}
+      {view === View.Register && <RegisterPage setView={setView} onRegister={handleRegister} language={language} setLanguage={handleSetLanguage} initialReferralCode={initialReferralCode} />}
       {view === View.ForgotPassword && <ForgotPasswordPage setView={setView} language={language} setLanguage={handleSetLanguage} />}
       {view === View.UserDashboard && loggedUser && (
         <UserDashboard
@@ -899,7 +987,7 @@ const App: React.FC = () => {
           chatMessages={dbState.chatMessages}
           platformSettings={dbState.platformSettings}
           adminActionLogs={dbState.adminActionLogs}
-          notifications={dbState.notifications.filter(n => n.userId === loggedUser.id)}
+          notifications={dbState.notifications}
           onLogout={handleLogout}
           onUpdateTransaction={handleUpdateTransaction}
           onUpdateUserStatus={handleUpdateUserStatus}
@@ -912,12 +1000,14 @@ const App: React.FC = () => {
           onAdminUpdateUserProfit={handleAdminUpdateUserProfit}
           onUpdateUser={handleUpdateUser}
           onMarkAllNotificationsAsRead={handleMarkAllNotificationsAsRead}
+          onAddNotification={handleAddNotification}
+          onDeleteNotification={handleDeleteNotification}
           isDarkMode={isDarkMode}
           toggleTheme={toggleTheme}
           language={language}
           setLanguage={handleSetLanguage}
           onRefreshData={loadRemoteData}
-          onBroadcastNotification={handleBroadcastNotification}
+          onBroadcastNotification={handleAddNotification}
           referralRates={referralRates}
           investmentPlans={dbState.investmentPlans}
           onUpdatePlan={handleUpdatePlan}

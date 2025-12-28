@@ -36,9 +36,10 @@ export interface ExtendedRegisterData {
 
 interface RegisterPageProps {
   setView: (view: View) => void;
-  onRegister: (data: ExtendedRegisterData) => void;
+  onRegister: (data: ExtendedRegisterData) => Promise<{ success: boolean; message?: string; }>;
   language: Language;
   setLanguage: (lang: Language) => void;
+  initialReferralCode?: string | null;
 }
 
 const LANGUAGE_OPTIONS: { code: Language; flag: string; label: string }[] = [
@@ -93,7 +94,7 @@ const FileUploadField: React.FC<{
     </div>
 );
 
-const RegisterPage: React.FC<RegisterPageProps> = ({ setView, onRegister, language, setLanguage }) => {
+const RegisterPage: React.FC<RegisterPageProps> = ({ setView, onRegister, language, setLanguage, initialReferralCode }) => {
     const [step, setStep] = useState(1);
     const [formData, setFormData] = useState({
         // Step 1: Account
@@ -131,14 +132,13 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ setView, onRegister, langua
     const langMenuRef = useRef<HTMLDivElement>(null);
 
     const t = TRANSLATIONS[language].auth;
-
+    
     useEffect(() => {
-        const params = new URLSearchParams(window.location.search);
-        const ref = params.get('ref');
-        if (ref) {
-            setFormData(prev => ({ ...prev, referralCode: ref }));
+        const code = initialReferralCode || localStorage.getItem('referral_code');
+        if (code) {
+            setFormData(prev => ({ ...prev, referralCode: code }));
         }
-    }, []);
+    }, [initialReferralCode]);
 
     // Close language dropdown when clicking outside
     useEffect(() => {
@@ -152,6 +152,8 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ setView, onRegister, langua
         document.removeEventListener('mousedown', handleClickOutside);
         };
     }, []);
+    
+    const isRefCodeFromUrl = !!initialReferralCode || !!localStorage.getItem('referral_code');
 
     const passwordStrength = useMemo(() => calculatePasswordStrength(formData.password), [formData.password]);
 
@@ -311,13 +313,22 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ setView, onRegister, langua
                     selfieUrl
                 }
             };
+            
+            const result = await onRegister(registerData);
 
-            await onRegister(registerData);
-            setIsSubmitted(true);
+            if (!result.success) {
+                setIsProcessing(false);
+                if (result.message && result.message.includes('indicação')) {
+                    setErrors(prev => ({...prev, referralCode: result.message}));
+                } else {
+                    alert(result.message || 'Ocorreu um erro no cadastro. Tente novamente.');
+                }
+            } else {
+                setIsSubmitted(true);
+            }
         } catch (error) {
             console.error("Registration error:", error);
             alert("Erro ao processar cadastro. Tente novamente.");
-        } finally {
             setIsProcessing(false);
         }
     };
@@ -458,13 +469,18 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ setView, onRegister, langua
                             <p className="text-[10px] text-gray-500 mt-1">{t.pass_min}</p>
                         </div>
                         <Input label={t.confirm_password_label} id="confirmPassword" type="password" value={formData.confirmPassword} onChange={handleInputChange} error={errors.confirmPassword} required />
-                        <Input 
-                            label={t.referral_label}
-                            id="referralCode"
-                            value={formData.referralCode}
-                            onChange={handleInputChange}
-                            placeholder=""
-                        />
+                        <div>
+                            <Input 
+                                label={t.referral_label}
+                                id="referralCode"
+                                value={formData.referralCode}
+                                onChange={handleInputChange}
+                                readOnly={isRefCodeFromUrl}
+                                className={isRefCodeFromUrl ? 'bg-gray-800/50 !border-gray-600 focus:!ring-0 cursor-not-allowed' : ''}
+                                error={errors.referralCode}
+                            />
+                            {isRefCodeFromUrl && <p className="text-xs text-brand-green/80 mt-1">✓ Código de indicação aplicado via link.</p>}
+                        </div>
                     </div>
                 )}
 

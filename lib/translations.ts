@@ -1,7 +1,4 @@
 
-
-
-
 import { Language } from '../types';
 
 export const TRANSLATIONS = {
@@ -53,6 +50,7 @@ export const TRANSLATIONS = {
     infinite_width_desc: 'Não há limites para o seu crescimento. Indique quantas pessoas quiser no seu primeiro nível e aumente exponencialmente seus ganhos residuais.',
     share_code_title: 'Seu Código de Acesso',
     copy_code: 'Copiar Código',
+    copy_link: 'Copiar Link de Indicação',
     level_1_desc: 'Comissão direta no 1º Depósito.',
     level_2_desc: 'Indicações dos seus amigos.',
     level_3_desc: 'Expansão da rede nível 3.',
@@ -262,6 +260,7 @@ export const TRANSLATIONS = {
     infinite_width_desc: 'There are no limits to your growth. Refer as many people as you want at your first level and exponentially increase your residual income.',
     share_code_title: 'Your Access Code',
     copy_code: 'Copy Code',
+    copy_link: 'Copy Referral Link',
     level_1_desc: 'Direct commission on 1st Deposit.',
     level_2_desc: 'Referrals from your friends.',
     level_3_desc: 'Level 3 network expansion.',
@@ -477,6 +476,7 @@ export const TRANSLATIONS = {
     infinite_width_desc: 'No hay límites para tu crecimiento. Refiere a tantas personas como quieras en tu primer nivel y aumenta exponencialmente tus ingresos residuales.',
     share_code_title: 'Tu Código de Acceso',
     copy_code: 'Copiar Código',
+    copy_link: 'Copiar Enlace de Referido',
     level_1_desc: 'Comisión directa en el 1er Depósito.',
     level_2_desc: 'Referidos de tus amigos.',
     level_3_desc: 'Expansión de red nivel 3.',
@@ -692,6 +692,7 @@ export const TRANSLATIONS = {
     infinite_width_desc: 'Il n\'y a pas de limites à votre croissance. Parrainez autant de personnes que vous le souhaitez à votre premier niveau et augmentez exponentiellement vos revenus résiduels.',
     share_code_title: 'Votre Code d\'Accès',
     copy_code: 'Copier le Code',
+    copy_link: 'Copier le lien de parrainage',
     level_1_desc: 'Commission directe sur le 1er Dépôt.',
     level_2_desc: 'Parrainages de vos amis.',
     level_3_desc: 'Expansion du réseau niveau 3.',
@@ -904,6 +905,7 @@ export const TRANSLATIONS = {
     infinite_width_desc: 'Es gibt keine Grenzen für Ihr Wachstum. Empfehlen Sie so viele Personen wie Sie möchten auf Ihrer ersten Ebene und steigern Sie Ihr Residualeinkommen exponentiell.',
     share_code_title: 'Ihr Zugangscode',
     copy_code: 'Code Kopieren',
+    copy_link: 'Empfehlungslink kopieren',
     level_1_desc: 'Direkte Provision auf die 1. Einzahlung.',
     level_2_desc: 'Empfehlungen von Ihren Freunden.',
     level_3_desc: 'Netzwerkerweiterung Level 3.',

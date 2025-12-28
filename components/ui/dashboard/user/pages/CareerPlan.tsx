@@ -103,6 +103,7 @@ const RankProgress: React.FC<{ user: User }> = ({ user }) => {
 
 const CareerPlan: React.FC<CareerPlanProps> = ({ user, allUsers = [], allTransactions = [], language }) => {
     const [referralCode] = useState(user.referralCode);
+    const [copySuccess, setCopySuccess] = useState(false);
     const [prevBonusCount, setPrevBonusCount] = useState(0);
     const t = TRANSLATIONS[language] || TRANSLATIONS['pt'];
     
@@ -142,9 +143,11 @@ const CareerPlan: React.FC<CareerPlanProps> = ({ user, allUsers = [], allTransac
         }
     }, [bonusHistory.length, prevBonusCount]);
 
-    const copyCode = () => {
-        navigator.clipboard.writeText(referralCode);
-        alert('Código copiado para a área de transferência!');
+    const copyLink = () => {
+        const link = `${window.location.origin}/register?ref=${referralCode}`;
+        navigator.clipboard.writeText(link);
+        setCopySuccess(true);
+        setTimeout(() => setCopySuccess(false), 2000); // Hide message after 2 seconds
     };
 
     return (
@@ -209,8 +212,18 @@ const CareerPlan: React.FC<CareerPlanProps> = ({ user, allUsers = [], allTransac
                                 <p className="text-3xl font-mono font-black text-brand-green tracking-widest">{referralCode}</p>
                             </div>
                             
-                            <Button onClick={copyCode} fullWidth variant="primary">
-                                {ICONS.copy} {t.copy_code}
+                            <Button onClick={copyLink} fullWidth variant="primary">
+                                {copySuccess ? (
+                                    <div className="flex items-center gap-2">
+                                        {ICONS.check}
+                                        <span>Link Copiado!</span>
+                                    </div>
+                                ) : (
+                                    <div className="flex items-center gap-2">
+                                        {ICONS.copy}
+                                        <span>{t.copy_link}</span>
+                                    </div>
+                                )}
                             </Button>
                         </div>
                     </div>
