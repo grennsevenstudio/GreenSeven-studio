@@ -1,13 +1,10 @@
 
-
-
-
 import React from 'react';
 import { type InvestmentPlan, InvestorRank, type Stock } from './types';
 
 export const DOLLAR_RATE = 5.45;
-// Updated to 5% (Level 1), 3% (Level 2), 1% (Level 3)
-export const REFERRAL_BONUS_RATES = { 1: 0.05, 2: 0.03, 3: 0.01 };
+// Updated Level 1 to 10%, Level 2 to 3%, Level 3 to 1%
+export const REFERRAL_BONUS_RATES = { 1: 0.10, 2: 0.03, 3: 0.01 };
 
 export const INVESTMENT_PLANS: InvestmentPlan[] = [
   { id: '1', name: 'Conservador', monthlyReturn: '1% a 5%', returnRate: 0.05, minDepositUSD: 8.70, color: 'text-brand-blue' },
