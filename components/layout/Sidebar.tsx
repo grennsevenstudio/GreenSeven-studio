@@ -1,12 +1,10 @@
 
-
-
-
 import React from 'react';
 import type { User, Language, PlatformSettings } from '../../types';
 import { ICONS } from '../../constants';
 import { TRANSLATIONS } from '../../lib/translations';
 import { formatCurrency } from '../../lib/utils';
+import Button from '../ui/Button';
 
 interface NavItem {
   label: string;
@@ -26,9 +24,11 @@ interface SidebarProps {
   onLogout?: () => void;
   language: Language;
   platformSettings?: PlatformSettings;
+  onDepositClick?: () => void;
+  onWithdrawClick?: () => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ user, navItems, activeView, setActiveView, isOpen, onClose, logoUrl, onLogout, language, platformSettings }) => {
+const Sidebar: React.FC<SidebarProps> = ({ user, navItems, activeView, setActiveView, isOpen, onClose, logoUrl, onLogout, language, platformSettings, onDepositClick, onWithdrawClick }) => {
   const t = TRANSLATIONS[language] || TRANSLATIONS.pt;
 
   return (
@@ -76,6 +76,18 @@ const Sidebar: React.FC<SidebarProps> = ({ user, navItems, activeView, setActive
           ))}
         </nav>
         
+        {/* QUICK ACTIONS */}
+        {onDepositClick && onWithdrawClick && !user.isAdmin && (
+            <div className="px-4 py-4 space-y-3 border-t border-gray-800">
+                <Button onClick={() => { onDepositClick(); onClose(); }} fullWidth>
+                    {ICONS.deposit} Depositar
+                </Button>
+                <Button onClick={() => { onWithdrawClick(); onClose(); }} variant="secondary" fullWidth>
+                    {ICONS.withdraw} Sacar
+                </Button>
+            </div>
+        )}
+
         {/* Dollar Rate Display for non-admins */}
         {!user.isAdmin && platformSettings && (
             <div className="px-4 py-3 border-t border-gray-800 flex-shrink-0">
