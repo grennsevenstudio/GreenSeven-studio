@@ -93,19 +93,26 @@ const LoginPage: React.FC<LoginPageProps> = ({ setView, onLogin, language, setLa
     }
 
     setIsLoading(true);
+    setErrors({ email: false, password: false }); // Clear previous submit errors
 
-    if (rememberMe) {
-      localStorage.setItem('rememberedEmail', email);
-    } else {
-      localStorage.removeItem('rememberedEmail');
+    try {
+      if (rememberMe) {
+        localStorage.setItem('rememberedEmail', email);
+      } else {
+        localStorage.removeItem('rememberedEmail');
+      }
+      
+      const result = await onLogin(email, password);
+      if (!result.success) {
+          setIsLoading(false);
+          setErrors({ email: result.message || 'Credenciais inválidas.', password: true });
+      }
+      // On success, isLoading remains true until view change
+    } catch (error) {
+      console.error("Login error:", error);
+      setIsLoading(false);
+      setErrors({ email: "Falha na conexão. Tente novamente.", password: false });
     }
-    
-    const result = await onLogin(email, password);
-    if (!result.success) {
-        setIsLoading(false);
-        setErrors({ email: result.message || 'Credenciais inválidas.', password: true });
-    }
-    // On success, the component unmounts and isLoading state is gone.
   };
 
   const handleForgotPassword = (e: React.FormEvent) => {
