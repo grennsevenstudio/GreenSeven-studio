@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
 import type { User, Language, PlatformSettings } from '../../types';
+import { InvestorRank } from '../../types';
 import { ICONS } from '../../constants';
 import { TRANSLATIONS } from '../../lib/translations';
 import { formatCurrency } from '../../lib/utils';
@@ -27,6 +28,48 @@ interface SidebarProps {
   onDepositClick?: () => void;
   onWithdrawClick?: () => void;
 }
+
+const RANK_GRADIENT_STOPS = {
+  [InvestorRank.Bronze]: { from: '#f97316', to: '#b45309', shadow: 'shadow-orange-700/30' },
+  [InvestorRank.Silver]: { from: '#94a3b8', to: '#64748b', shadow: 'shadow-slate-500/30' },
+  [InvestorRank.Gold]: { from: '#facc15', to: '#d97706', shadow: 'shadow-yellow-500/30' },
+  [InvestorRank.Platinum]: { from: '#22d3ee', to: '#0284c7', shadow: 'shadow-cyan-500/30' },
+  [InvestorRank.Diamond]: { from: '#00FF9C', to: '#059669', shadow: 'shadow-green-500/30' },
+};
+
+const RankShield: React.FC<{ rank: InvestorRank }> = ({ rank }) => {
+    const style = RANK_GRADIENT_STOPS[rank] || RANK_GRADIENT_STOPS[InvestorRank.Bronze];
+    const gradientId = `shield-grad-${rank}`;
+  
+    return (
+        <div className="px-4 py-8 flex justify-center items-center">
+            <div className={`w-20 h-24 animate-spin-slow drop-shadow-lg ${style.shadow}`}>
+                <svg viewBox="0 0 100 125" className="w-full h-full">
+                    <defs>
+                        <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style={{ stopColor: style.from }} />
+                            <stop offset="100%" style={{ stopColor: style.to }} />
+                        </linearGradient>
+                    </defs>
+                    <path
+                        d="M50 0 L95 15 V 60 C 95 95, 50 125, 50 125 C 50 125, 5 95, 5 60 V 15 Z"
+                        fill={`url(#${gradientId})`}
+                        stroke="rgba(255, 255, 255, 0.1)"
+                        strokeWidth="2"
+                    />
+                    {/* Inner highlight */}
+                    <path
+                        d="M50 5 L90 18 V 60 C 90 90, 50 118, 50 118 C 50 118, 10 90, 10 60 V 18 Z"
+                        fill="none"
+                        stroke="rgba(255, 255, 255, 0.2)"
+                        strokeWidth="1.5"
+                    />
+                </svg>
+            </div>
+        </div>
+    );
+};
+
 
 const Sidebar: React.FC<SidebarProps> = ({ user, navItems, activeView, setActiveView, isOpen, onClose, logoUrl, onLogout, language, platformSettings, onDepositClick, onWithdrawClick }) => {
   const t = TRANSLATIONS[language] || TRANSLATIONS.pt;
@@ -67,6 +110,9 @@ const Sidebar: React.FC<SidebarProps> = ({ user, navItems, activeView, setActive
             </>
           )}
         </div>
+
+        {!user.isAdmin && <RankShield rank={user.rank} />}
+
         <nav className="flex-1 px-2 py-4 space-y-2 overflow-y-auto">
           {navItems.map((item) => (
             <a
