@@ -1019,7 +1019,6 @@ const App: React.FC = () => {
           language={language}
           setLanguage={handleSetLanguage}
           onRefreshData={loadRemoteData}
-          onBroadcastNotification={handleAddNotification}
           referralRates={referralRates}
           investmentPlans={dbState.investmentPlans}
           onUpdatePlan={handleUpdatePlan}

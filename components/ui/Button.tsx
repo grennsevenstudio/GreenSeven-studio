@@ -1,4 +1,3 @@
-
 import React from 'react';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -13,9 +12,8 @@ const Button: React.FC<ButtonProps> = ({ children, variant = 'primary', fullWidt
   
   const variantStyles = {
     primary: 'bg-gradient-to-r from-brand-green to-brand-blue text-brand-black shadow-lg shadow-brand-green/20 hover:shadow-xl hover:shadow-brand-green/30 hover:-translate-y-0.5 focus:ring-brand-green',
-    // Updated secondary to darker style
-    secondary: 'bg-gray-800 border border-gray-700 text-white hover:bg-gray-700 hover:border-gray-600 focus:ring-brand-blue',
-    ghost: 'text-gray-400 hover:text-brand-green hover:bg-brand-gray',
+    secondary: 'bg-white border border-slate-300 text-slate-700 hover:bg-slate-100 focus:ring-blue-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white dark:hover:bg-gray-700 dark:hover:border-gray-600 dark:focus:ring-brand-blue',
+    ghost: 'text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-gray-400 dark:hover:text-brand-green dark:hover:bg-brand-gray',
   };
 
   const widthStyle = fullWidth ? 'w-full' : 'w-auto';

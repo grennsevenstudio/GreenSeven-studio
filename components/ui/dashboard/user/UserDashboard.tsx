@@ -1,9 +1,8 @@
-
 import React, { useState, useEffect } from 'react';
 import type { User, Transaction, Notification, ChatMessage, InvestmentPlan, Language, SyncStatus, PlatformSettings, WithdrawalDetails } from '../../../../types';
 import { TransactionType, TransactionStatus } from '../../../../types';
 import Sidebar from '../../../layout/Sidebar';
-import Header from '../../../layout/Header';
+import { Header } from '../../../layout/Header';
 import BottomNavBar from '../../../layout/BottomNavBar';
 import { ICONS, INVESTMENT_PLANS } from '../../../../constants';
 import { TRANSLATIONS } from '../../../../lib/translations';
@@ -609,7 +608,7 @@ const UserDashboard: React.FC<UserDashboardProps> = (props) => {
   };
 
   return (
-    <div className="flex min-h-[100dvh] w-full overflow-x-hidden bg-gray-100 dark:bg-brand-black text-gray-900 dark:text-white transition-colors duration-300">
+    <div className="flex min-h-[100dvh] w-full overflow-x-hidden bg-slate-50 dark:bg-brand-black text-slate-900 dark:text-white transition-colors duration-300">
       <WelcomePopup
         isOpen={isWelcomePopupOpen}
         onClose={handleCloseWelcomePopup}

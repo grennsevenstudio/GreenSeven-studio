@@ -3,7 +3,7 @@ import React, { useState, useMemo } from 'react';
 import type { User, Transaction, ChatMessage, PlatformSettings, AdminActionLog, Language, Notification, InvestmentPlan } from '../../../../types';
 import { TransactionStatus, UserStatus, TransactionType } from '../../../../types';
 import Sidebar from '../../../layout/Sidebar';
-import Header from '../../../layout/Header';
+import { Header } from '../../../layout/Header';
 import { ICONS } from '../../../../constants';
 import { TRANSLATIONS } from '../../../../lib/translations';
 
@@ -20,6 +20,7 @@ import ManageBonus from './pages/ManageBonus';
 import ManageInvestments from './pages/ManageInvestments';
 import ProfitProjection from './pages/ProfitProjection';
 import DeleteUser from './pages/DeleteUser';
+import ManageNotifications from './pages/ManageNotifications';
 
 interface AdminDashboardProps {
   user: User;
@@ -45,17 +46,18 @@ interface AdminDashboardProps {
   language: Language;
   setLanguage: (lang: Language) => void;
   onRefreshData: () => void;
-  onBroadcastNotification: (message: string) => void;
   referralRates?: {[key:number]: number};
   onUpdatePlan: (updatedPlan: InvestmentPlan) => void;
   investmentPlans: InvestmentPlan[];
   syncStatus: any;
   onDeleteTransaction: (txId: string) => void;
   onDeleteUser: (userId: string) => void;
+  onAddNotification: (targetUserIds: string[], message: string) => void;
+  onDeleteNotification: (notificationId: string) => void;
 }
 
 const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
-  const { user, allUsers, allTransactions, chatMessages, platformSettings, adminActionLogs, notifications, onLogout, onUpdateTransaction, onUpdateUserStatus, onSendMessage, onUpdateSettings, onAdminUpdateUserBalance, onAdminUpdateUserBonus, onAdminUpdateUserCapital, onAdminUpdateUserProfit, onUpdateUser, onMarkAllNotificationsAsRead, isDarkMode, toggleTheme, language, setLanguage, onRefreshData, onBroadcastNotification, referralRates, investmentPlans, onUpdatePlan, syncStatus, onDeleteTransaction, onDeleteUser } = props;
+  const { user, allUsers, allTransactions, chatMessages, platformSettings, adminActionLogs, notifications, onLogout, onUpdateTransaction, onUpdateUserStatus, onSendMessage, onUpdateSettings, onAdminUpdateUserBalance, onAdminUpdateUserBonus, onAdminUpdateUserCapital, onAdminUpdateUserProfit, onUpdateUser, onMarkAllNotificationsAsRead, isDarkMode, toggleTheme, language, setLanguage, onRefreshData, referralRates, investmentPlans, onUpdatePlan, syncStatus, onDeleteTransaction, onDeleteUser, onAddNotification, onDeleteNotification } = props;
   const [activeView, setActiveView] = useState('dashboard');
   const [isSidebarOpen, setSidebarOpen] = useState(false);
 
@@ -81,6 +83,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
     { label: 'Limpar Histórico', icon: ICONS.archive, view: 'delete_history' },
     { label: t.logs, icon: ICONS.history, view: 'logs' },
     { label: t.support, icon: ICONS.support, view: 'support' },
+    { label: 'Notificações', icon: ICONS.bell, view: 'notifications' },
     { label: t.plans, icon: ICONS.plans, view: 'plans' },
     { label: t.settings, icon: ICONS.adminSettings, view: 'settings' },
   ];
@@ -88,7 +91,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
   const renderContent = () => {
     switch (activeView) {
       case 'dashboard':
-        return <AdminDashboardHome allUsers={allUsers} allTransactions={allTransactions} onBroadcastNotification={onBroadcastNotification} />;
+        return <AdminDashboardHome allUsers={allUsers} allTransactions={allTransactions} onBroadcastNotification={(message: string) => onAddNotification(allUsers.filter(u => !u.isAdmin).map(u => u.id), message)} />;
       case 'users':
         return <ManageUsers allUsers={allUsers} onAdminUpdateUserBalance={onAdminUpdateUserBalance} onUpdateUserStatus={onUpdateUserStatus} />;
       case 'manage_investments':
@@ -107,17 +110,19 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
         return <AdminActionLogs adminActionLogs={adminActionLogs} />;
       case 'support':
         return <ManageSupport adminUser={user} allUsers={allUsers} allMessages={chatMessages} allTransactions={allTransactions} onSendMessage={onSendMessage} onUpdateUser={onUpdateUser} />;
+      case 'notifications':
+        return <ManageNotifications allUsers={allUsers} allNotifications={notifications} onAddNotification={onAddNotification} onDeleteNotification={onDeleteNotification} />;
       case 'plans':
         return <ManagePlans investmentPlans={investmentPlans} onUpdatePlan={onUpdatePlan} platformSettings={platformSettings} />;
       case 'settings':
         return <Settings platformSettings={platformSettings} onUpdateSettings={onUpdateSettings} allUsers={allUsers} allTransactions={allTransactions} />;
       default:
-        return <AdminDashboardHome allUsers={allUsers} allTransactions={allTransactions} onBroadcastNotification={onBroadcastNotification} />;
+        return <AdminDashboardHome allUsers={allUsers} allTransactions={allTransactions} onBroadcastNotification={(message: string) => onAddNotification(allUsers.filter(u => !u.isAdmin).map(u => u.id), message)} />;
     }
   };
 
   return (
-    <div className="flex min-h-[100dvh] w-full overflow-x-hidden bg-gray-100 dark:bg-brand-black text-gray-900 dark:text-white transition-colors duration-300">
+    <div className="flex min-h-[100dvh] w-full overflow-x-hidden bg-slate-50 dark:bg-brand-black text-slate-900 dark:text-white transition-colors duration-300">
       <Sidebar
         user={user}
         navItems={navItems}

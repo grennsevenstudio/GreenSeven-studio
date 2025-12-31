@@ -1,8 +1,4 @@
 
-
-
-
-
 import React, { useState, useRef, useEffect } from 'react';
 import type { User, Notification, Language, SyncStatus } from '../../types';
 import { ICONS, RANK_COLORS } from '../../constants';
@@ -91,7 +87,7 @@ interface HeaderProps {
   syncStatus: SyncStatus;
 }
 
-const Header: React.FC<HeaderProps> = ({ user, onLogout, toggleSidebar, notifications = [], onMarkAllAsRead, isDarkMode, toggleTheme, language, setLanguage, onRefreshData, syncStatus }) => {
+export const Header: React.FC<HeaderProps> = ({ user, onLogout, toggleSidebar, notifications = [], onMarkAllAsRead, isDarkMode, toggleTheme, language, setLanguage, onRefreshData, syncStatus }) => {
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -158,7 +154,7 @@ const Header: React.FC<HeaderProps> = ({ user, onLogout, toggleSidebar, notifica
          {onRefreshData && (
              <button 
                 onClick={handleRefresh} 
-                className={`text-gray-500 dark:text-gray-400 hover:text-brand-green transition-colors hidden md:block ${isRefreshing ? 'animate-spin text-brand-green' : ''}`}
+                className={`text-gray-500 dark:text-gray-400 hover:text-green-500 dark:hover:text-brand-green transition-colors hidden md:block ${isRefreshing ? 'animate-spin text-green-500 dark:text-brand-green' : ''}`}
                 title="Atualizar Dados"
              >
                  {ICONS.refresh}
@@ -190,8 +186,9 @@ const Header: React.FC<HeaderProps> = ({ user, onLogout, toggleSidebar, notifica
               <div className="p-3 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-brand-gray">
                 <h3 className="font-bold text-gray-900 dark:text-white">Notificações</h3>
                 {unreadCount > 0 && onMarkAllAsRead && (
-                    <button onClick={onMarkAllAsRead} className="text-xs text-brand-green hover:underline">
-                        Marcar todas como lidas
+                    <button onClick={onMarkAllAsRead} className="flex items-center gap-1.5 text-xs text-green-600 dark:text-brand-green hover:bg-green-500/10 dark:hover:bg-brand-green/10 px-2 py-1 rounded-md transition-colors">
+                        {ICONS.checkAll}
+                        <span className="font-semibold">Marcar todas como lidas</span>
                     </button>
                 )}
               </div>
@@ -223,7 +220,7 @@ const Header: React.FC<HeaderProps> = ({ user, onLogout, toggleSidebar, notifica
                 <img
                     src={user.avatarUrl}
                     alt="User Avatar"
-                    className="h-8 w-8 sm:h-10 sm:w-10 rounded-full border-2 border-brand-green object-cover hover:border-gray-300 dark:hover:border-white transition-colors"
+                    className="h-8 w-8 sm:h-10 sm:w-10 rounded-full border-2 border-green-500 dark:border-brand-green object-cover hover:border-gray-400 dark:hover:border-white transition-colors"
                 />
             </button>
             
@@ -246,7 +243,7 @@ const Header: React.FC<HeaderProps> = ({ user, onLogout, toggleSidebar, notifica
                                     setLanguage(option.code);
                                     setIsProfileOpen(false);
                                 }}
-                                className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-3 transition-colors ${language === option.code ? 'text-brand-green bg-gray-50 dark:bg-gray-800/50' : 'text-gray-700 dark:text-gray-300'}`}
+                                className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-3 transition-colors ${language === option.code ? 'text-green-600 dark:text-brand-green bg-gray-50 dark:bg-gray-800/50' : 'text-gray-700 dark:text-gray-300'}`}
                             >
                                 <span className="text-lg">{option.flag}</span>
                                 <span>{option.label}</span>
@@ -265,9 +262,6 @@ const Header: React.FC<HeaderProps> = ({ user, onLogout, toggleSidebar, notifica
             )}
         </div>
       </div>
-    </header>
     </>
   );
 };
-
-export default Header;

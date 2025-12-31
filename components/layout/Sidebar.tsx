@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import type { User, Language, PlatformSettings } from '../../types';
 import { ICONS } from '../../constants';
 import { TRANSLATIONS } from '../../lib/translations';
@@ -30,6 +30,21 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ user, navItems, activeView, setActiveView, isOpen, onClose, logoUrl, onLogout, language, platformSettings, onDepositClick, onWithdrawClick }) => {
   const t = TRANSLATIONS[language] || TRANSLATIONS.pt;
+  const [isRatingSubmitted, setIsRatingSubmitted] = useState(false);
+
+  const handleRating = (rating: number) => {
+    // In a real app, this would send data to an analytics service
+    console.log(`User rated the experience: ${rating}/5`);
+    setIsRatingSubmitted(true);
+  };
+
+  const ratings = [
+    { rating: 1, emoji: '😠', label: 'Péssimo' },
+    { rating: 2, emoji: '😟', label: 'Ruim' },
+    { rating: 3, emoji: '😐', label: 'Ok' },
+    { rating: 4, emoji: '🙂', label: 'Bom' },
+    { rating: 5, emoji: '😍', label: 'Excelente' },
+  ];
 
   return (
     <>
@@ -78,7 +93,7 @@ const Sidebar: React.FC<SidebarProps> = ({ user, navItems, activeView, setActive
         
         {/* QUICK ACTIONS */}
         {onDepositClick && onWithdrawClick && !user.isAdmin && (
-            <div className="px-4 py-4 space-y-3 border-t border-gray-800">
+            <div className="px-4 py-4 space-y-3 border-t border-gray-200 dark:border-gray-800">
                 <Button onClick={() => { onDepositClick(); onClose(); }} fullWidth>
                     {ICONS.deposit} Depositar
                 </Button>
@@ -88,9 +103,34 @@ const Sidebar: React.FC<SidebarProps> = ({ user, navItems, activeView, setActive
             </div>
         )}
 
+        {/* SATISFACTION RATING */}
+        {!user.isAdmin && (
+            <div className="px-4 py-4 space-y-3 border-t border-gray-200 dark:border-gray-800">
+                <p className="text-xs text-center font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Avalie sua experiência</p>
+                {isRatingSubmitted ? (
+                    <div className="text-center py-4 text-brand-green font-bold animate-fade-in">
+                        Obrigado pelo seu feedback!
+                    </div>
+                ) : (
+                    <div className="flex justify-around items-center pt-2">
+                        {ratings.map(r => (
+                            <button 
+                                key={r.rating} 
+                                title={r.label}
+                                onClick={() => handleRating(r.rating)}
+                                className="text-3xl grayscale opacity-60 hover:grayscale-0 hover:opacity-100 hover:scale-125 transition-all duration-200 focus:outline-none"
+                            >
+                                {r.emoji}
+                            </button>
+                        ))}
+                    </div>
+                )}
+            </div>
+        )}
+
         {/* Dollar Rate Display for non-admins */}
         {!user.isAdmin && platformSettings && (
-            <div className="px-4 py-3 border-t border-gray-800 flex-shrink-0">
+            <div className="px-4 py-3 border-t border-gray-200 dark:border-gray-800 flex-shrink-0">
                 <p className="text-xs text-gray-500 uppercase font-bold tracking-wider">Cotação do Dólar</p>
                 <p className="text-lg font-bold text-brand-green mt-1">{formatCurrency(platformSettings.dollarRate, 'BRL')}</p>
             </div>
