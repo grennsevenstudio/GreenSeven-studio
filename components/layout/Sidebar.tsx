@@ -42,28 +42,76 @@ const RankShield: React.FC<{ rank: InvestorRank }> = ({ rank }) => {
     const gradientId = `shield-grad-${rank}`;
   
     return (
-        <div className="px-4 py-8 flex justify-center items-center">
-            <div className={`w-20 h-24 animate-spin-slow drop-shadow-lg ${style.shadow}`}>
-                <svg viewBox="0 0 100 125" className="w-full h-full">
+        <div className="px-4 py-4 flex flex-col justify-center items-center">
+            {/* The main container for animation and shadow */}
+            <div className={`w-32 h-36 animate-spin-slow relative group`}>
+                {/* Pulsing Glow Effect */}
+                <div 
+                    className="absolute inset-0 animate-pulse-slow" 
+                    style={{ filter: `drop-shadow(0 0 15px ${style.from}A0)` }}
+                />
+                
+                <svg viewBox="0 0 120 135" className="w-full h-full relative z-10">
                     <defs>
                         <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="100%">
-                            <stop offset="0%" style={{ stopColor: style.from }} />
-                            <stop offset="100%" style={{ stopColor: style.to }} />
+                            <stop offset="0%" stopColor={style.from} />
+                            <stop offset="100%" stopColor={style.to} />
                         </linearGradient>
+                         {/* Filter for text glow */}
+                        <filter id="text-glow" x="-0.5" y="-0.5" width="2" height="2">
+                            <feGaussianBlur stdDeviation="1" result="coloredBlur"/>
+                            <feMerge>
+                                <feMergeNode in="coloredBlur"/>
+                                <feMergeNode in="SourceGraphic"/>
+                            </feMerge>
+                        </filter>
                     </defs>
+                    
+                    {/* Layer 1: Back Plate (darker) */}
                     <path
-                        d="M50 0 L95 15 V 60 C 95 95, 50 125, 50 125 C 50 125, 5 95, 5 60 V 15 Z"
-                        fill={`url(#${gradientId})`}
-                        stroke="rgba(255, 255, 255, 0.1)"
+                        d="M60 135 L5 95 V 30 L60 0 L115 30 V 95 Z"
+                        fill="#111"
+                        stroke="#000"
                         strokeWidth="2"
                     />
-                    {/* Inner highlight */}
+
+                    {/* Layer 2: Main Gradient Shield */}
                     <path
-                        d="M50 5 L90 18 V 60 C 90 90, 50 118, 50 118 C 50 118, 10 90, 10 60 V 18 Z"
-                        fill="none"
-                        stroke="rgba(255, 255, 255, 0.2)"
-                        strokeWidth="1.5"
+                        d="M60 128 L15 90 V 35 L60 10 L105 35 V 90 Z"
+                        fill={`url(#${gradientId})`}
                     />
+
+                    {/* Layer 3: Inner Accent Plate */}
+                    <path
+                        d="M60 120 L25 85 V 40 L60 20 L95 40 V 85 Z"
+                        fill="rgba(0,0,0,0.3)"
+                        stroke="rgba(255,255,255,0.1)"
+                        strokeWidth="1"
+                    />
+                    
+                     {/* Layer 4: Top Gem/Crest */}
+                    <path
+                        d="M60 15 L75 30 L60 40 L45 30 Z"
+                        fill="rgba(255,255,255,0.2)"
+                        stroke="rgba(255,255,255,0.4)"
+                        strokeWidth="1"
+                    />
+
+                    {/* Rank Text with Glow */}
+                    <text 
+                        x="60" 
+                        y="85"
+                        fontFamily="Inter, sans-serif" 
+                        fontSize="20"
+                        fontWeight="900"
+                        fill="white" 
+                        textAnchor="middle"
+                        letterSpacing="1"
+                        className="uppercase"
+                        filter="url(#text-glow)"
+                    >
+                        {rank}
+                    </text>
                 </svg>
             </div>
         </div>
@@ -110,8 +158,6 @@ const Sidebar: React.FC<SidebarProps> = ({ user, navItems, activeView, setActive
             </>
           )}
         </div>
-
-        {!user.isAdmin && <RankShield rank={user.rank} />}
 
         <nav className="flex-1 px-2 py-4 space-y-2 overflow-y-auto">
           {navItems.map((item) => (
@@ -173,6 +219,8 @@ const Sidebar: React.FC<SidebarProps> = ({ user, navItems, activeView, setActive
                 )}
             </div>
         )}
+
+        {!user.isAdmin && <RankShield rank={user.rank} />}
 
         {/* Dollar Rate Display for non-admins */}
         {!user.isAdmin && platformSettings && (
