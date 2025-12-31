@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import type { User, Transaction, Notification, ChatMessage, InvestmentPlan, Language, SyncStatus, PlatformSettings, WithdrawalDetails } from '../../../../types';
 import { TransactionType, TransactionStatus } from '../../../../types';
@@ -21,6 +22,7 @@ import SupportChat from './pages/SupportChat';
 import FAQPage from './pages/FAQPage';
 import WelcomePopup from './WelcomePopup';
 import ProfitCalculator from './pages/ProfitCalculator';
+import DeleteAccountPage from './pages/DeleteAccountPage';
 
 // --- MODAL SUB-COMPONENTS (LIFTED FROM DASHBOARDHOME) ---
 
@@ -413,6 +415,7 @@ interface UserDashboardProps {
   onSendMessage: (senderId: string, receiverId: string, text: string, attachment?: File) => void;
   onUpdateUser: (updatedUser: User) => void;
   onUpdatePassword: (userId: string, newPassword: string) => void;
+  onDeleteAccount: (userId: string, password: string, isSelfDelete: boolean) => Promise<{ success: boolean; message?: string; }>;
   isDarkMode: boolean;
   toggleTheme: () => void;
   language: Language;
@@ -439,6 +442,7 @@ const UserDashboard: React.FC<UserDashboardProps> = (props) => {
     onSendMessage,
     onUpdateUser,
     onUpdatePassword,
+    onDeleteAccount,
     isDarkMode,
     toggleTheme,
     language,
@@ -530,6 +534,7 @@ const UserDashboard: React.FC<UserDashboardProps> = (props) => {
     { label: t.profile, icon: ICONS.profile, view: 'profile' },
     { label: t.support, icon: ICONS.support, view: 'support' },
     { label: t.faq_menu, icon: ICONS.question, view: 'faq' },
+    { label: t.delete_account_menu, icon: ICONS.trash, view: 'delete_account' },
   ];
 
   const renderContent = () => {
@@ -571,6 +576,14 @@ const UserDashboard: React.FC<UserDashboardProps> = (props) => {
         );
       case 'faq':
         return <FAQPage language={language} setActiveView={setActiveView} />;
+      case 'delete_account':
+        return (
+          <DeleteAccountPage
+            user={user}
+            onDeleteAccount={onDeleteAccount}
+            language={language}
+          />
+        );
       case 'support':
         const userChatMessages = chatMessages
           .filter(

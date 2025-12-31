@@ -13,6 +13,8 @@ export const TRANSLATIONS = {
     calculator: 'Calculadora',
     users: 'Usuários',
     delete_user: 'Excluir Usuário',
+    // FIX: Added missing translations for delete account feature.
+    delete_account_menu: 'Excluir Conta',
     logs: 'Logs de Ações',
     settings: 'Configurações',
     welcome: 'Bem-vindo',
@@ -238,6 +240,17 @@ export const TRANSLATIONS = {
         modal_start_text: 'Comece com apenas US$ 8,70 e veja seu dinheiro render em moeda forte.',
         modal_cta: 'Começar a Investir Agora',
     },
+    delete_account: {
+        title: 'Excluir Conta Permanentemente',
+        subtitle: 'Esta ação é irreversível e removerá todos os seus dados da plataforma.',
+        warning_title: 'Atenção: Ação Irreversível',
+        warning_1: 'A exclusão da sua conta resultará na perda permanente de todo o seu histórico de investimentos, saldo, bônus e dados pessoais.',
+        warning_2: 'Uma vez excluída, a conta não poderá ser recuperada.',
+        confirm_label: 'Para confirmar, digite seu nome completo',
+        confirm_placeholder: 'Seu nome completo',
+        password_label: 'Confirme sua senha atual',
+        button_text: 'Excluir Minha Conta Permanentemente'
+    },
     faq: [
         { q: "POR QUE INVESTIR NA GREENNSEVEN?", a: "A GreennSeven oferece uma oportunidade única de dolarizar seu patrimônio. Enquanto moedas locais sofrem com a inflação, investir em Dólar Americano protege seu poder de compra." },
         { q: "O QUE É A DOLARIZAÇÃO DE CAPITAL?", a: "Dolarizar significa converter seu saldo em Reais para Dólares no momento do depósito. Isso blinda seu dinheiro contra a desvalorização do Real." },
@@ -277,6 +290,7 @@ export const TRANSLATIONS = {
     faq_menu: 'FAQ',
     users: 'Users',
     delete_user: 'Delete User',
+    delete_account_menu: 'Delete Account',
     logs: 'Action Logs',
     settings: 'Settings',
     welcome: 'Welcome',
@@ -454,6 +468,17 @@ export const TRANSLATIONS = {
         modal_start_text: 'Start with just $8.70 USD and watch your money grow in a strong currency.',
         modal_cta: 'Start Investing Now',
     },
+    delete_account: {
+        title: 'Permanently Delete Account',
+        subtitle: 'This action is irreversible and will remove all your data from the platform.',
+        warning_title: 'Warning: Irreversible Action',
+        warning_1: 'Deleting your account will result in the permanent loss of all your investment history, balance, bonuses, and personal data.',
+        warning_2: 'Once deleted, the account cannot be recovered.',
+        confirm_label: 'To confirm, type your full name',
+        confirm_placeholder: 'Your full name',
+        password_label: 'Confirm your current password',
+        button_text: 'Permanently Delete My Account'
+    },
     faq: [
         { q: "WHY INVEST IN GREENNSEVEN?", a: "GreennSeven offers a unique opportunity to dollarize your assets. While local currencies suffer from inflation, investing in US Dollars protects your purchasing power." },
         { q: "WHAT IS CAPITAL DOLLARIZATION?", a: "Dollarization means converting your balance from local currency to Dollars at the time of deposit. This shields your money against devaluation." },
@@ -493,6 +518,7 @@ export const TRANSLATIONS = {
     faq_menu: 'Preguntas Frecuentes',
     users: 'Usuarios',
     delete_user: 'Eliminar Usuario',
+    delete_account_menu: 'Eliminar Cuenta',
     logs: 'Registros',
     settings: 'Configuración',
     welcome: 'Bienvenido',
@@ -670,6 +696,17 @@ export const TRANSLATIONS = {
         modal_start_text: 'Empieza con solo US$ 8,70 y ve tu dinero crecer en moneda fuerte.',
         modal_cta: 'Empezar a Invertir Ahora',
     },
+    delete_account: {
+        title: 'Eliminar Cuenta Permanentemente',
+        subtitle: 'Esta acción es irreversible y eliminará todos tus datos de la plataforma.',
+        warning_title: 'Atención: Acción Irreversible',
+        warning_1: 'Eliminar tu cuenta resultará en la pérdida permanente de todo tu historial de inversiones, saldo, bonos y datos personales.',
+        warning_2: 'Una vez eliminada, la cuenta no se puede recuperar.',
+        confirm_label: 'Para confirmar, escribe tu nombre completo',
+        confirm_placeholder: 'Tu nombre completo',
+        password_label: 'Confirma tu contraseña actual',
+        button_text: 'Eliminar Mi Cuenta Permanentemente'
+    },
     faq: [
         { q: "¿POR QUÉ INVERTIR EN GREENNSEVEN?", a: "GreennSeven ofrece una oportunidad única para dolarizar tu patrimonio. Mientras las monedas locales sufren inflación, invertir en Dólar Americano protege tu poder adquisitivo." },
         { q: "¿QUÉ ES LA DOLARIZACIÓN DE CAPITAL?", a: "Dolarizar significa convertir tu saldo en moneda local a Dólares en el momento del depósito. Esto blinda tu dinero contra la devaluación." },
@@ -709,6 +746,7 @@ export const TRANSLATIONS = {
     faq_menu: 'FAQ',
     users: 'Utilisateurs',
     delete_user: 'Supprimer l\'Utilisateur',
+    delete_account_menu: 'Supprimer le Compte',
     logs: 'Journaux',
     settings: 'Paramètres',
     welcome: 'Bienvenue',
@@ -883,6 +921,17 @@ export const TRANSLATIONS = {
         modal_start_text: 'Commencez avec seulement 8,70 $ US et voyez votre argent fructifier dans une monnaie forte.',
         modal_cta: 'Commencer à Investir Maintenant',
     },
+    delete_account: {
+        title: 'Supprimer le Compte Définitivement',
+        subtitle: 'Cette action est irréversible et supprimera toutes vos données de la plateforme.',
+        warning_title: 'Attention : Action Irréversible',
+        warning_1: 'La suppression de votre compte entraînera la perte permanente de tout votre historique d\'investissement, solde, bonus et données personnelles.',
+        warning_2: 'Une fois supprimé, le compte ne peut pas être récupéré.',
+        confirm_label: 'Pour confirmer, tapez votre nom complet',
+        confirm_placeholder: 'Votre nom complet',
+        password_label: 'Confirmez votre mot de passe actuel',
+        button_text: 'Supprimer Mon Compte Définitivement'
+    },
     faq: [
         { q: "POURQUOI INVESTIR DANS GREENNSEVEN ?", a: "GreennSeven offre une opportunité unique de dollariser votre patrimoine. Tandis que les monnaies locales souffrent d'inflation, investir en dollars américains protège votre pouvoir d'achat." },
         { q: "QU'EST-CE QUE LA DOLLARISATION DU CAPITAL ?", a: "Dollariser signifie convertir votre solde en monnaie locale en dollars au moment du dépôt. Cela protège votre argent contre la dévaluation." },
@@ -922,6 +971,7 @@ export const TRANSLATIONS = {
     faq_menu: 'FAQ',
     users: 'Benutzer',
     delete_user: 'Benutzer Löschen',
+    delete_account_menu: 'Konto Löschen',
     logs: 'Protokolle',
     settings: 'Einstellungen',
     welcome: 'Willkommen',
@@ -1095,6 +1145,17 @@ export const TRANSLATIONS = {
         modal_adv_3_desc: 'Verlassen Sie sich nicht nur auf die Wirtschaft Ihres Landes. GreennSeven verbindet Sie mit dem globalen Markt.',
         modal_start_text: 'Beginnen Sie mit nur 8,70 USD und sehen Sie, wie Ihr Geld in einer starken Währung wächst.',
         modal_cta: 'Jetzt Investieren',
+    },
+    delete_account: {
+        title: 'Konto Dauerhaft Löschen',
+        subtitle: 'Diese Aktion ist unumkehrbar und wird alle Ihre Daten von der Plattform entfernen.',
+        warning_title: 'Warnung: Unumkehrbare Aktion',
+        warning_1: 'Das Löschen Ihres Kontos führt zum dauerhaften Verlust Ihrer gesamten Anlagehistorie, Ihres Guthabens, Ihrer Boni und Ihrer persönlichen Daten.',
+        warning_2: 'Einmal gelöscht, kann das Konto nicht wiederhergestellt werden.',
+        confirm_label: 'Zur Bestätigung geben Sie Ihren vollständigen Namen ein',
+        confirm_placeholder: 'Ihr vollständiger Name',
+        password_label: 'Bestätigen Sie Ihr aktuelles Passwort',
+        button_text: 'Mein Konto Dauerhaft Löschen'
     },
     faq: [
         { q: "WARUM IN GREENNSEVEN INVESTIEREN?", a: "GreennSeven bietet eine einzigartige Möglichkeit, Ihr Vermögen zu dollarisieren. Während lokale Währungen unter Inflation leiden, schützt eine Investition in US-Dollar Ihre Kaufkraft." },

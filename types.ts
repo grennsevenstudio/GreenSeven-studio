@@ -1,7 +1,4 @@
 
-
-
-
 export enum View {
   Home,
   Login,
@@ -182,6 +179,7 @@ export enum AdminActionType {
     HistoryClear = 'HistoryClear',
     TransactionDelete = 'TransactionDelete',
     UserDelete = 'UserDelete',
+    UserSelfDelete = 'UserSelfDelete',
     NotificationAdd = 'NotificationAdd',
     NotificationDelete = 'NotificationDelete',
 }

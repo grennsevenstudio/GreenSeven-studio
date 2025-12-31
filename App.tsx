@@ -920,40 +920,58 @@ const App: React.FC = () => {
     await syncInvestmentPlanToSupabase(updatedPlan);
   };
 
-  const handleDeleteUser = async (userId: string) => {
-      const userToDelete = dbState.users.find(u => u.id === userId);
-      if (!userToDelete) return;
+  const handleDeleteUser = async (userId: string, password?: string, isSelfDelete: boolean = false): Promise<{ success: boolean; message?: string; }> => {
+    const userToDelete = dbState.users.find(u => u.id === userId);
+    if (!userToDelete) {
+        return { success: false, message: "Usuário não encontrado." };
+    }
 
-      if (userToDelete.isAdmin) {
-          alert("A conta de administrador não pode ser excluída.");
-          return;
-      }
-      
-      const adminLog: AdminActionLog = {
-          id: faker.string.uuid(),
-          timestamp: new Date().toISOString(),
-          adminId: loggedUser?.id || 'system_delete',
-          adminName: loggedUser?.name || 'Sistema',
-          actionType: AdminActionType.UserDelete,
-          description: `Excluiu o usuário ${userToDelete.name} (ID: ${userToDelete.id.slice(0, 8)})`,
-          targetId: userId
-      };
+    if (userToDelete.isAdmin) {
+        alert("A conta de administrador não pode ser excluída.");
+        return { success: false, message: "A conta de administrador não pode ser excluída." };
+    }
 
-      setDbState(prev => {
-          const newState = {
-              ...prev,
-              users: prev.users.filter(u => u.id !== userId),
-              transactions: prev.transactions.filter(t => t.userId !== userId),
-              notifications: prev.notifications.filter(n => n.userId !== userId),
-              chatMessages: prev.chatMessages.filter(m => m.senderId !== userId && m.receiverId !== userId),
-              adminActionLogs: [adminLog, ...prev.adminActionLogs],
-          };
-          saveAllData(newState);
-          return newState;
-      });
+    // Password validation for self-delete
+    if (isSelfDelete && password) {
+        if (userToDelete.password !== password) {
+            return { success: false, message: "Senha incorreta. A exclusão foi cancelada." };
+        }
+    } else if (isSelfDelete && !password) {
+        // Password is required for self-delete
+        return { success: false, message: "Senha é obrigatória para auto-exclusão." };
+    }
+    
+    const adminLog: AdminActionLog = {
+        id: faker.string.uuid(),
+        timestamp: new Date().toISOString(),
+        adminId: isSelfDelete ? userId : (loggedUser?.id || 'system_delete'),
+        adminName: isSelfDelete ? userToDelete.name : (loggedUser?.name || 'Sistema'),
+        actionType: isSelfDelete ? AdminActionType.UserSelfDelete : AdminActionType.UserDelete,
+        description: isSelfDelete ? `Usuário ${userToDelete.name} auto-excluiu a conta.` : `Excluiu o usuário ${userToDelete.name} (ID: ${userToDelete.id.slice(0, 8)})`,
+        targetId: userId
+    };
 
-      await deleteUserById(userId);
-      await syncAdminLogToSupabase(adminLog);
+    setDbState(prev => {
+        const newState = {
+            ...prev,
+            users: prev.users.filter(u => u.id !== userId),
+            transactions: prev.transactions.filter(t => t.userId !== userId),
+            notifications: prev.notifications.filter(n => n.userId !== userId),
+            chatMessages: prev.chatMessages.filter(m => m.senderId !== userId && m.receiverId !== userId),
+            adminActionLogs: [adminLog, ...prev.adminActionLogs],
+        };
+        saveAllData(newState);
+        return newState;
+    });
+
+    await deleteUserById(userId);
+    await syncAdminLogToSupabase(adminLog);
+    
+    if (isSelfDelete && loggedUser?.id === userId) {
+        handleLogout();
+    }
+
+    return { success: true };
   };
 
   if (dbState.platformSettings.isMaintenanceMode && (!loggedUser || !loggedUser.isAdmin)) {
@@ -981,6 +999,7 @@ const App: React.FC = () => {
           onSendMessage={handleSendMessage}
           onUpdateUser={handleUpdateUser}
           onUpdatePassword={handleUpdatePassword}
+          onDeleteAccount={handleDeleteUser}
           isDarkMode={isDarkMode}
           toggleTheme={toggleTheme}
           language={language}
