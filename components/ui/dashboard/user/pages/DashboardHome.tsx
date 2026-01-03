@@ -242,8 +242,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ user, transactions, onAdd
                     title={t.total_balance} 
                     value={maskValue(formatCurrency(user.capitalInvestedUSD, 'USD'))} 
                     icon={ICONS.dollar} 
-                    subValue={t.locked_capital}
-                    locked
+                    subValue={t.invested_total}
                 />
                 <StatCard 
                     title={t.available_withdraw} 

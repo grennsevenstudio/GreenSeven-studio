@@ -23,7 +23,7 @@ export const TRANSLATIONS = {
     financial_dashboard: 'Dashboard Financeiro',
     dashboard_subtitle: 'Carteira Digital',
     total_balance: 'Capital Investido',
-    locked_capital: 'Capital Bloqueado',
+    invested_total: 'Total Investido',
     available_withdraw: 'Lucro Disponível (Diário)',
     daily_yields: 'Rendimentos liberados para saque',
     bonus_available: 'Bônus Disponível',
@@ -254,7 +254,7 @@ export const TRANSLATIONS = {
     faq: [
         { q: "POR QUE INVESTIR NA GREENNSEVEN?", a: "A GreennSeven oferece uma oportunidade única de dolarizar seu patrimônio. Enquanto moedas locais sofrem com a inflação, investir em Dólar Americano protege seu poder de compra." },
         { q: "O QUE É A DOLARIZAÇÃO DE CAPITAL?", a: "Dolarizar significa converter seu saldo em Reais para Dólares no momento do depósito. Isso blinda seu dinheiro contra a desvalorização do Real." },
-        { q: "COMO FUNCIONAM OS DEPÓSITOS E SAQUES?", a: "Depósitos são feitos instantáneamente via PIX (24 horas). Para sacar, convertimos seus dólares de volta para Reais e enviamos para sua chave PIX. O Capital Principal fica bloqueado por 30 dias, mas os rendimentos diários podem ser sacados das 08:00 às 18:00." },
+        { q: "COMO FUNCIONAM OS DEPÓSITOS E SAQUES?", a: "Depósitos são feitos instantaneamente via PIX (24 horas). Para sacar, convertemos seus dólares de volta para Reais e enviamos para sua chave PIX. Tanto o Capital Principal quanto os rendimentos diários podem ser sacados. As solicitações de saque são processadas de segunda a sexta, das 08:00 às 18:00." },
         { q: "A PLATAFORMA É SEGURA?", a: "Sim. Utilizamos criptografia de ponta (AES-256) e operamos com 'Cold Wallets' para custódia segura dos ativos." },
         { q: "QUAL O VALOR MÍNIMO PARA COMEÇAR?", a: "Você pode começar a investir com o plano Conservador a partir de apenas US$ 8,70." }
     ]
@@ -299,7 +299,7 @@ export const TRANSLATIONS = {
     financial_dashboard: 'Financial Dashboard',
     dashboard_subtitle: 'Digital Wallet',
     total_balance: 'Invested Capital',
-    locked_capital: 'Locked Capital',
+    invested_total: 'Total Invested',
     available_withdraw: 'Available Profit (Daily)',
     daily_yields: 'Yields released for withdrawal',
     bonus_available: 'Available Bonus',
@@ -482,7 +482,7 @@ export const TRANSLATIONS = {
     faq: [
         { q: "WHY INVEST IN GREENNSEVEN?", a: "GreennSeven offers a unique opportunity to dollarize your assets. While local currencies suffer from inflation, investing in US Dollars protects your purchasing power." },
         { q: "WHAT IS CAPITAL DOLLARIZATION?", a: "Dollarization means converting your balance from local currency to Dollars at the time of deposit. This shields your money against devaluation." },
-        { q: "HOW DO DEPOSITS AND WITHDRAWALS WORK?", a: "Deposits are made instantly via PIX (24/7). To withdraw, we convert your dollars back to local currency and send it to your PIX key. Principal Capital is locked for 30 days, but daily yields can be withdrawn between 08:00 and 18:00." },
+        { q: "HOW DO DEPOSITS AND WITHDRAWALS WORK?", a: "Deposits are made instantly via PIX (24/7). To withdraw, we convert your dollars back to local currency and send it to your PIX key. Both Principal Capital and daily yields can be withdrawn. Withdrawal requests are processed Monday to Friday, from 08:00 to 18:00." },
         { q: "IS THE PLATFORM SECURE?", a: "Yes. We use top-tier encryption (AES-256) and operate with 'Cold Wallets' for secure asset custody." },
         { q: "WHAT IS THE MINIMUM AMOUNT TO START?", a: "You can start investing with the Conservative plan starting from just $8.70 USD." }
     ]
@@ -527,7 +527,7 @@ export const TRANSLATIONS = {
     financial_dashboard: 'Panel Financiero',
     dashboard_subtitle: 'Cartera Digital',
     total_balance: 'Capital Invertido',
-    locked_capital: 'Capital Bloqueado',
+    invested_total: 'Total Invertido',
     available_withdraw: 'Beneficio Disponible (Diario)',
     daily_yields: 'Rendimientos liberados para retiro',
     bonus_available: 'Bono Disponible',
@@ -710,7 +710,7 @@ export const TRANSLATIONS = {
     faq: [
         { q: "¿POR QUÉ INVERTIR EN GREENNSEVEN?", a: "GreennSeven ofrece una oportunidad única para dolarizar tu patrimonio. Mientras las monedas locales sufren inflación, invertir en Dólar Americano protege tu poder adquisitivo." },
         { q: "¿QUÉ ES LA DOLARIZACIÓN DE CAPITAL?", a: "Dolarizar significa convertir tu saldo en moneda local a Dólares en el momento del depósito. Esto blinda tu dinero contra la devaluación." },
-        { q: "¿CÓMO FUNCIONAN LOS DEPÓSITOS Y RETIROS?", a: "Los depósitos se realizan instantáneamente vía PIX (24h). Para retirar, convertimos tus dólares nuevamente a moneda local y los enviamos a tu clave PIX. El Capital Principal queda bloqueado por 30 días, pero los rendimientos diarios pueden ser retirados de 08:00 a 18:00." },
+        { q: "¿CÓMO FUNCIONAN LOS DEPÓSITOS Y RETIROS?", a: "Los depósitos se realizan instantáneamente vía PIX (24h). Para retirar, convertimos tus dólares nuevamente a moneda local y los enviamos a tu clave PIX. Tanto el Capital Principal como los rendimientos diarios pueden ser retirados. Las solicitudes de retiro se procesan de lunes a viernes, de 08:00 a 18:00." },
         { q: "¿LA PLATAFORMA ES SEGURA?", a: "Sí. Utilizamos cifrado de punta (AES-256) y operamos con 'Cold Wallets' para la custodia segura de los activos." },
         { q: "¿CUÁL ES EL VALOR MÍNIMO PARA EMPEZAR?", a: "Puedes empezar a invertir con el plan Conservador desde solo US$ 8,70." }
     ]
@@ -755,7 +755,7 @@ export const TRANSLATIONS = {
     financial_dashboard: 'Tableau Financier',
     dashboard_subtitle: 'Portefeuille Numérique',
     total_balance: 'Capital Investi',
-    locked_capital: 'Capital Bloqué',
+    invested_total: 'Total Investi',
     available_withdraw: 'Bénéfice Disponible (Quotidien)',
     daily_yields: 'Rendements libérés pour retrait',
     bonus_available: 'Bonus Disponible',
@@ -935,7 +935,7 @@ export const TRANSLATIONS = {
     faq: [
         { q: "POURQUOI INVESTIR DANS GREENNSEVEN ?", a: "GreennSeven offre une opportunité unique de dollariser votre patrimoine. Tandis que les monnaies locales souffrent d'inflation, investir en dollars américains protège votre pouvoir d'achat." },
         { q: "QU'EST-CE QUE LA DOLLARISATION DU CAPITAL ?", a: "Dollariser signifie convertir votre solde en monnaie locale en dollars au moment du dépôt. Cela protège votre argent contre la dévaluation." },
-        { q: "COMMENT FONCTIONNENT LES DÉPÔTS ET RETRAITS ?", a: "Les dépôts se font instantanément via PIX (24/24h). Pour retirer, nous convertissons vos dollars en monnaie locale et les envoyons à votre clé PIX. Le Capital Principal est bloqué pendant 30 jours, mais les rendements quotidiens peuvent être retirés de 08h00 à 18h00." },
+        { q: "COMMENT FONCTIONNENT LES DÉPÔTS ET RETRAITS ?", a: "Les dépôts se font instantanément via PIX (24/24h). Pour retirer, nous convertissons vos dollars en monnaie locale et les envoyons à votre clé PIX. Le Capital Principal ainsi que les rendements quotidiens peuvent être retirés. Les demandes de retrait sont traitées du lundi au vendredi, de 08h00 à 18h00." },
         { q: "LA PLATEFORME EST-ELLE SÉCURISÉE ?", a: "Oui. Nous utilisons un cryptage de pointe (AES-256) et opérons avec des 'Cold Wallets' pour la garde sécurisée des actifs." },
         { q: "QUEL EST LE MONTANT MINIMUM POUR COMMENCER ?", a: "Vous pouvez commencer à investir avec le plan Conservateur à partir de seulement 8,70 $ US." }
     ]
@@ -980,7 +980,7 @@ export const TRANSLATIONS = {
     financial_dashboard: 'Finanz-Dashboard',
     dashboard_subtitle: 'Digitale Geldbörse',
     total_balance: 'Investiertes Kapital',
-    locked_capital: 'Gesperrtes Kapital',
+    invested_total: 'Gesamtinvestition',
     available_withdraw: 'Verfügbarer Gewinn (Täglich)',
     daily_yields: 'Zur Auszahlung freigegebene Erträge',
     bonus_available: 'Verfügbarer Bonus',
@@ -1160,7 +1160,7 @@ export const TRANSLATIONS = {
     faq: [
         { q: "WARUM IN GREENNSEVEN INVESTIEREN?", a: "GreennSeven bietet eine einzigartige Möglichkeit, Ihr Vermögen zu dollarisieren. Während lokale Währungen unter Inflation leiden, schützt eine Investition in US-Dollar Ihre Kaufkraft." },
         { q: "WAS IST KAPITAL-DOLLARISIERUNG?", a: "Dollarisierung bedeutet, Ihr Guthaben in lokaler Währung zum Zeitpunkt der Einzahlung in Dollar umzuwandeln. Dies schützt Ihr Geld vor Abwertung." },
-        { q: "WIE FUNKTIONIEREN EINZAHLUNGEN UND ABHEBUNGEN?", a: "Einzahlungen erfolgen sofort über PIX (24/7). Für Auszahlungen konvertieren wir Ihre Dollar zurück in die lokale Währung und senden sie an Ihren PIX-Schlüssel. Das Hauptkapital ist für 30 Tage gesperrt, aber tägliche Erträge können von 08:00 bis 18:00 Uhr abgehoben werden." },
+        { q: "WIE FUNKTIONIEREN EINZAHLUNGEN UND ABHEBUNGEN?", a: "Einzahlungen erfolgen sofort über PIX (24/7). Für Auszahlungen konvertieren wir Ihre Dollar zurück in die lokale Währung und senden sie an Ihren PIX-Schlüssel. Sowohl das Hauptkapital als auch die täglichen Erträge können abgehoben werden. Auszahlungsanträge werden von Montag bis Freitag von 08:00 bis 18:00 Uhr bearbeitet." },
         { q: "IST DIE PLATTFORM SICHER?", a: "Ja. Wir verwenden erstklassige Verschlüsselung (AES-256) und arbeiten mit 'Cold Wallets' für die sichere Verwahrung von Vermögenswerten." },
         { q: "WAS IST DER MINDESTBETRAG ZUM STARTEN?", a: "Sie können mit dem konservativen Plan bereits ab 8,70 USD investieren." }
     ]

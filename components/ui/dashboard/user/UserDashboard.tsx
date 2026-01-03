@@ -184,7 +184,7 @@ const WithdrawModalContent: React.FC<{
     const [pixDetails, setPixDetails] = useState<WithdrawalDetails>({ pixKey: '', fullName: '', cpf: '', bank: '' });
     const [pixKeyError, setPixKeyError] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
-    const [withdrawalSource, setWithdrawalSource] = useState<'yield' | 'bonus'>('yield');
+    const [withdrawalSource, setWithdrawalSource] = useState<'yield' | 'bonus' | 'capital'>('yield');
 
     const withdrawalFeePercent = platformSettings.withdrawalFeePercent || 0;
     const dollarRate = platformSettings.dollarRate || 5.50;
@@ -195,7 +195,9 @@ const WithdrawModalContent: React.FC<{
     
     const availableBalance = withdrawalSource === 'yield' 
         ? currentLiveProfit
-        : (user.bonusBalanceUSD || 0);
+        : withdrawalSource === 'bonus'
+            ? (user.bonusBalanceUSD || 0)
+            : (user.capitalInvestedUSD || 0);
 
     const handleAmountSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -330,7 +332,7 @@ const WithdrawModalContent: React.FC<{
     
     return (
         <form onSubmit={handleAmountSubmit} className="space-y-5">
-             <div className="grid grid-cols-2 gap-3">
+             <div className="grid grid-cols-3 gap-3">
                 <button
                     type="button"
                     onClick={() => setWithdrawalSource('yield')}
@@ -355,6 +357,19 @@ const WithdrawModalContent: React.FC<{
                 >
                     <span className="text-xs font-bold uppercase">Bônus</span>
                     <span className="text-sm font-bold">{formatCurrency(user.bonusBalanceUSD || 0, 'USD')}</span>
+                </button>
+
+                <button
+                    type="button"
+                    onClick={() => setWithdrawalSource('capital')}
+                    className={`p-3 rounded-xl border flex flex-col items-center justify-center gap-1 transition-all ${
+                        withdrawalSource === 'capital' 
+                        ? 'bg-purple-500/10 border-purple-500 text-purple-400' 
+                        : 'bg-brand-black border-gray-700 text-gray-400 hover:border-gray-600'
+                    }`}
+                >
+                    <span className="text-xs font-bold uppercase">Capital</span>
+                    <span className="text-sm font-bold">{formatCurrency(user.capitalInvestedUSD || 0, 'USD')}</span>
                 </button>
             </div>
             
@@ -385,12 +400,9 @@ const WithdrawModalContent: React.FC<{
                 <p className="text-[10px] text-gray-500 text-right">Cotação: {formatCurrency(dollarRate, 'BRL')}</p>
             </div>
 
-            <div className="flex gap-2 text-[10px] text-gray-400 bg-black/20 p-2 rounded-lg">
+            <div className="flex gap-2 text-[10px] text-gray-400 bg-black/20 p-2 rounded-lg items-center">
                 <div className="min-w-[4px] bg-brand-blue rounded-full"></div>
-                <div>
-                    <p>• Atendimento: Seg à Sex, 08:00 às 18:00.</p>
-                    <p>• Capital principal permanece investido (bloqueado).</p>
-                </div>
+                <p>Atendimento para saques: Seg à Sex, 08:00 às 18:00.</p>
             </div>
             
             <div className="pt-2">

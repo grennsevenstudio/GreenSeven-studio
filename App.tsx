@@ -371,8 +371,12 @@ const App: React.FC = () => {
               if (userUpdate) user = { ...user, ...userUpdate };
               if (transaction.walletSource === 'bonus') {
                   user.bonusBalanceUSD = Math.max(0, user.bonusBalanceUSD - amount);
-              } else {
+              } else if (transaction.walletSource === 'yield') {
                   user.dailyWithdrawableUSD = Math.max(0, user.dailyWithdrawableUSD - amount);
+              } else if (transaction.walletSource === 'capital') {
+                  user.capitalInvestedUSD = Math.max(0, user.capitalInvestedUSD - amount);
+                  const plan = dbState.investmentPlans.find(p => p.name === user.plan) || dbState.investmentPlans[0];
+                  user.monthlyProfitUSD = user.capitalInvestedUSD * plan.returnRate;
               }
               user.balanceUSD = user.capitalInvestedUSD + user.dailyWithdrawableUSD + user.bonusBalanceUSD;
               user.rank = calculateRank(user.balanceUSD);
@@ -469,8 +473,12 @@ const App: React.FC = () => {
               if (newStatus === TransactionStatus.Failed) {
                   if (tx.walletSource === 'bonus') {
                       user.bonusBalanceUSD += amount;
-                  } else {
+                  } else if (tx.walletSource === 'yield') {
                       user.dailyWithdrawableUSD += amount;
+                  } else if (tx.walletSource === 'capital') {
+                      user.capitalInvestedUSD += amount;
+                      const plan = dbState.investmentPlans.find(p => p.name === user.plan) || dbState.investmentPlans[0];
+                      user.monthlyProfitUSD = user.capitalInvestedUSD * plan.returnRate;
                   }
                   user.balanceUSD = user.capitalInvestedUSD + user.dailyWithdrawableUSD + user.bonusBalanceUSD;
                   user.rank = calculateRank(user.balanceUSD);
