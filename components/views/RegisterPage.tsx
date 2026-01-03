@@ -476,7 +476,7 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ setView, onRegister, langua
                                 value={formData.referralCode}
                                 onChange={handleInputChange}
                                 readOnly={isRefCodeFromUrl}
-                                className={isRefCodeFromUrl ? 'bg-gray-800/50 !border-gray-600 focus:!ring-0 cursor-not-allowed' : ''}
+                                className={isRefCodeFromUrl ? 'bg-black !border-gray-600 focus:!ring-0 cursor-not-allowed' : ''}
                                 error={errors.referralCode}
                             />
                             {isRefCodeFromUrl && <p className="text-xs text-brand-green/80 mt-1">✓ Código de indicação aplicado via link.</p>}
